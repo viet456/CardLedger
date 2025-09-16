@@ -1,15 +1,179 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
-  provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
+    provider = "prisma-client-js"
+    output   = "../src/generated/prisma"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+enum LegalityStatus {
+    Legal
+    Banned
+}
+
+model Set {
+    id           String   @id
+    name         String
+    series       String
+    printedTotal Int
+    total        Int
+    ptcgoCode    String?
+    releaseDate  DateTime
+    updatedAt    DateTime
+    cards        Card[]
+
+    // Flattened legalities using the enum
+    unlimited LegalityStatus?
+    standard  LegalityStatus?
+    expanded  LegalityStatus?
+
+    // Images
+    symbolImageKey String?
+    logoImageKey   String?
+
+    // Indexes for faster queries
+    @@index([name])
+    @@index([series])
+    @@index([releaseDate])
+}
+
+enum Supertype {
+    Pokémon
+    Trainer
+    Energy
+}
+
+model Card {
+    id          String            @id
+    name        String
+    supertype   Supertype
+    hp          Int?
+    // Relations in normalized tables
+    subtypes    SubtypesOnCards[]
+    types       TypesOnCards[]
+    attacks     Attack[]
+    weaknesses  Weakness[]
+    retreatCost RetreatCost[]
+    resistances Resistance[]
+
+    evolvesTo        String[]
+    rules            String[]
+    ancientTraitName String?
+    ancientTraitText String?
+
+    convertedRetreatCost Int?
+    set                  Set    @relation(fields: [setId], references: [id])
+    setId                String
+
+    number                 String
+    artist                 String?
+    rarity                 String?
+    nationalPokedexNumbers Int[]
+
+    // Card legalities
+    unlimited LegalityStatus?
+    expanded  LegalityStatus?
+
+    // Indexes for faster queries
+    @@index([name])
+    @@index([supertype])
+    @@index([rarity])
+    @@index([setId])
+    @@index([name, setId])
+}
+
+model Subtype {
+    id    Int               @id @default(autoincrement())
+    name  String            @unique
+    cards SubtypesOnCards[]
+}
+
+model SubtypesOnCards {
+    cardId    String
+    card      Card    @relation(fields: [cardId], references: [id])
+    subtype   Subtype @relation(fields: [subtypeId], references: [id])
+    subtypeId Int
+
+    @@id([cardId, subtypeId])
+    @@index([subtypeId])
+}
+
+model Type {
+    id   Int    @id @default(autoincrement())
+    name String @unique
+
+    cards       TypesOnCards[]
+    weaknesses  Weakness[]
+    resistances Resistance[]
+    attackCosts AttackCost[]
+    retreatCost RetreatCost[]
+}
+
+model TypesOnCards {
+    id     Int    @id @default(autoincrement())
+    cardId String
+    card   Card   @relation(fields: [cardId], references: [id])
+    type   Type   @relation(fields: [typeId], references: [id])
+    typeId Int
+
+    @@unique([cardId, typeId])
+    @@index([typeId])
+}
+
+model Attack {
+    id                  Int          @id @default(autoincrement())
+    card                Card         @relation(fields: [cardId], references: [id])
+    cardId              String
+    name                String
+    cost                AttackCost[]
+    convertedEnergyCost Int
+    damage              String?
+    text                String?
+}
+
+model AttackCost {
+    id       Int    @id @default(autoincrement())
+    attack   Attack @relation(fields: [attackId], references: [id])
+    attackId Int
+    type     Type   @relation(fields: [typeId], references: [id])
+    typeId   Int
+
+    @@index([typeId])
+}
+
+model Weakness {
+    id     Int     @id @default(autoincrement())
+    card   Card    @relation(fields: [cardId], references: [id])
+    cardId String
+    type   Type    @relation(fields: [typeId], references: [id])
+    typeId Int
+    value  String?
+
+    @@unique([cardId, typeId])
+}
+
+model RetreatCost {
+    id     Int    @id @default(autoincrement())
+    card   Card   @relation(fields: [cardId], references: [id])
+    cardId String
+    type   Type   @relation(fields: [typeId], references: [id])
+    typeId Int
+
+    @@index([typeId])
+}
+
+model Resistance {
+    id     Int     @id @default(autoincrement())
+    card   Card    @relation(fields: [cardId], references: [id])
+    cardId String
+    type   Type    @relation(fields: [typeId], references: [id])
+    typeId Int
+    value  String?
+
+    @@unique([cardId, typeId])
+    @@index([typeId])
 }

@@ -1,5 +1,6 @@
 printWidth: 100
-useTabs: true
+useTabs: false
+tabWidth: 4
 singleQuote: true
 semi: true
 jsxSingleQuote: true
@@ -7,3 +8,5 @@ quoteProps: as-needed
 trailingComma: none
 bracketSpacing: true
 bracketSameLine: false
+plugins:
+  - prettier-plugin-prisma
