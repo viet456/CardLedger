@@ -51,22 +51,21 @@ model Card {
     id          String            @id
     name        String
     supertype   Supertype
+    subtypes    SubtypesOnCards[]
     hp          Int?
+    types       TypesOnCards[]
     evolvesFrom String?
     evolvesTo        String[]
-    // Relations in normalized tables
-    subtypes    SubtypesOnCards[]
-    types       TypesOnCards[]
+
+    abilities Ability[]
     attacks     Attack[]
     weaknesses  Weakness[]
     resistances Resistance[]
-    abilities Ability[]
+    convertedRetreatCost Int?
 
     rules            String[]
     ancientTraitName String?
     ancientTraitText String?
-
-    convertedRetreatCost Int?
     set                  Set    @relation(fields: [setId], references: [id])
     setId                String
 
@@ -76,8 +75,9 @@ model Card {
     nationalPokedexNumbers Int[]
 
     // Card legalities
-    unlimited LegalityStatus?
+    standard  LegalityStatus?
     expanded  LegalityStatus?
+    unlimited LegalityStatus?
 
     // Indexes for faster queries
     @@index([name])
@@ -124,6 +124,15 @@ model TypesOnCards {
     @@index([typeId])
 }
 
+model Ability {
+    id Int @id @default(autoincrement())
+    name String
+    text String
+    type String
+    card Card @relation(fields: [cardId], references: [id])
+    cardId String
+}
+
 model Attack {
     id                  Int          @id @default(autoincrement())
     card                Card         @relation(fields: [cardId], references: [id])
@@ -166,13 +175,4 @@ model Resistance {
 
     @@unique([cardId, typeId])
     @@index([typeId])
-}
-
-model Ability {
-    id Int @id @default(autoincrement())
-    name String
-    text String
-    type String
-    card Card @relation(fields: [cardId], references: [id])
-    cardId String
 }

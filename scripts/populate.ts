@@ -25,15 +25,34 @@ interface ApiSet {
 interface ApiCard {
     id: string;
     name: string;
-    hp?: string;
     supertype: 'Pokémon' | 'Trainer' | 'Energy';
     subtypes?: string[];
+    hp?: string;
     types?: string[];
     evolvesFrom?: string;
     evolvesTo?: string[];
+
+    abilities: ApiAbility[];
     attacks?: ApiAttack[];
     weaknesses?: ApiWeakness[];
+    resistances?: ApiResistance[];
     convertedRetreatCost?: number;
+
+    rules: string[];
+    ancientTraitName?: string;
+    ancientTraitText?: string;
+    number: string;
+    artist?: string;
+    rarity?: string;
+    nationalPokedexNumbers: number[];
+
+    legalities: ApiLegalityStatus;
+}
+
+interface ApiAbility {
+    name: string;
+    text: string;
+    type: string;
 }
 
 interface ApiAttack {
@@ -47,6 +66,17 @@ interface ApiAttack {
 interface ApiWeakness {
     type: string;
     value?: string;
+}
+
+interface ApiResistance {
+    type: string;
+    value?: string;
+}
+
+interface ApiLegalityStatus {
+    standard: string;
+    expanded: string;
+    unlimited: string;
 }
 
 async function uploadImageToR2(imageUrl: string, key: string): Promise<string> {
@@ -157,7 +187,7 @@ async function main() {
                     series: apiSet.series,
                     printedTotal: apiSet.printedTotal,
                     total: apiSet.total,
-                    ptgcoCode: apiSet.ptcgoCode,
+                    ptcgoCode: apiSet.ptcgoCode,
                     releaseDate: new Date(apiSet.releaseDate),
                     updatedAt: new Date(apiSet.updatedAt),
                     symbolImageKey: symbolImageKey,
@@ -202,7 +232,6 @@ async function main() {
                     data: {
                         id: apiCard.id,
                         name: apiCard.name,
-                        hp: apiCard.hp ? parseInt(apiCard.hp) : null,
                         supertype: apiCard.supertype,
                         subtypes: {
                             // Match api subtypes to our map containing coresponding ids
@@ -211,6 +240,7 @@ async function main() {
                                 return id ? [{ id }] : [];
                             })
                         },
+                        hp: apiCard.hp ? parseInt(apiCard.hp, 10) : null,
                         types: {
                             connect: (apiCard.types || []).flatMap((typeName: string) => {
                                 const id = typeNameToIdMap.get(typeName);
@@ -219,18 +249,26 @@ async function main() {
                         },
                         evolvesFrom: apiCard.evolvesFrom || null,
                         evolvesTo: apiCard.evolvesTo || [],
-                        convertedRetreatCost: apiCard.convertedRetreatCost || null,
+                        abilities: {
+                            create: (apiCard.abilities || []).map((ability: ApiAbility) => ({
+                                name: ability.name,
+                                text: ability.text,
+                                type: ability.type
+                            }))
+                        },
                         attacks: {
                             create: (apiCard.attacks || []).map((attack: ApiAttack) => ({
                                 name: attack.name,
                                 cost: {
-                                    create: (attack.cost || []).map((costName: string) => {
+                                    create: (attack.cost || []).flatMap((costName: string) => {
                                         const typeId = typeNameToIdMap.get(costName);
                                         return typeId
                                             ? [
                                                   {
                                                       type: {
-                                                          connect: { id: typeId }
+                                                          connect: {
+                                                              id: typeId
+                                                          }
                                                       }
                                                   }
                                               ]
@@ -256,7 +294,36 @@ async function main() {
                                       ]
                                     : [];
                             })
-                        }
+                        },
+                        resistances: {
+                            create: (apiCard.resistances || []).flatMap(
+                                (resistance: ApiResistance) => {
+                                    const typeId = typeNameToIdMap.get(resistance.type);
+                                    return typeId
+                                        ? [
+                                              {
+                                                  type: {
+                                                      connect: { id: typeId }
+                                                  },
+                                                  value: resistance.value || null
+                                              }
+                                          ]
+                                        : [];
+                                }
+                            )
+                        },
+                        convertedRetreatCost: apiCard.convertedRetreatCost || null,
+                        rules: apiCard.rules || [],
+                        ancientTraitName: apiCard.ancientTraitName || null,
+                        ancientTraitText: apiCard.ancientTraitText || null,
+                        number: apiCard.number,
+                        artist: apiCard.artist || null,
+                        rarity: apiCard.rarity || null,
+                        nationalPokedexNumbers: apiCard.nationalPokedexNumbers || [],
+                        // Legalities
+                        standard: apiCard.legalities?.standard || null,
+                        expanded: apiCard.legalities?.expanded || null,
+                        unlimited: apiCard.legalities?.unlimited || null
                     }
                 });
             }
