@@ -39,6 +39,11 @@ interface ApiAttack {
     text: string;
 }
 
+interface ApiWeakness {
+    type: string;
+    value?: string;
+}
+
 async function uploadImageToR2(imageUrl: string, key: string): Promise<string> {
     try {
         const response = await fetch(imageUrl);
@@ -125,46 +130,8 @@ async function main() {
 
     // Ensure sets exist in our database
     console.log('-- Syncing sets -- ');
-    const setsResponse = await fetch('https://api.pokemontcg.io/v2/sets', {
-        headers: { 'X-Api-Key': process.env.POKEMONTCG_API_KEY! }
-    });
-    const setsData = ((await setsResponse.json()) as { data: ApiSet[] }).data;
 
-    for (const apiSet of setsData) {
-        // Check if set already exists
-        const existingSet = await prisma.set.findUnique({ where: { id: apiSet.id } });
-        if (existingSet) {
-            console.log('Set already exists, skipping');
-            continue;
-        }
-        console.log(`Creating new set: ${apiSet.name}`);
-        const symbolImageKey = await uploadImageToR2(
-            apiSet.images.symbol,
-            `sets/${apiSet.id}-symbol.png`
-        );
-        const logoImageKey = await uploadImageToR2(
-            apiSet.images.logo,
-            `sets/${apiSet.id}-logo.png`
-        );
-
-        await prisma.set.create({
-            data: {
-                id: apiSet.id,
-                name: apiSet.name,
-                series: apiSet.series,
-                printedTotal: apiSet.printedTotal,
-                total: apiSet.total,
-                ptgcoCode: apiSet.ptcgoCode,
-                releaseDate: new Date(apiSet.releaseDate),
-                updatedAt: new Date(apiSet.updatedAt),
-                symbolImageKey: symbolImageKey,
-                logoImageKey: logoImageKey
-            }
-        });
-    }
-    console.log('Set sync complete');
-
-    console.log('-- Syncing cards --');
+    const setsInDbMap = new Map();
     const setsInDb = await prisma.set.findMany({
         select: {
             id: true,
@@ -173,6 +140,57 @@ async function main() {
             }
         }
     });
+    for (const set of setsInDb) {
+        setsInDbMap.set(set.id, set);
+    }
+
+    const setsResponse = await fetch('https://api.pokemontcg.io/v2/sets', {
+        headers: { 'X-Api-Key': process.env.POKEMONTCG_API_KEY! }
+    });
+    const setsData = ((await setsResponse.json()) as { data: ApiSet[] }).data;
+
+    for (const apiSet of setsData) {
+        // Check if set already exists in db
+        const existingSet = setsInDbMap.get(apiSet.id);
+        if (!existingSet) {
+            console.log(`Creating new set: ${apiSet.name}`);
+            const symbolImageKey = await uploadImageToR2(
+                apiSet.images.symbol,
+                `sets/${apiSet.id}-symbol.png`
+            );
+            const logoImageKey = await uploadImageToR2(
+                apiSet.images.logo,
+                `sets/${apiSet.id}-logo.png`
+            );
+
+            await prisma.set.create({
+                data: {
+                    id: apiSet.id,
+                    name: apiSet.name,
+                    series: apiSet.series,
+                    printedTotal: apiSet.printedTotal,
+                    total: apiSet.total,
+                    ptgcoCode: apiSet.ptcgoCode,
+                    releaseDate: new Date(apiSet.releaseDate),
+                    updatedAt: new Date(apiSet.updatedAt),
+                    symbolImageKey: symbolImageKey,
+                    logoImageKey: logoImageKey
+                }
+            });
+        } else if (existingSet.total !== apiSet.total) {
+            console.log(
+                `Updating set ${apiSet.name}: total changed from ${existingSet.total} to ${apiSet.total}`
+            );
+            await prisma.set.update({
+                where: { id: apiSet.id },
+                data: { total: apiSet.total }
+            });
+        }
+    }
+    console.log('Set sync complete');
+
+    console.log('-- Syncing cards --');
+
     for (const dbSet of setsInDb) {
         console.log(`Checking set: ${dbSet.name}`);
         if (dbSet._count.cards < dbSet.total) {
@@ -233,7 +251,8 @@ async function main() {
                                 damage: attack.damage,
                                 text: attack.text
                             }))
-                        }
+                        },
+                        weaknesses: {}
                     }
                 });
             }
