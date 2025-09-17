@@ -53,13 +53,12 @@ model Card {
     supertype   Supertype
     hp          Int?
     evolvesFrom String?
-    evolvesTo String?
+    evolvesTo        String[]
     // Relations in normalized tables
     subtypes    SubtypesOnCards[]
     types       TypesOnCards[]
     attacks     Attack[]
     weaknesses  Weakness[]
-    retreatCost RetreatCost[]
     resistances Resistance[]
     abilities Ability[]
 
@@ -112,7 +111,6 @@ model Type {
     weaknesses  Weakness[]
     resistances Resistance[]
     attackCosts AttackCost[]
-    retreatCost RetreatCost[]
 }
 
 model TypesOnCards {
@@ -156,16 +154,6 @@ model Weakness {
     value  String?
 
     @@unique([cardId, typeId])
-}
-
-model RetreatCost {
-    id     Int    @id @default(autoincrement())
-    card   Card   @relation(fields: [cardId], references: [id])
-    cardId String
-    type   Type   @relation(fields: [typeId], references: [id])
-    typeId Int
-
-    @@index([typeId])
 }
 
 model Resistance {

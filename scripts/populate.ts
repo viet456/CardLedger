@@ -25,10 +25,15 @@ interface ApiSet {
 interface ApiCard {
     id: string;
     name: string;
+    hp?: string;
     supertype: 'Pokémon' | 'Trainer' | 'Energy';
     subtypes?: string[];
     types?: string[];
+    evolvesFrom?: string;
+    evolvesTo?: string[];
     attacks?: ApiAttack[];
+    weaknesses?: ApiWeakness[];
+    convertedRetreatCost?: number;
 }
 
 interface ApiAttack {
@@ -70,46 +75,28 @@ async function seedMasterData() {
     console.log('Seeding master data...');
 
     // Seeds the types and subtypes tables
-    const pokemonTypes = [
-        'Grass',
-        'Fire',
-        'Water',
-        'Lightning',
-        'Psychic',
-        'Fighting',
-        'Darkness',
-        'Metal',
-        'Fairy',
-        'Dragon',
-        'Colorless'
-    ];
-    const pokemonSubtypes = [
-        'Basic',
-        'Stage 1',
-        'Stage 2',
-        'V',
-        'VMAX',
-        'VSTAR',
-        'EX',
-        'GX',
-        'BREAK',
-        'Restored',
-        'LEGEND',
-        'Level-Up',
-        'Mega',
-        'Prime',
-        'Tera',
-        'Radiant'
-    ];
-    await prisma.type.createMany({
-        data: pokemonTypes.map((name) => ({ name })),
-        skipDuplicates: true
-    });
-    await prisma.subtype.createMany({
-        data: pokemonSubtypes.map((name) => ({ name })),
-        skipDuplicates: true
-    });
-
+    try {
+        // Get types and subtypes lists from API
+        const typesResponse = await fetch('https://api.pokemontcg.io/v2/types', {
+            headers: { 'X-Api-Key': process.env.POKEMONTCG_API_KEY! }
+        });
+        const { data: pokemonTypes } = (await typesResponse.json()) as { data: string[] };
+        const subtypesResponse = await fetch('https://api.pokemontcg.io/v2/subtypes', {
+            headers: { 'X-Api-Key': process.env.POKEMONTCG_API_KEY! }
+        });
+        const { data: pokemonSubtypes } = (await subtypesResponse.json()) as { data: string[] };
+        await prisma.type.createMany({
+            data: pokemonTypes.map((name) => ({ name })),
+            skipDuplicates: true
+        });
+        await prisma.subtype.createMany({
+            data: pokemonSubtypes.map((name) => ({ name })),
+            skipDuplicates: true
+        });
+    } catch (error) {
+        console.error('Failed to seed master data from API');
+        process.exit(1);
+    }
     console.log('Master data seeded');
 }
 
@@ -215,6 +202,7 @@ async function main() {
                     data: {
                         id: apiCard.id,
                         name: apiCard.name,
+                        hp: apiCard.hp ? parseInt(apiCard.hp) : null,
                         supertype: apiCard.supertype,
                         subtypes: {
                             // Match api subtypes to our map containing coresponding ids
@@ -229,10 +217,12 @@ async function main() {
                                 return id ? [{ id }] : [];
                             })
                         },
+                        evolvesFrom: apiCard.evolvesFrom || null,
+                        evolvesTo: apiCard.evolvesTo || [],
+                        convertedRetreatCost: apiCard.convertedRetreatCost || null,
                         attacks: {
                             create: (apiCard.attacks || []).map((attack: ApiAttack) => ({
                                 name: attack.name,
-                                // cost
                                 cost: {
                                     create: (attack.cost || []).map((costName: string) => {
                                         const typeId = typeNameToIdMap.get(costName);
@@ -252,7 +242,21 @@ async function main() {
                                 text: attack.text
                             }))
                         },
-                        weaknesses: {}
+                        weaknesses: {
+                            create: (apiCard.weaknesses || []).flatMap((weakness: ApiWeakness) => {
+                                const typeId = typeNameToIdMap.get(weakness.type);
+                                return typeId
+                                    ? [
+                                          {
+                                              type: {
+                                                  connect: { id: typeId }
+                                              },
+                                              value: weakness.value || null
+                                          }
+                                      ]
+                                    : [];
+                            })
+                        }
                     }
                 });
             }
