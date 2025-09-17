@@ -52,6 +52,8 @@ model Card {
     name        String
     supertype   Supertype
     hp          Int?
+    evolvesFrom String?
+    evolvesTo String?
     // Relations in normalized tables
     subtypes    SubtypesOnCards[]
     types       TypesOnCards[]
@@ -59,8 +61,8 @@ model Card {
     weaknesses  Weakness[]
     retreatCost RetreatCost[]
     resistances Resistance[]
+    abilities Ability[]
 
-    evolvesTo        String[]
     rules            String[]
     ancientTraitName String?
     ancientTraitText String?
@@ -176,4 +178,13 @@ model Resistance {
 
     @@unique([cardId, typeId])
     @@index([typeId])
+}
+
+model Ability {
+    id Int @id @default(autoincrement())
+    name String
+    text String
+    type String
+    card Card @relation(fields: [cardId], references: [id])
+    cardId String
 }
