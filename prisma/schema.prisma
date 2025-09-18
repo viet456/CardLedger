@@ -79,6 +79,8 @@ model Card {
     expanded  LegalityStatus?
     unlimited LegalityStatus?
 
+    imageKey String?
+
     // Indexes for faster queries
     @@index([name])
     @@index([supertype])

@@ -62,7 +62,14 @@ const ApiCardSchema = z.object({
     rarity: z.string().optional(),
     nationalPokedexNumbers: z.array(z.number()).optional(),
 
-    legalities: ApiLegalitySchema.optional()
+    legalities: ApiLegalitySchema.optional(),
+
+    images: z
+        .object({
+            small: z.string(),
+            large: z.string()
+        })
+        .optional()
 });
 
 const ApiSetSchema = z.object({
@@ -266,9 +273,15 @@ async function syncCards(
                         where: { id: apiCard.id }
                     });
                     if (existingCard) continue;
-
                     console.log(`- Processing card: ${apiCard.name}`);
+
                     // Fill in card data
+                    let imageKey: string | null = null;
+                    if (apiCard.images?.large) {
+                        const key = `cards/${apiCard.id}.png`;
+                        imageKey = await uploadImageToR2(apiCard.images.large, key);
+                    }
+
                     await prisma.card.create({
                         data: {
                             id: apiCard.id,
@@ -367,7 +380,8 @@ async function syncCards(
                             // Legalities
                             standard: apiCard.legalities?.standard || null,
                             expanded: apiCard.legalities?.expanded || null,
-                            unlimited: apiCard.legalities?.unlimited || null
+                            unlimited: apiCard.legalities?.unlimited || null,
+                            imageKey: imageKey
                         }
                     });
                 }
