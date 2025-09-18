@@ -94,6 +94,8 @@ type ApiAbility = z.infer<typeof ApiAbilitySchema>;
 type ApiAttack = z.infer<typeof ApiAttackSchema>;
 type ApiWeakness = z.infer<typeof ApiWeaknessSchema>;
 type ApiResistance = z.infer<typeof ApiResistanceSchema>;
+type ApiCard = z.infer<typeof ApiCardSchema>;
+type ApiSet = z.infer<typeof ApiSetSchema>;
 
 async function uploadImageToR2(imageUrl: string, key: string): Promise<string> {
     try {
@@ -150,6 +152,7 @@ async function seedMasterData() {
 async function prepareLookups() {
     const allTypes = await prisma.type.findMany();
     const subTypes = await prisma.subtype.findMany();
+
     const typeNameToIdMap = new Map<string, number>();
     for (const type of allTypes) {
         typeNameToIdMap.set(type.name, type.id);
@@ -161,24 +164,19 @@ async function prepareLookups() {
     return { typeNameToIdMap, subtypeNameToIdMap };
 }
 
-async function main() {
-    console.log('Starting database population');
-
-    await seedMasterData();
-    const { typeNameToIdMap, subtypeNameToIdMap } = await prepareLookups();
-
-    // Ensure sets exist in our database
+async function syncSets() {
     console.log('-- Syncing sets -- ');
-
-    const setsInDbMap = new Map();
+    // Ensure sets exist in our database
     const setsInDb = await prisma.set.findMany({
         select: {
             id: true,
+            total: true,
             _count: {
                 select: { cards: true }
             }
         }
     });
+    const setsInDbMap = new Map();
     for (const set of setsInDb) {
         setsInDbMap.set(set.id, set);
     }
@@ -187,7 +185,7 @@ async function main() {
         headers: { 'X-Api-Key': process.env.POKEMONTCG_API_KEY! }
     });
     try {
-        const { data: setsData } = ApiSetResponseSchema.parse(setsResponse.json());
+        const { data: setsData } = ApiSetResponseSchema.parse(await setsResponse.json());
         for (const apiSet of setsData) {
             // Check if set already exists in db
             const existingSet = setsInDbMap.get(apiSet.id);
@@ -231,8 +229,23 @@ async function main() {
         process.exit(1);
     }
     console.log('Set sync complete');
+}
 
+async function syncCards(
+    typeNameToIdMap: Map<string, number>,
+    subtypeNameToIdMap: Map<string, number>
+) {
     console.log('-- Syncing cards --');
+
+    const setsInDb = await prisma.set.findMany({
+        select: {
+            id: true,
+            total: true,
+            _count: {
+                select: { cards: true }
+            }
+        }
+    });
 
     for (const dbSet of setsInDb) {
         console.log(`Checking set: ${dbSet.name}`);
@@ -346,7 +359,6 @@ async function main() {
                             rules: apiCard.rules || [],
                             ancientTraitName: apiCard.ancientTraitName || null,
                             ancientTraitText: apiCard.ancientTraitText || null,
-                            set: dbSet.name,
                             setId: dbSet.id,
                             number: apiCard.number,
                             artist: apiCard.artist || null,
@@ -366,5 +378,24 @@ async function main() {
             console.log('- Set complete, skipping -');
         }
     }
+}
+
+async function main() {
+    console.log('Starting database population');
+
+    await seedMasterData();
+    const { typeNameToIdMap, subtypeNameToIdMap } = await prepareLookups();
+    await syncSets();
+    await syncCards(typeNameToIdMap, subtypeNameToIdMap);
+
     console.log('-- Database population complete --');
 }
+
+main()
+    .catch((e) => {
+        console.error(e);
+        process.exit(1);
+    })
+    .finally(async () => {
+        await prisma.$disconnect();
+    });
