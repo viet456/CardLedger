@@ -37,6 +37,7 @@
         "prettier-plugin-prisma": "^5.0.0",
         "prisma": "^6.16.2",
         "tailwindcss": "^4",
+        "tsx": "^4.20.5",
         "typescript": "^5"
     },
     "lint-staged": {
