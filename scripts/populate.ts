@@ -1,13 +1,13 @@
-import { PrismaClient } from '@prisma/client/extension';
+import { PrismaClient } from '../src/generated/prisma';
 import fetch from 'node-fetch';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { r2 } from '../src/lib/r2';
 import { z } from 'zod';
 
 const prisma = new PrismaClient();
 const BUCKET_NAME = 'cardledger';
 
-// Zod validators
+// Zod validators and schemas
 const ApiAbilitySchema = z.object({
     name: z.string(),
     text: z.string(),
@@ -33,9 +33,9 @@ const ApiResistanceSchema = z.object({
 });
 
 const ApiLegalitySchema = z.object({
-    standard: z.string(),
-    expanded: z.string(),
-    unlimited: z.string()
+    standard: z.enum(['Legal', 'Banned']).optional(),
+    expanded: z.enum(['Legal', 'Banned']).optional(),
+    unlimited: z.enum(['Legal', 'Banned']).optional()
 });
 
 const ApiCardSchema = z.object({
@@ -81,7 +81,6 @@ const ApiSetSchema = z.object({
     ptcgoCode: z.string().optional(),
     releaseDate: z.coerce.date(),
     updatedAt: z.coerce.date(),
-    cards: z.lazy(() => z.array(ApiCardSchema)),
     images: z.object({
         symbol: z.string(),
         logo: z.string()
@@ -96,6 +95,10 @@ const ApiCardResponseSchema = z.object({
     data: z.array(ApiCardSchema)
 });
 
+const ApiStringsResponseSchema = z.object({
+    data: z.array(z.string())
+});
+
 // Types
 type ApiAbility = z.infer<typeof ApiAbilitySchema>;
 type ApiAttack = z.infer<typeof ApiAttackSchema>;
@@ -104,10 +107,29 @@ type ApiResistance = z.infer<typeof ApiResistanceSchema>;
 type ApiCard = z.infer<typeof ApiCardSchema>;
 type ApiSet = z.infer<typeof ApiSetSchema>;
 
-async function uploadImageToR2(imageUrl: string, key: string): Promise<string> {
+async function doesImageExistInR2(key: string): Promise<boolean> {
+    try {
+        const command = new HeadObjectCommand({
+            Bucket: BUCKET_NAME,
+            Key: key
+        });
+        await r2.send(command);
+        return true;
+    } catch (error) {
+        if (error instanceof Error && error.name === 'NotFound') {
+            return false;
+        }
+        console.error(`Error checking image existence for key ${key}`, error);
+        return false;
+    }
+}
+
+async function uploadImageToR2(imageUrl: string, key: string): Promise<string | null> {
     try {
         const response = await fetch(imageUrl);
         if (!response.ok) {
+            console.log(`Failed to fetch image: ${response.statusText}`);
+
             throw new Error(`Failed to fetch image: ${response.statusText}`);
         }
         const imageBuffer = Buffer.from(await response.arrayBuffer());
@@ -118,11 +140,19 @@ async function uploadImageToR2(imageUrl: string, key: string): Promise<string> {
             ContentType: response.headers.get('content-type') || 'image/png'
         });
         await r2.send(command);
-        console.log(`Successfully uploaded image to R2: ${key}`);
-        return key;
+        console.log(`Successfully sent upload command for image: ${key}`);
+
+        // Verify image is actually uploaded
+        console.log(`Verifying image existence in R2: ${key}`);
+        const imageExists = await doesImageExistInR2(key);
+        if (imageExists) {
+            return key;
+        } else {
+            throw new Error(`Verification failed for key ${key}`);
+        }
     } catch (error) {
-        console.error(`Error uploading image for key ${key}:`, error);
-        return '';
+        console.error(`Error in uploading/verifing image for key ${key}:`, error);
+        return null;
     }
 }
 
@@ -135,11 +165,13 @@ async function seedMasterData() {
         const typesResponse = await fetch('https://api.pokemontcg.io/v2/types', {
             headers: { 'X-Api-Key': process.env.POKEMONTCG_API_KEY! }
         });
-        const { data: pokemonTypes } = (await typesResponse.json()) as { data: string[] };
+        const { data: pokemonTypes } = ApiStringsResponseSchema.parse(await typesResponse.json());
         const subtypesResponse = await fetch('https://api.pokemontcg.io/v2/subtypes', {
             headers: { 'X-Api-Key': process.env.POKEMONTCG_API_KEY! }
         });
-        const { data: pokemonSubtypes } = (await subtypesResponse.json()) as { data: string[] };
+        const { data: pokemonSubtypes } = ApiStringsResponseSchema.parse(
+            await subtypesResponse.json()
+        );
         await prisma.type.createMany({
             data: pokemonTypes.map((name) => ({ name })),
             skipDuplicates: true
@@ -149,7 +181,7 @@ async function seedMasterData() {
             skipDuplicates: true
         });
     } catch (error) {
-        console.error('Failed to seed master data from API');
+        console.error('Failed to seed master data from API:', error);
         process.exit(1);
     }
     console.log('Master data seeded');
@@ -248,22 +280,35 @@ async function syncCards(
         select: {
             id: true,
             total: true,
+            name: true,
             _count: {
-                select: { cards: true }
+                select: {
+                    cards: true
+                }
             }
         }
     });
 
     for (const dbSet of setsInDb) {
         console.log(`Checking set: ${dbSet.name}`);
-        if (dbSet._count.cards < dbSet.total) {
+
+        const imageCount = await prisma.card.count({
+            where: {
+                setId: dbSet.id,
+                imageKey: { not: null }
+            }
+        });
+        // Ensure sets have all their cards and images
+        if (dbSet._count.cards < dbSet.total || imageCount < dbSet.total) {
             console.log(
-                `- Set  is incomplete (${dbSet._count.cards}/${dbSet.total}). Fetching cards -`
+                `- Set  is incomplete. Cards: (${dbSet._count.cards}/${dbSet.total}) Images: Images: (${imageCount}/${dbSet.total}). Fetching cards -`
             );
 
             const cardsResponse = await fetch(
                 `https://api.pokemontcg.io/v2/cards?q=set.id:${dbSet.id}`,
-                { headers: { 'X-Api-key': process.env.POKEMONTCG_API_KEY! } }
+                {
+                    headers: { 'X-Api-key': process.env.POKEMONTCG_API_KEY! }
+                }
             );
             try {
                 const { data: cardsData } = ApiCardResponseSchema.parse(await cardsResponse.json());
@@ -279,7 +324,15 @@ async function syncCards(
                     let imageKey: string | null = null;
                     if (apiCard.images?.large) {
                         const key = `cards/${apiCard.id}.png`;
-                        imageKey = await uploadImageToR2(apiCard.images.large, key);
+
+                        // Check if image is in R2 before uploading
+                        const imageExists = await doesImageExistInR2(key);
+                        if (!imageExists) {
+                            imageKey = await uploadImageToR2(apiCard.images.large, key);
+                        } else {
+                            imageKey = key;
+                            console.log(`Image already exists in R2, skipping: ${key}`);
+                        }
                     }
 
                     await prisma.card.create({
@@ -289,16 +342,16 @@ async function syncCards(
                             supertype: apiCard.supertype,
                             subtypes: {
                                 // Match api subtypes to our map containing coresponding ids
-                                connect: (apiCard.subtypes || []).flatMap((subtypeName: string) => {
-                                    const id = subtypeNameToIdMap.get(subtypeName);
-                                    return id ? [{ id }] : [];
+                                create: (apiCard.subtypes || []).flatMap((subtypeName: string) => {
+                                    const subtypeId = subtypeNameToIdMap.get(subtypeName);
+                                    return subtypeId ? [{ subtypeId: subtypeId }] : [];
                                 })
                             },
                             hp: apiCard.hp ? parseInt(apiCard.hp, 10) : null,
                             types: {
-                                connect: (apiCard.types || []).flatMap((typeName: string) => {
-                                    const id = typeNameToIdMap.get(typeName);
-                                    return id ? [{ id }] : [];
+                                create: (apiCard.types || []).flatMap((typeName: string) => {
+                                    const typeId = typeNameToIdMap.get(typeName);
+                                    return typeId ? [{ typeId: typeId }] : [];
                                 })
                             },
                             evolvesFrom: apiCard.evolvesFrom || null,

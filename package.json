@@ -9,11 +9,18 @@
         "start": "next start",
         "lint": "eslint",
         "prepare": "husky install",
-        "db:populate": "tsx scripts/populate.ts"
+        "db:generate": "prisma generate",
+        "db:populate": "pnpm run db:generate && tsx scripts/populate.ts"
     },
     "dependencies": {
         "@aws-sdk/client-s3": "^3.890.0",
+        "@aws-sdk/lib-storage": "^3.891.0",
         "@prisma/client": "^6.16.2",
+        "@smithy/node-http-handler": "^4.2.1",
+        "dotenv": "^17.2.2",
+        "mime": "^4.1.0",
+        "mime-types": "^3.0.1",
+        "mine": "^0.1.0",
         "next": "15.5.3",
         "node-fetch": "^3.3.2",
         "react": "19.1.0",
@@ -28,6 +35,7 @@
         "@types/pg": "^8.15.5",
         "@types/react": "^19",
         "@types/react-dom": "^19",
+        "dotenv-cli": "^10.0.0",
         "eslint": "^9",
         "eslint-config-next": "15.5.3",
         "eslint-config-prettier": "^10.1.8",
