@@ -2,7 +2,7 @@ import { PrismaClient } from '../src/generated/prisma';
 import fetch from 'node-fetch';
 import { S3Client, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { r2 } from '../src/lib/r2';
-import { z } from 'zod';
+import { set, z } from 'zod';
 
 const prisma = new PrismaClient();
 const BUCKET_NAME = 'cardledger';
@@ -107,6 +107,29 @@ type ApiResistance = z.infer<typeof ApiResistanceSchema>;
 type ApiCard = z.infer<typeof ApiCardSchema>;
 type ApiSet = z.infer<typeof ApiSetSchema>;
 
+function delay(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function processInBatches<T, R>(
+    items: T[],
+    batchSize: number,
+    fn: (item: T) => Promise<R>
+): Promise<R[]> {
+    let results: R[] = [];
+    for (let i = 0; i < items.length; i += batchSize) {
+        const batchItems = items.slice(i, i + batchSize);
+        console.log(`Processing batch ${i / batchSize + 1} / ${Math.ceil(items.length / batchSize)}...`);
+        const batchPromises = batchItems.map(fn);
+        const batchResults = await Promise.all(batchPromises);
+        if (i + batchSize < items.length) { // Don't delay after the last batch
+            await delay(1000); 
+        }
+        results = results.concat(batchResults);
+    }
+    return results;
+}
+
 async function doesImageExistInR2(key: string): Promise<boolean> {
     try {
         const command = new HeadObjectCommand({
@@ -141,15 +164,7 @@ async function uploadImageToR2(imageUrl: string, key: string): Promise<string | 
         });
         await r2.send(command);
         console.log(`Successfully sent upload command for image: ${key}`);
-
-        // Verify image is actually uploaded
-        console.log(`Verifying image existence in R2: ${key}`);
-        const imageExists = await doesImageExistInR2(key);
-        if (imageExists) {
-            return key;
-        } else {
-            throw new Error(`Verification failed for key ${key}`);
-        }
+        return key;
     } catch (error) {
         console.error(`Error in uploading/verifing image for key ${key}:`, error);
         return null;
@@ -162,24 +177,31 @@ async function seedMasterData() {
     // Seeds the types and subtypes tables
     try {
         // Get types and subtypes lists from API
-        const typesResponse = await fetch('https://api.pokemontcg.io/v2/types', {
-            headers: { 'X-Api-Key': process.env.POKEMONTCG_API_KEY! }
-        });
+        const [typesResponse, subtypesResponse] = await Promise.all([
+            fetch('https://api.pokemontcg.io/v2/types', {
+                headers: { 'X-Api-Key': process.env.POKEMONTCG_API_KEY! }
+            }), 
+            fetch('https://api.pokemontcg.io/v2/subtypes', {
+                headers: { 'X-Api-Key': process.env.POKEMONTCG_API_KEY! }
+            }),
+        ]);
+        
         const { data: pokemonTypes } = ApiStringsResponseSchema.parse(await typesResponse.json());
-        const subtypesResponse = await fetch('https://api.pokemontcg.io/v2/subtypes', {
-            headers: { 'X-Api-Key': process.env.POKEMONTCG_API_KEY! }
-        });
         const { data: pokemonSubtypes } = ApiStringsResponseSchema.parse(
             await subtypesResponse.json()
         );
-        await prisma.type.createMany({
-            data: pokemonTypes.map((name) => ({ name })),
-            skipDuplicates: true
-        });
-        await prisma.subtype.createMany({
-            data: pokemonSubtypes.map((name) => ({ name })),
-            skipDuplicates: true
-        });
+
+        // Write types tables in DB
+        await Promise.all([
+            prisma.type.createMany({
+                data: pokemonTypes.map((name) => ({ name })),
+                skipDuplicates: true
+            }),
+            prisma.subtype.createMany({
+                data: pokemonSubtypes.map((name) => ({ name })),
+                skipDuplicates: true
+            })
+        ]);
     } catch (error) {
         console.error('Failed to seed master data from API:', error);
         process.exit(1);
@@ -188,10 +210,14 @@ async function seedMasterData() {
 }
 
 // Create lookup maps
-async function prepareLookups() {
-    const allTypes = await prisma.type.findMany();
-    const subTypes = await prisma.subtype.findMany();
-
+async function prepareLookups(): Promise<{
+    typeNameToIdMap: Map<string, number>;
+    subtypeNameToIdMap: Map<string, number>;
+}> {
+    const [allTypes, subTypes] = await Promise.all([
+        prisma.type.findMany(),
+        prisma.subtype.findMany()
+    ]);
     const typeNameToIdMap = new Map<string, number>();
     for (const type of allTypes) {
         typeNameToIdMap.set(type.name, type.id);
@@ -206,39 +232,46 @@ async function prepareLookups() {
 async function syncSets() {
     console.log('-- Syncing sets -- ');
     // Ensure sets exist in our database
-    const setsInDb = await prisma.set.findMany({
-        select: {
-            id: true,
-            total: true,
-            _count: {
-                select: { cards: true }
+    const [setsInDb, setsResponse] = await Promise.all([
+        prisma.set.findMany({
+            select: {
+                id: true,
+                total: true,
+                _count: {
+                    select: { cards: true }
+                }
             }
-        }
-    });
+        }),
+        fetch('https://api.pokemontcg.io/v2/sets', {
+            headers: { 'X-Api-Key': process.env.POKEMONTCG_API_KEY! }
+        })
+    ]);
     const setsInDbMap = new Map();
     for (const set of setsInDb) {
         setsInDbMap.set(set.id, set);
     }
 
-    const setsResponse = await fetch('https://api.pokemontcg.io/v2/sets', {
-        headers: { 'X-Api-Key': process.env.POKEMONTCG_API_KEY! }
-    });
     try {
         const { data: setsData } = ApiSetResponseSchema.parse(await setsResponse.json());
-        for (const apiSet of setsData) {
+
+        const setPromises = setsData.map(async (apiSet) => {
             // Check if set already exists in db
             const existingSet = setsInDbMap.get(apiSet.id);
             if (!existingSet) {
                 console.log(`Creating new set: ${apiSet.name}`);
-                const symbolImageKey = await uploadImageToR2(
-                    apiSet.images.symbol,
-                    `sets/${apiSet.id}-symbol.png`
-                );
-                const logoImageKey = await uploadImageToR2(
-                    apiSet.images.logo,
-                    `sets/${apiSet.id}-logo.png`
-                );
 
+                // Upload set images
+                const [symbolImageKey, logoImageKey] = await Promise.all([
+                    uploadImageToR2(
+                        apiSet.images.symbol,
+                        `sets/${apiSet.id}-symbol.png`
+                    ),
+                    uploadImageToR2(
+                        apiSet.images.logo,
+                        `sets/${apiSet.id}-logo.png`
+                    )
+                ])
+                
                 await prisma.set.create({
                     data: {
                         id: apiSet.id,
@@ -262,7 +295,9 @@ async function syncSets() {
                     data: { total: apiSet.total }
                 });
             }
-        }
+        });
+
+        await Promise.all(setPromises);
     } catch (error) {
         console.error('API Set response did not match schema: ', error);
         process.exit(1);
@@ -276,6 +311,7 @@ async function syncCards(
 ) {
     console.log('-- Syncing cards --');
 
+    // Fetch all sets from database at once, including card counts
     const setsInDb = await prisma.set.findMany({
         select: {
             id: true,
@@ -289,163 +325,315 @@ async function syncCards(
         }
     });
 
-    for (const dbSet of setsInDb) {
-        console.log(`Checking set: ${dbSet.name}`);
+    // Identify incomplete sets by checking card and image counts simultaneously
+    const setCompletenessChecks = await Promise.all(
+        setsInDb.map(async (dbSet) => {
+            console.log(`Checking set: ${dbSet.name}`);
 
-        const imageCount = await prisma.card.count({
-            where: {
-                setId: dbSet.id,
-                imageKey: { not: null }
-            }
-        });
-        // Ensure sets have all their cards and images
-        if (dbSet._count.cards < dbSet.total || imageCount < dbSet.total) {
-            console.log(
-                `- Set  is incomplete. Cards: (${dbSet._count.cards}/${dbSet.total}) Images: Images: (${imageCount}/${dbSet.total}). Fetching cards -`
-            );
-
-            const cardsResponse = await fetch(
-                `https://api.pokemontcg.io/v2/cards?q=set.id:${dbSet.id}`,
-                {
-                    headers: { 'X-Api-key': process.env.POKEMONTCG_API_KEY! }
-                }
-            );
-            try {
-                const { data: cardsData } = ApiCardResponseSchema.parse(await cardsResponse.json());
-
-                for (const apiCard of cardsData) {
-                    const existingCard = await prisma.card.findUnique({
-                        where: { id: apiCard.id }
-                    });
-                    if (existingCard) continue;
-                    console.log(`- Processing card: ${apiCard.name}`);
-
-                    // Fill in card data
-                    let imageKey: string | null = null;
-                    if (apiCard.images?.large) {
-                        const key = `cards/${apiCard.id}.png`;
-
-                        // Check if image is in R2 before uploading
-                        const imageExists = await doesImageExistInR2(key);
-                        if (!imageExists) {
-                            imageKey = await uploadImageToR2(apiCard.images.large, key);
-                        } else {
-                            imageKey = key;
-                            console.log(`Image already exists in R2, skipping: ${key}`);
-                        }
+            const [cardCount, imageCount] = await Promise.all([
+                prisma.card.count({
+                    where: {
+                        setId: dbSet.id
                     }
+                }),
+                prisma.card.count({
+                    where: {
+                        setId: dbSet.id,
+                        imageKey: { not: null }
+                    }
+                })
+            ])
+            
+            const isComplete = cardCount >= dbSet.total && imageCount >= dbSet.total;
+            if (!isComplete) {
+                console.log(
+                    `- Set ${dbSet.name} is incomplete. Cards: (${cardCount}/${dbSet.total}) Images: Images: (${imageCount}/${dbSet.total}). Fetching cards -`
+                );
+            };
+            return { ...dbSet, isComplete };
+        })
+    );
 
-                    await prisma.card.create({
-                        data: {
-                            id: apiCard.id,
-                            name: apiCard.name,
-                            supertype: apiCard.supertype,
-                            subtypes: {
-                                // Match api subtypes to our map containing coresponding ids
-                                create: (apiCard.subtypes || []).flatMap((subtypeName: string) => {
-                                    const subtypeId = subtypeNameToIdMap.get(subtypeName);
-                                    return subtypeId ? [{ subtypeId: subtypeId }] : [];
-                                })
-                            },
-                            hp: apiCard.hp ? parseInt(apiCard.hp, 10) : null,
-                            types: {
-                                create: (apiCard.types || []).flatMap((typeName: string) => {
-                                    const typeId = typeNameToIdMap.get(typeName);
-                                    return typeId ? [{ typeId: typeId }] : [];
-                                })
-                            },
-                            evolvesFrom: apiCard.evolvesFrom || null,
-                            evolvesTo: apiCard.evolvesTo || [],
-                            abilities: {
-                                create: (apiCard.abilities || []).map((ability: ApiAbility) => ({
-                                    name: ability.name,
-                                    text: ability.text,
-                                    type: ability.type
-                                }))
-                            },
-                            attacks: {
-                                create: (apiCard.attacks || []).map((attack: ApiAttack) => ({
-                                    name: attack.name,
-                                    cost: {
-                                        create: (attack.cost || []).flatMap((costName: string) => {
-                                            const typeId = typeNameToIdMap.get(costName);
-                                            return typeId
-                                                ? [
-                                                      {
-                                                          type: {
-                                                              connect: {
-                                                                  id: typeId
-                                                              }
-                                                          }
-                                                      }
-                                                  ]
-                                                : [];
-                                        })
-                                    },
-                                    convertedEnergyCost: attack.convertedEnergyCost,
-                                    damage: attack.damage,
-                                    text: attack.text
-                                }))
-                            },
-                            weaknesses: {
-                                create: (apiCard.weaknesses || []).flatMap(
-                                    (weakness: ApiWeakness) => {
-                                        const typeId = typeNameToIdMap.get(weakness.type);
-                                        return typeId
-                                            ? [
-                                                  {
-                                                      type: {
-                                                          connect: { id: typeId }
-                                                      },
-                                                      value: weakness.value || null
-                                                  }
-                                              ]
-                                            : [];
-                                    }
-                                )
-                            },
-                            resistances: {
-                                create: (apiCard.resistances || []).flatMap(
-                                    (resistance: ApiResistance) => {
-                                        const typeId = typeNameToIdMap.get(resistance.type);
-                                        return typeId
-                                            ? [
-                                                  {
-                                                      type: {
-                                                          connect: { id: typeId }
-                                                      },
-                                                      value: resistance.value || null
-                                                  }
-                                              ]
-                                            : [];
-                                    }
-                                )
-                            },
-                            convertedRetreatCost: apiCard.convertedRetreatCost || null,
-                            rules: apiCard.rules || [],
-                            ancientTraitName: apiCard.ancientTraitName || null,
-                            ancientTraitText: apiCard.ancientTraitText || null,
-                            setId: dbSet.id,
-                            number: apiCard.number,
-                            artist: apiCard.artist || null,
-                            rarity: apiCard.rarity || null,
-                            nationalPokedexNumbers: apiCard.nationalPokedexNumbers || [],
-                            // Legalities
-                            standard: apiCard.legalities?.standard || null,
-                            expanded: apiCard.legalities?.expanded || null,
-                            unlimited: apiCard.legalities?.unlimited || null,
-                            imageKey: imageKey
-                        }
-                    });
-                }
+    const incompleteSets = setCompletenessChecks.filter((set) => !set.isComplete);
+    if (incompleteSets.length === 0) {
+        console.log('All sets are up to date. Card sync complete.');
+        return;
+    }
+    console.log(`Found ${incompleteSets.length} incomplete sets. Fetching card data...`);
+
+    // Fetch card data for all incomplete sets simultaneously
+    const allFetchedCardData = (
+        await processInBatches(incompleteSets, 5, async (dbSet) => {
+            try {
+                const cardsResponse = await fetch(
+                            `https://api.pokemontcg.io/v2/cards?q=set.id:${dbSet.id}`,
+                            {
+                                headers: { 'X-Api-key': process.env.POKEMONTCG_API_KEY! }
+                            }
+                        );
+                const { data: cardsData } = ApiCardResponseSchema.parse(await cardsResponse.json());
+                return { dbSet, cardsData};
             } catch (error) {
-                console.error('API Card response did not match schema: ', error);
+                console.error(`API Card response error for set ${dbSet.name}:`, error);
+                return null;
             }
-        } else {
-            console.log('- Set complete, skipping -');
+        })
+    ).filter((result): result is NonNullable<typeof result> => result !== null);
+
+    // Insert cards simultaneously
+    // await Promise.all(
+    //     allFetchedCardData.map(async ({ dbSet, cardsData }) => {
+    //         const existingCardIds = new Set(
+    //             (await prisma.card.findMany({ where: { setId: dbSet.id}, select: { id: true} } )).map(
+    //                 (c) => c.id
+    //             )
+    //         );
+
+    //         const cardsToCreate = cardsData.filter((card) => !existingCardIds.has(card.id));
+
+    //         if (cardsToCreate.length === 0) {
+    //             console.log(`- All cards for set ${dbSet.name} already exist. Skipping insertions. -`);
+    //             return;
+    //         }
+
+    //         const newCardPromises = cardsToCreate.map(async (apiCard) => {
+    //             let imageKey: string | null = null;
+    //             if (apiCard.images?.large) {
+    //                 const key = `cards/${apiCard.id}.png`;
+    //                 const imageExists = await doesImageExistInR2(key);
+    //                 if (!imageExists) {
+    //                     imageKey = await uploadImageToR2(apiCard.images.large, key);
+    //                 } else {
+    //                     // Image is in R2 but is not yet linked to card
+    //                     imageKey = key;
+    //                 }
+
+    //             }
+    //             return {
+    //                 id: apiCard.id,
+    //                 name: apiCard.name,
+    //                 supertype: apiCard.supertype,
+    //                 subtypes: {
+    //                     // Match api subtypes to our map containing coresponding ids
+    //                     create: (apiCard.subtypes || []).flatMap(
+    //                         (subtypeName: string) => {
+    //                             const subtypeId = subtypeNameToIdMap.get(subtypeName);
+    //                             return subtypeId ? [{ subtypeId: subtypeId }] : [];
+    //                         }
+    //                     )
+    //                 },
+    //                 hp: apiCard.hp ? parseInt(apiCard.hp, 10) : null,
+    //                 types: {
+    //                     create: (apiCard.types || []).flatMap((typeName: string) => {
+    //                         const typeId = typeNameToIdMap.get(typeName);
+    //                         return typeId ? [{ typeId: typeId }] : [];
+    //                     })
+    //                 },
+    //                 evolvesFrom: apiCard.evolvesFrom || null,
+    //                 evolvesTo: apiCard.evolvesTo || [],
+    //                 abilities: {
+    //                     create: (apiCard.abilities || []).map(
+    //                         (ability: ApiAbility) => ({
+    //                             name: ability.name,
+    //                             text: ability.text,
+    //                             type: ability.type
+    //                         })
+    //                     )
+    //                 },
+    //                 attacks: {
+    //                     create: (apiCard.attacks || []).map((attack: ApiAttack) => ({
+    //                         name: attack.name,
+    //                         cost: {
+    //                             create: (attack.cost || []).flatMap(
+    //                                 (costName: string) => {
+    //                                     const typeId = typeNameToIdMap.get(costName);
+    //                                     return typeId
+    //                                         ? [
+    //                                             {
+    //                                                 type: {
+    //                                                     connect: {
+    //                                                         id: typeId
+    //                                                     }
+    //                                                 }
+    //                                             }
+    //                                         ]
+    //                                         : [];
+    //                                 }
+    //                             )
+    //                         },
+    //                         convertedEnergyCost: attack.convertedEnergyCost,
+    //                         damage: attack.damage,
+    //                         text: attack.text
+    //                     }))
+    //                 },
+    //                 weaknesses: {
+    //                     create: (apiCard.weaknesses || []).flatMap(
+    //                         (weakness: ApiWeakness) => {
+    //                             const typeId = typeNameToIdMap.get(weakness.type);
+    //                             return typeId
+    //                                 ? [
+    //                                     {
+    //                                         type: {
+    //                                             connect: { id: typeId }
+    //                                         },
+    //                                         value: weakness.value || null
+    //                                     }
+    //                                 ]
+    //                                 : [];
+    //                         }
+    //                     )
+    //                 },
+    //                 resistances: {
+    //                     create: (apiCard.resistances || []).flatMap(
+    //                         (resistance: ApiResistance) => {
+    //                             const typeId = typeNameToIdMap.get(resistance.type);
+    //                             return typeId
+    //                                 ? [
+    //                                     {
+    //                                         type: {
+    //                                             connect: { id: typeId }
+    //                                         },
+    //                                         value: resistance.value || null
+    //                                     }
+    //                                 ]
+    //                                 : [];
+    //                         }
+    //                     )
+    //                 },
+    //                 convertedRetreatCost: apiCard.convertedRetreatCost || null,
+    //                 rules: apiCard.rules || [],
+    //                 ancientTraitName: apiCard.ancientTraitName || null,
+    //                 ancientTraitText: apiCard.ancientTraitText || null,
+    //                 setId: dbSet.id,
+    //                 number: apiCard.number,
+    //                 artist: apiCard.artist || null,
+    //                 rarity: apiCard.rarity || null,
+    //                 nationalPokedexNumbers: apiCard.nationalPokedexNumbers || [],
+    //                 // Legalities
+    //                 standard: apiCard.legalities?.standard || null,
+    //                 expanded: apiCard.legalities?.expanded || null,
+    //                 unlimited: apiCard.legalities?.unlimited || null,
+    //                 imageKey: imageKey
+    //             };
+    //         })
+    //         const newCardsData = (await Promise.all(newCardPromises)).filter(
+    //             (card): card is NonNullable<typeof card> => card !== null
+    //         );
+    //         if (newCardsData.length > 0) {
+    //             console.log(`- Inserting ${newCardsData.length} new cards for set ${dbSet.name} -`);
+    //             await Promise.all(
+    //                 newCardsData.map((cardData) => {
+    //                     return prisma.card.create({ data: cardData as any});
+    //                 })
+    //             );
+    //         };
+    //     }) 
+    // );
+
+    for (const { dbSet, cardsData } of allFetchedCardData) {
+        const existingCardIds = new Set(
+            (await prisma.card.findMany({ where: { setId: dbSet.id }, select: { id: true } })).map(
+                (c) => c.id
+            )
+        );
+
+        const cardsToCreate = cardsData.filter((card) => !existingCardIds.has(card.id));
+        if (cardsToCreate.length === 0) {
+            console.log(`- All cards for set ${dbSet.name} already exist. Skipping insertions. -`);
+            continue; 
+        }
+
+        console.log(`Processing ${cardsToCreate.length} new cards for set ${dbSet.name}...`);
+        
+        const newCardsDataPromises = (apiCard: ApiCard) => {
+            return (async () => {
+                let imageKey: string | null = null;
+                if (apiCard.images?.large) {
+                    const key = `cards/${apiCard.id}.png`;
+                    const imageExists = await doesImageExistInR2(key);
+                    if (!imageExists) {
+                        imageKey = await uploadImageToR2(apiCard.images.large, key);
+                    } else {
+                        imageKey = key;
+                    }
+                }
+                return {
+                    id: apiCard.id,
+                    name: apiCard.name,
+                    supertype: apiCard.supertype,
+                    subtypes: {
+                        create: (apiCard.subtypes || []).flatMap((subtypeName: string) => {
+                            const subtypeId = subtypeNameToIdMap.get(subtypeName);
+                            return subtypeId ? [{ subtypeId: subtypeId }] : [];
+                        })
+                    },
+                    hp: apiCard.hp ? parseInt(apiCard.hp, 10) : null,
+                    types: {
+                        create: (apiCard.types || []).flatMap((typeName: string) => {
+                            const typeId = typeNameToIdMap.get(typeName);
+                            return typeId ? [{ typeId: typeId }] : [];
+                        })
+                    },
+                    evolvesFrom: apiCard.evolvesFrom || null,
+                    evolvesTo: apiCard.evolvesTo || [],
+                    abilities: { create: apiCard.abilities || [] },
+                    attacks: {
+                        create: (apiCard.attacks || []).map((attack) => ({
+                            name: attack.name,
+                            cost: {
+                                create: (attack.cost || []).flatMap((costName) => {
+                                    const typeId = typeNameToIdMap.get(costName);
+                                    return typeId ? [{ type: { connect: { id: typeId } } }] : [];
+                                })
+                            },
+                            convertedEnergyCost: attack.convertedEnergyCost,
+                            damage: attack.damage,
+                            text: attack.text
+                        }))
+                    },
+                    weaknesses: {
+                        create: (apiCard.weaknesses || []).flatMap((weakness) => {
+                            const typeId = typeNameToIdMap.get(weakness.type);
+                            return typeId ? [{ type: { connect: { id: typeId } }, value: weakness.value || null }] : [];
+                        })
+                    },
+                    resistances: {
+                        create: (apiCard.resistances || []).flatMap((resistance) => {
+                            const typeId = typeNameToIdMap.get(resistance.type);
+                            return typeId ? [{ type: { connect: { id: typeId } }, value: resistance.value || null }] : [];
+                        })
+                    },
+                    convertedRetreatCost: apiCard.convertedRetreatCost || null,
+                    rules: apiCard.rules || [],
+                    ancientTraitName: apiCard.ancientTraitName || null,
+                    ancientTraitText: apiCard.ancientTraitText || null,
+                    setId: dbSet.id,
+                    number: apiCard.number,
+                    artist: apiCard.artist || null,
+                    rarity: apiCard.rarity || null,
+                    nationalPokedexNumbers: apiCard.nationalPokedexNumbers || [],
+                    standard: apiCard.legalities?.standard || null,
+                    expanded: apiCard.legalities?.expanded || null,
+                    unlimited: apiCard.legalities?.unlimited || null,
+                    imageKey: imageKey
+                };
+            })();
+        };
+        
+        const newCardsData = (await processInBatches(cardsToCreate, 25, newCardsDataPromises))
+            .filter((card): card is NonNullable<typeof card> => card !== null);
+
+        if (newCardsData.length > 0) {
+            console.log(`- Inserting ${newCardsData.length} new cards for set ${dbSet.name} -`);
+            await Promise.all(
+                newCardsData.map((cardData) => {
+                    return prisma.card.create({ data: cardData as any });
+                })
+            );
         }
     }
 }
+
 
 async function main() {
     console.log('Starting database population');
