@@ -3,6 +3,7 @@ import fetch, { RequestInit, Response } from 'node-fetch';
 import { PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { r2 } from '../src/lib/r2';
 import { z } from 'zod';
+// Note: refactor to use Axios
 
 const prisma = new PrismaClient();
 const BUCKET_NAME = 'cardledger';
@@ -345,7 +346,7 @@ async function syncCards(
     let imageUploadsDisabled = false;
 
     // Fetch all sets from the database
-    const setsInDb = await prisma.set.findMany({
+    const allSetsInDb = await prisma.set.findMany({
         select: {
             id: true,
             total: true,
@@ -354,8 +355,33 @@ async function syncCards(
         }
     });
 
+    // Sets missing cards or imageKeys
+    const setsMissingCards = allSetsInDb.filter((dbSet) => dbSet._count.cards < dbSet.total);
+    const setsMissingImages = await prisma.set.findMany({
+        where: {
+            cards: {
+                some: {
+                    imageKey: null
+                }
+            }
+        },
+        include: {
+            _count: {
+                select: {
+                    cards: true
+                }
+            }
+        }
+    });
     // Determine which sets need to be synced
-    const incompleteSets = setsInDb.filter((dbSet) => dbSet._count.cards < dbSet.total);
+    const incompleteSetsMap = new Map();
+    for (const set of setsMissingCards) {
+        incompleteSetsMap.set(set.id, set);
+    }
+    for (const set of setsMissingImages) {
+        incompleteSetsMap.set(set.id, set);
+    }
+    const incompleteSets = Array.from(incompleteSetsMap.values());
 
     if (incompleteSets.length === 0) {
         console.log('All sets are up to date. Card sync complete.');
