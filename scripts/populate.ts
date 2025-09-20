@@ -18,8 +18,8 @@ const ApiAttackSchema = z.object({
     name: z.string(),
     cost: z.array(z.string()),
     convertedEnergyCost: z.number(),
-    damage: z.string(),
-    text: z.string()
+    damage: z.string().optional(),
+    text: z.string().optional()
 });
 
 const ApiWeaknessSchema = z.object({
@@ -391,8 +391,8 @@ async function syncCards(
                                         })
                                     },
                                     convertedEnergyCost: attack.convertedEnergyCost,
-                                    damage: attack.damage,
-                                    text: attack.text
+                                    damage: attack.damage || null,
+                                    text: attack.text || null
                                 }))
                             },
                             weaknesses: {
@@ -434,7 +434,7 @@ async function syncCards(
                             expanded: apiCard.legalities?.expanded || null,
                             unlimited: apiCard.legalities?.unlimited || null,
                             imageKey: imageKey
-                        }
+                        } //
                     });
                 } catch (dbError) {
                     console.error(`Database insertion failed for card ${apiCard.name}:`, dbError);
