@@ -201,14 +201,19 @@ async function seedMasterData() {
     try {
         // Get types and subtypes lists from API
         const [typesResponse, subtypesResponse] = await Promise.all([
-            fetch('https://api.pokemontcg.io/v2/types', {
+            fetchWithRetries('https://api.pokemontcg.io/v2/types', {
                 headers: { 'X-Api-Key': process.env.POKEMONTCG_API_KEY! }
             }),
-            fetch('https://api.pokemontcg.io/v2/subtypes', {
+            fetchWithRetries('https://api.pokemontcg.io/v2/subtypes', {
                 headers: { 'X-Api-Key': process.env.POKEMONTCG_API_KEY! }
             })
         ]);
-
+        if (!typesResponse || !subtypesResponse) {
+            throw new Error('Failed to fetch master data after multiple retries.');
+        }
+        if (!typesResponse.ok || !subtypesResponse.ok) {
+            throw new Error('API error when fetching master data.');
+        }
         const { data: pokemonTypes } = ApiStringsResponseSchema.parse(await typesResponse.json());
         const { data: pokemonSubtypes } = ApiStringsResponseSchema.parse(
             await subtypesResponse.json()
