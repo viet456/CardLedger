@@ -292,6 +292,11 @@ async function syncCards(
 ) {
     console.log('-- Syncing cards sequentially --');
 
+    // Cancel image uploads when bucket loses connection
+    let consecutiveUploadFailures = 0;
+    const FAILURE_THRESHOLD = 5;
+    let imageUploadsDisabled = false;
+
     // Fetch all sets from the database
     const setsInDb = await prisma.set.findMany({
         select: {
@@ -350,17 +355,37 @@ async function syncCards(
 
             // Use a for loop to process and insert cards one at a time, to handle image uploads sequentially
             for (const apiCard of cardsToCreate) {
+                // Upload card image from API to the bucket
                 let imageKey: string | null = null;
-                if (apiCard.images?.large) {
+                if (apiCard.images?.large && !imageUploadsDisabled) {
                     const key = `cards/${apiCard.id}.png`;
                     console.log(` -> Checking for image in R2: ${key}`);
                     const imageExists = await doesImageExistInR2(key);
                     if (!imageExists) {
                         imageKey = await uploadImageToR2(apiCard.images.large, key);
+
+                        if (imageKey === null) {
+                            consecutiveUploadFailures++;
+                            console.log(
+                                ` -> ⚠️ Upload failed. Consecutive failures: ${consecutiveUploadFailures}`
+                            );
+                        } else {
+                            // Reset the counter on a successful upload
+                            consecutiveUploadFailures = 0;
+                        }
                     } else {
                         console.log(` -> Image already exists in R2. Skipping upload.`);
                         imageKey = key;
+                        consecutiveUploadFailures = 0;
                     }
+                }
+
+                // Image upload circuit breaker
+                if (consecutiveUploadFailures >= FAILURE_THRESHOLD && !imageUploadsDisabled) {
+                    imageUploadsDisabled = true;
+                    console.error(
+                        ` -> ❌ CRITICAL: Disabling future image uploads due to ${FAILURE_THRESHOLD} consecutive failures.`
+                    );
                 }
 
                 try {
