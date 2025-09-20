@@ -1,5 +1,5 @@
 import { PrismaClient } from '../src/generated/prisma/index.js';
-import fetch from 'node-fetch';
+import fetch, { RequestInit, Response } from 'node-fetch';
 import { PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { r2 } from '../src/lib/r2';
 import { z } from 'zod';
@@ -108,6 +108,34 @@ type ApiCard = z.infer<typeof ApiCardSchema>;
 type ApiSet = z.infer<typeof ApiSetSchema>;
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function fetchWithRetries(
+    url: string,
+    options: RequestInit,
+    retries: number = 3,
+    initialDelay: number = 2000
+): Promise<Response | null> {
+    let currentDelay = initialDelay;
+    for (let i = 0; i < retries; i++) {
+        try {
+            const response = await fetch(url, options);
+            if (response.ok || (response.status >= 400 && response.status < 500)) {
+                return response;
+            }
+            console.log(
+                ` -> Server error (${response.status}). Retrying in ${currentDelay / 1000}s... (Attempt ${i + 1}/${retries})`
+            );
+        } catch (error) {
+            console.log(
+                ` -> Network error. Retrying in ${currentDelay / 1000}s... (Attempt ${i + 1}/${retries})`
+            );
+        }
+        await delay(currentDelay);
+        currentDelay *= 2; // Double the delay for the next attempt
+    }
+    console.error(` -> ❌ All ${retries} retry attempts failed for URL: ${url}`);
+    return null;
+}
 
 async function doesImageExistInR2(key: string): Promise<boolean> {
     try {
@@ -322,14 +350,19 @@ async function syncCards(
         console.log(`- Fetching cards for set: ${dbSet.name} -`);
         // Create a card item from the set
         try {
-            const cardsResponse = await fetch(
+            const cardsResponse = await fetchWithRetries(
                 `https://api.pokemontcg.io/v2/cards?q=set.id:${dbSet.id}`,
                 { headers: { 'X-Api-Key': process.env.POKEMONTCG_API_KEY! } }
             );
 
+            if (!cardsResponse) {
+                console.error(`> ❌ Skipping set ${dbSet.name} after all retries failed.`);
+                continue; // Skip to the next set
+            }
+
             // Check for API errors before parsing JSON
             if (!cardsResponse.ok) {
-                console.error(`API error for set ${dbSet.name}: ${cardsResponse.statusText}`);
+                console.error(`> ❌ API error for set ${dbSet.name}: ${cardsResponse.statusText}`);
                 continue; // Skip to the next set
             }
 
