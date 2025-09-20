@@ -107,6 +107,8 @@ type ApiResistance = z.infer<typeof ApiResistanceSchema>;
 type ApiCard = z.infer<typeof ApiCardSchema>;
 type ApiSet = z.infer<typeof ApiSetSchema>;
 
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 async function doesImageExistInR2(key: string): Promise<boolean> {
     try {
         const command = new HeadObjectCommand({
@@ -128,13 +130,13 @@ async function uploadImageToR2(imageUrl: string, key: string): Promise<string | 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
     try {
+        console.log(` -> Fetching image from URL: ${imageUrl}`);
         const response = await fetch(imageUrl, {
             signal: controller.signal
         });
         clearTimeout(timeoutId);
         if (!response.ok) {
             console.log(`Failed to fetch image: ${response.statusText}`);
-
             throw new Error(`Failed to fetch image: ${response.statusText}`);
         }
         const imageBuffer = Buffer.from(await response.arrayBuffer());
@@ -144,11 +146,12 @@ async function uploadImageToR2(imageUrl: string, key: string): Promise<string | 
             Body: imageBuffer,
             ContentType: response.headers.get('content-type') || 'image/png'
         });
+        console.log(` -> Uploading image to R2 with key: ${key}`);
         await r2.send(command);
-        console.log(`Successfully sent upload command for image: ${key}`);
+        console.log(` -> ✅ Successfully uploaded image: ${key}`);
         return key;
     } catch (error) {
-        console.error(`Error in uploading/verifing image for key ${key}:`, error);
+        console.error(` -> ❌ Error in uploading/verifing image for key ${key}:`, error);
         return null;
     } finally {
         clearTimeout(timeoutId);
@@ -312,6 +315,7 @@ async function syncCards(
     // Process each incomplete set sequentially
     for (const dbSet of incompleteSets) {
         console.log(`- Fetching cards for set: ${dbSet.name} -`);
+        // Create a card item from the set
         try {
             const cardsResponse = await fetch(
                 `https://api.pokemontcg.io/v2/cards?q=set.id:${dbSet.id}`,
@@ -349,15 +353,18 @@ async function syncCards(
                 let imageKey: string | null = null;
                 if (apiCard.images?.large) {
                     const key = `cards/${apiCard.id}.png`;
+                    console.log(` -> Checking for image in R2: ${key}`);
                     const imageExists = await doesImageExistInR2(key);
                     if (!imageExists) {
                         imageKey = await uploadImageToR2(apiCard.images.large, key);
                     } else {
+                        console.log(` -> Image already exists in R2. Skipping upload.`);
                         imageKey = key;
                     }
                 }
 
                 try {
+                    console.log(` -> Inserting card ${apiCard.name} into database.`);
                     await prisma.card.create({
                         data: {
                             id: apiCard.id,
@@ -436,9 +443,15 @@ async function syncCards(
                             imageKey: imageKey
                         } //
                     });
+                    console.log(` -> ✅ Successfully inserted card ${apiCard.name}.`);
                 } catch (dbError) {
-                    console.error(`Database insertion failed for card ${apiCard.name}:`, dbError);
+                    console.error(
+                        ` -> ❌ Database insertion failed for card ${apiCard.name}:`,
+                        dbError
+                    );
                 }
+                // Wait 200ms before uploading next card
+                await delay(200);
             }
         } catch (error) {
             console.error(`API Card response error for set ${dbSet.name}:`, error);

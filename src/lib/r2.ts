@@ -21,7 +21,9 @@ const S3 = new S3Client({
         secretAccessKey: R2_SECRET_ACCESS_KEY!
     },
     requestHandler: new NodeHttpHandler({
-        httpsAgent: agent
+        httpsAgent: agent,
+        connectionTimeout: 5000, // 5 seconds to connect
+        requestTimeout: 10000 // 10 seconds for the request to complete
     })
 });
 
