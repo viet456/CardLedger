@@ -113,7 +113,7 @@ async function fetchWithRetries(
     url: string,
     options: RequestInit,
     retries: number = 3,
-    initialDelay: number = 2000
+    initialDelay: number = 3000
 ): Promise<Response | null> {
     let currentDelay = initialDelay;
     for (let i = 0; i < retries; i++) {
@@ -154,7 +154,10 @@ async function doesImageExistInR2(key: string): Promise<boolean> {
     }
 }
 
-async function uploadImageToR2(imageUrl: string, key: string): Promise<string | null> {
+async function uploadImageToR2(
+    imageUrl: string,
+    key: string
+): Promise<{ key: string | null; isHardFailure: boolean }> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
     try {
@@ -164,6 +167,10 @@ async function uploadImageToR2(imageUrl: string, key: string): Promise<string | 
         });
         clearTimeout(timeoutId);
         if (!response.ok) {
+            if (response.status === 404) {
+                console.log(` -> Image not found at source (404). Skipping.`);
+                return { key: null, isHardFailure: false };
+            }
             console.log(`Failed to fetch image: ${response.statusText}`);
             throw new Error(`Failed to fetch image: ${response.statusText}`);
         }
@@ -177,10 +184,10 @@ async function uploadImageToR2(imageUrl: string, key: string): Promise<string | 
         console.log(` -> Uploading image to R2 with key: ${key}`);
         await r2.send(command);
         console.log(` -> ✅ Successfully uploaded image: ${key}`);
-        return key;
+        return { key: key, isHardFailure: false };
     } catch (error) {
         console.error(` -> ❌ Error in uploading/verifing image for key ${key}:`, error);
-        return null;
+        return { key: null, isHardFailure: true };
     } finally {
         clearTimeout(timeoutId);
     }
@@ -247,8 +254,19 @@ async function prepareLookups(): Promise<{
 async function syncSets() {
     console.log('-- Syncing sets -- ');
     // Ensure sets exist in our database
-    const [setsInDb, setsResponse] = await Promise.all([
-        prisma.set.findMany({
+
+    try {
+        const setsResponse = await fetchWithRetries('https://api.pokemontcg.io/v2/sets', {
+            headers: { 'X-Api-Key': process.env.POKEMONTCG_API_KEY! }
+        });
+        if (!setsResponse) {
+            throw new Error('Failed to fetch sets from API after multiple retries. Aborting.');
+        }
+        if (!setsResponse.ok) {
+            // Client side errors
+            throw new Error(`API error when fetching sets: ${setsResponse.statusText}`);
+        }
+        const setsInDb = await prisma.set.findMany({
             select: {
                 id: true,
                 total: true,
@@ -256,18 +274,11 @@ async function syncSets() {
                     select: { cards: true }
                 }
             }
-        }),
-        fetch('https://api.pokemontcg.io/v2/sets', {
-            headers: { 'X-Api-Key': process.env.POKEMONTCG_API_KEY! }
-        })
-    ]);
-    const setsInDbMap = new Map();
-    for (const set of setsInDb) {
-        setsInDbMap.set(set.id, set);
-    }
-
-    try {
-        // Check response for error HTML
+        });
+        const setsInDbMap = new Map();
+        for (const set of setsInDb) {
+            setsInDbMap.set(set.id, set);
+        }
         const responseText = await setsResponse.text();
         let setsData: ApiSet[];
         try {
@@ -278,7 +289,6 @@ async function syncSets() {
             console.error(responseText);
             throw parseError;
         }
-
         const setPromises = setsData.map(async (apiSet) => {
             // Check if set already exists in db
             const existingSet = setsInDbMap.get(apiSet.id);
@@ -286,7 +296,7 @@ async function syncSets() {
                 console.log(`Creating new set: ${apiSet.name}`);
 
                 // Upload set images
-                const [symbolImageKey, logoImageKey] = await Promise.all([
+                const [symbolUploadResult, logoUploadResult] = await Promise.all([
                     uploadImageToR2(apiSet.images.symbol, `sets/${apiSet.id}-symbol.png`),
                     uploadImageToR2(apiSet.images.logo, `sets/${apiSet.id}-logo.png`)
                 ]);
@@ -301,8 +311,8 @@ async function syncSets() {
                         ptcgoCode: apiSet.ptcgoCode,
                         releaseDate: new Date(apiSet.releaseDate),
                         updatedAt: new Date(apiSet.updatedAt),
-                        symbolImageKey: symbolImageKey,
-                        logoImageKey: logoImageKey
+                        symbolImageKey: symbolUploadResult.key,
+                        logoImageKey: logoUploadResult.key
                     }
                 });
             } else if (existingSet.total !== apiSet.total) {
@@ -315,7 +325,6 @@ async function syncSets() {
                 });
             }
         });
-
         await Promise.all(setPromises);
     } catch (error) {
         console.error('❌❌ An error occured during set synchronization: ', error);
@@ -405,9 +414,10 @@ async function syncCards(
                     console.log(` -> Checking for image in R2: ${key}`);
                     const imageExists = await doesImageExistInR2(key);
                     if (!imageExists) {
-                        imageKey = await uploadImageToR2(apiCard.images.large, key);
+                        const uploadResult = await uploadImageToR2(apiCard.images.large, key);
+                        imageKey = uploadResult.key;
 
-                        if (imageKey === null) {
+                        if (uploadResult.isHardFailure) {
                             consecutiveUploadFailures++;
                             console.log(
                                 ` -> ⚠️ Upload failed. Consecutive failures: ${consecutiveUploadFailures}`
