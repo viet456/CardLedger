@@ -220,7 +220,7 @@ async function seedMasterData() {
         );
 
         // Write types tables in DB
-        await Promise.all([
+        await prisma.$transaction([
             prisma.type.createMany({
                 data: pokemonTypes.map((name) => ({ name })),
                 skipDuplicates: true
