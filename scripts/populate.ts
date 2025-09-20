@@ -218,7 +218,7 @@ async function seedMasterData() {
             })
         ]);
     } catch (error) {
-        console.error('Failed to seed master data from API:', error);
+        console.error('❌❌ Failed to seed master data from API:', error);
         process.exit(1);
     }
     console.log('Master data seeded');
@@ -267,7 +267,17 @@ async function syncSets() {
     }
 
     try {
-        const { data: setsData } = ApiSetResponseSchema.parse(await setsResponse.json());
+        // Check response for error HTML
+        const responseText = await setsResponse.text();
+        let setsData: ApiSet[];
+        try {
+            const jsonData = JSON.parse(responseText);
+            setsData = ApiSetResponseSchema.parse(jsonData).data;
+        } catch (parseError) {
+            console.error('❌❌ Failed to parse API Set response as JSON. Server response:');
+            console.error(responseText);
+            throw parseError;
+        }
 
         const setPromises = setsData.map(async (apiSet) => {
             // Check if set already exists in db
@@ -308,7 +318,7 @@ async function syncSets() {
 
         await Promise.all(setPromises);
     } catch (error) {
-        console.error('API Set response did not match schema: ', error);
+        console.error('❌❌ An error occured during set synchronization: ', error);
         process.exit(1);
     }
     console.log('Set sync complete');
@@ -526,7 +536,7 @@ async function main() {
     await syncSets();
     await syncCards(typeNameToIdMap, subtypeNameToIdMap);
 
-    console.log('-- Database population complete --');
+    console.log('-- ✅ Database population complete ✅ --');
 }
 
 main()
