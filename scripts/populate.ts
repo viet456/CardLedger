@@ -415,148 +415,165 @@ async function syncCards(
                 console.error(`> ❌ API error for set ${dbSet.name}: ${cardsResponse.statusText}`);
                 continue; // Skip to the next set
             }
-
             const { data: cardsData } = ApiCardResponseSchema.parse(await cardsResponse.json());
 
-            // Bulk find existing card IDs to optimize
-            const existingCardIds = new Set(
-                (
-                    await prisma.card.findMany({ where: { setId: dbSet.id }, select: { id: true } })
-                ).map((c) => c.id)
-            );
-
-            const cardsToCreate = cardsData.filter((card) => !existingCardIds.has(card.id));
-
-            if (cardsToCreate.length === 0) {
-                console.log(
-                    `- All cards for set ${dbSet.name} already exist. Skipping insertions. -`
-                );
-                continue;
-            }
-
-            console.log(`- Inserting ${cardsToCreate.length} new cards for set ${dbSet.name} -`);
+            // Fetch cards in the DB with their imageKey status
+            const existingCardsInDb = await prisma.card.findMany({
+                where: { setId: dbSet.id },
+                select: { id: true, imageKey: true }
+            });
+            const existingCardsMap = new Map(existingCardsInDb.map((c) => [c.id, c]));
+            console.log(`- Syncing ${cardsData.length} cards for set ${dbSet.name} -`);
 
             // Use a for loop to process and insert cards one at a time, to handle image uploads sequentially
-            for (const apiCard of cardsToCreate) {
-                // Upload card image from API to the bucket
-                let imageKey: string | null = null;
-                if (apiCard.images?.large && !imageUploadsDisabled) {
-                    const key = `cards/${apiCard.id}.png`;
-                    console.log(` -> Checking for image in R2: ${key}`);
-                    const imageExists = await doesImageExistInR2(key);
-                    if (!imageExists) {
-                        const uploadResult = await uploadImageToR2(apiCard.images.large, key);
-                        imageKey = uploadResult.key;
+            for (const apiCard of cardsData) {
+                const existingCard = existingCardsMap.get(apiCard.id);
 
-                        if (uploadResult.isHardFailure) {
-                            consecutiveUploadFailures++;
-                            console.log(
-                                ` -> ⚠️ Upload failed. Consecutive failures: ${consecutiveUploadFailures}`
-                            );
+                if (!existingCard) {
+                    // Create new card
+                    // Upload card image from API to the bucket
+                    let imageKey: string | null = null;
+                    if (apiCard.images?.large && !imageUploadsDisabled) {
+                        const key = `cards/${apiCard.id}.png`;
+                        console.log(` -> Checking for image in R2: ${key}`);
+                        const imageExists = await doesImageExistInR2(key);
+                        if (!imageExists) {
+                            const uploadResult = await uploadImageToR2(apiCard.images.large, key);
+                            imageKey = uploadResult.key;
+
+                            if (uploadResult.isHardFailure) {
+                                consecutiveUploadFailures++;
+                                console.log(
+                                    ` -> ⚠️ Upload failed. Consecutive failures: ${consecutiveUploadFailures}`
+                                );
+                            } else {
+                                // Reset the counter on a successful upload
+                                consecutiveUploadFailures = 0;
+                            }
                         } else {
-                            // Reset the counter on a successful upload
+                            console.log(` -> Image already exists in R2. Skipping upload.`);
+                            imageKey = key;
                             consecutiveUploadFailures = 0;
                         }
-                    } else {
-                        console.log(` -> Image already exists in R2. Skipping upload.`);
-                        imageKey = key;
+                    }
+
+                    try {
+                        console.log(` -> Inserting card ${apiCard.name} into database.`);
+                        await prisma.card.create({
+                            data: {
+                                id: apiCard.id,
+                                name: apiCard.name,
+                                supertype: apiCard.supertype,
+                                subtypes: {
+                                    create: (apiCard.subtypes || []).flatMap((subtypeName) => {
+                                        const subtypeId = subtypeNameToIdMap.get(subtypeName);
+                                        return subtypeId ? [{ subtypeId: subtypeId }] : [];
+                                    })
+                                },
+                                hp: apiCard.hp ? parseInt(apiCard.hp, 10) : null,
+                                types: {
+                                    create: (apiCard.types || []).flatMap((typeName) => {
+                                        const typeId = typeNameToIdMap.get(typeName);
+                                        return typeId ? [{ typeId: typeId }] : [];
+                                    })
+                                },
+                                evolvesFrom: apiCard.evolvesFrom || null,
+                                evolvesTo: apiCard.evolvesTo || [],
+                                abilities: { create: apiCard.abilities || [] },
+                                attacks: {
+                                    create: (apiCard.attacks || []).map((attack) => ({
+                                        name: attack.name,
+                                        cost: {
+                                            create: (attack.cost || []).flatMap((costName) => {
+                                                const typeId = typeNameToIdMap.get(costName);
+                                                return typeId
+                                                    ? [{ type: { connect: { id: typeId } } }]
+                                                    : [];
+                                            })
+                                        },
+                                        convertedEnergyCost: attack.convertedEnergyCost,
+                                        damage: attack.damage || null,
+                                        text: attack.text || null
+                                    }))
+                                },
+                                weaknesses: {
+                                    create: (apiCard.weaknesses || []).flatMap((weakness) => {
+                                        const typeId = typeNameToIdMap.get(weakness.type);
+                                        return typeId
+                                            ? [
+                                                  {
+                                                      type: { connect: { id: typeId } },
+                                                      value: weakness.value || null
+                                                  }
+                                              ]
+                                            : [];
+                                    })
+                                },
+                                resistances: {
+                                    create: (apiCard.resistances || []).flatMap((resistance) => {
+                                        const typeId = typeNameToIdMap.get(resistance.type);
+                                        return typeId
+                                            ? [
+                                                  {
+                                                      type: { connect: { id: typeId } },
+                                                      value: resistance.value || null
+                                                  }
+                                              ]
+                                            : [];
+                                    })
+                                },
+                                convertedRetreatCost: apiCard.convertedRetreatCost || null,
+                                rules: apiCard.rules || [],
+                                ancientTraitName: apiCard.ancientTraitName || null,
+                                ancientTraitText: apiCard.ancientTraitText || null,
+                                setId: dbSet.id,
+                                number: apiCard.number,
+                                artist: apiCard.artist || null,
+                                rarity: apiCard.rarity || null,
+                                nationalPokedexNumbers: apiCard.nationalPokedexNumbers || [],
+                                standard: apiCard.legalities?.standard || null,
+                                expanded: apiCard.legalities?.expanded || null,
+                                unlimited: apiCard.legalities?.unlimited || null,
+                                imageKey: imageKey
+                            } //
+                        });
+                        console.log(` -> ✅ Successfully inserted card ${apiCard.name}.`);
+                    } catch (dbError) {
+                        console.error(
+                            ` -> ❌ Database insertion failed for card ${apiCard.name}:`,
+                            dbError
+                        );
+                    }
+                } else if (
+                    !existingCard.imageKey &&
+                    apiCard.images?.large &&
+                    !imageUploadsDisabled
+                ) {
+                    // Existing card is missing image
+                    console.log(` -> Updating missing image for ${apiCard.name}...`);
+                    const key = `cards/${apiCard.id}.png`;
+                    const uploadResult = await uploadImageToR2(apiCard.images.large, key);
+
+                    if (uploadResult.key) {
+                        await prisma.card.update({
+                            where: { id: apiCard.id },
+                            data: { imageKey: uploadResult.key }
+                        });
+                        console.log(` -> ✅ Successfully updated image for ${apiCard.name}.`);
                         consecutiveUploadFailures = 0;
                     }
+                    if (uploadResult.isHardFailure) {
+                        consecutiveUploadFailures++;
+                        console.log(
+                            ` -> ⚠️ Upload failed. Consecutive failures: ${consecutiveUploadFailures}`
+                        );
+                    }
                 }
-
                 // Image upload circuit breaker
                 if (consecutiveUploadFailures >= FAILURE_THRESHOLD && !imageUploadsDisabled) {
                     imageUploadsDisabled = true;
                     console.error(
                         ` -> ❌ CRITICAL: Disabling future image uploads due to ${FAILURE_THRESHOLD} consecutive failures.`
-                    );
-                }
-
-                try {
-                    console.log(` -> Inserting card ${apiCard.name} into database.`);
-                    await prisma.card.create({
-                        data: {
-                            id: apiCard.id,
-                            name: apiCard.name,
-                            supertype: apiCard.supertype,
-                            subtypes: {
-                                create: (apiCard.subtypes || []).flatMap((subtypeName) => {
-                                    const subtypeId = subtypeNameToIdMap.get(subtypeName);
-                                    return subtypeId ? [{ subtypeId: subtypeId }] : [];
-                                })
-                            },
-                            hp: apiCard.hp ? parseInt(apiCard.hp, 10) : null,
-                            types: {
-                                create: (apiCard.types || []).flatMap((typeName) => {
-                                    const typeId = typeNameToIdMap.get(typeName);
-                                    return typeId ? [{ typeId: typeId }] : [];
-                                })
-                            },
-                            evolvesFrom: apiCard.evolvesFrom || null,
-                            evolvesTo: apiCard.evolvesTo || [],
-                            abilities: { create: apiCard.abilities || [] },
-                            attacks: {
-                                create: (apiCard.attacks || []).map((attack) => ({
-                                    name: attack.name,
-                                    cost: {
-                                        create: (attack.cost || []).flatMap((costName) => {
-                                            const typeId = typeNameToIdMap.get(costName);
-                                            return typeId
-                                                ? [{ type: { connect: { id: typeId } } }]
-                                                : [];
-                                        })
-                                    },
-                                    convertedEnergyCost: attack.convertedEnergyCost,
-                                    damage: attack.damage || null,
-                                    text: attack.text || null
-                                }))
-                            },
-                            weaknesses: {
-                                create: (apiCard.weaknesses || []).flatMap((weakness) => {
-                                    const typeId = typeNameToIdMap.get(weakness.type);
-                                    return typeId
-                                        ? [
-                                              {
-                                                  type: { connect: { id: typeId } },
-                                                  value: weakness.value || null
-                                              }
-                                          ]
-                                        : [];
-                                })
-                            },
-                            resistances: {
-                                create: (apiCard.resistances || []).flatMap((resistance) => {
-                                    const typeId = typeNameToIdMap.get(resistance.type);
-                                    return typeId
-                                        ? [
-                                              {
-                                                  type: { connect: { id: typeId } },
-                                                  value: resistance.value || null
-                                              }
-                                          ]
-                                        : [];
-                                })
-                            },
-                            convertedRetreatCost: apiCard.convertedRetreatCost || null,
-                            rules: apiCard.rules || [],
-                            ancientTraitName: apiCard.ancientTraitName || null,
-                            ancientTraitText: apiCard.ancientTraitText || null,
-                            setId: dbSet.id,
-                            number: apiCard.number,
-                            artist: apiCard.artist || null,
-                            rarity: apiCard.rarity || null,
-                            nationalPokedexNumbers: apiCard.nationalPokedexNumbers || [],
-                            standard: apiCard.legalities?.standard || null,
-                            expanded: apiCard.legalities?.expanded || null,
-                            unlimited: apiCard.legalities?.unlimited || null,
-                            imageKey: imageKey
-                        } //
-                    });
-                    console.log(` -> ✅ Successfully inserted card ${apiCard.name}.`);
-                } catch (dbError) {
-                    console.error(
-                        ` -> ❌ Database insertion failed for card ${apiCard.name}:`,
-                        dbError
                     );
                 }
                 // Wait 200ms before uploading next card
