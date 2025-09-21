@@ -196,18 +196,18 @@ async function uploadImageToR2(
 
 async function seedMasterData() {
     console.log('Seeding master data...');
-
     // Seeds the types and subtypes tables
     try {
         // Get types and subtypes lists from API
-        const [typesResponse, subtypesResponse] = await Promise.all([
-            fetchWithRetries('https://api.pokemontcg.io/v2/types', {
-                headers: { 'X-Api-Key': process.env.POKEMONTCG_API_KEY! }
-            }),
-            fetchWithRetries('https://api.pokemontcg.io/v2/subtypes', {
-                headers: { 'X-Api-Key': process.env.POKEMONTCG_API_KEY! }
-            })
-        ]);
+        console.log(' -> Fetching types...');
+        const typesResponse = await fetchWithRetries('https://api.pokemontcg.io/v2/types', {
+            headers: { 'X-Api-Key': process.env.POKEMONTCG_API_KEY! }
+        });
+        console.log(' -> Fetching subtypes...');
+        const subtypesResponse = await fetchWithRetries('https://api.pokemontcg.io/v2/subtypes', {
+            headers: { 'X-Api-Key': process.env.POKEMONTCG_API_KEY! }
+        });
+
         if (!typesResponse || !subtypesResponse) {
             throw new Error('Failed to fetch master data after multiple retries.');
         }
