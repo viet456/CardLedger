@@ -114,7 +114,7 @@ async function fetchWithRetries(
     url: string,
     options: RequestInit,
     retries: number = 3,
-    initialDelay: number = 3000
+    initialDelay: number = 5000
 ): Promise<Response | null> {
     let currentDelay = initialDelay;
     for (let i = 0; i < retries; i++) {
@@ -203,17 +203,20 @@ async function seedMasterData() {
         const typesResponse = await fetchWithRetries('https://api.pokemontcg.io/v2/types', {
             headers: { 'X-Api-Key': process.env.POKEMONTCG_API_KEY! }
         });
+        // Fail-fast check for types
+        if (!typesResponse || !typesResponse.ok) {
+            throw new Error('API error when fetching types.');
+        }
+
         console.log(' -> Fetching subtypes...');
         const subtypesResponse = await fetchWithRetries('https://api.pokemontcg.io/v2/subtypes', {
             headers: { 'X-Api-Key': process.env.POKEMONTCG_API_KEY! }
         });
+        // Fail-fast check for subtypes
+        if (!subtypesResponse || !subtypesResponse.ok) {
+            throw new Error('API error when fetching subtypes.');
+        }
 
-        if (!typesResponse || !subtypesResponse) {
-            throw new Error('Failed to fetch master data after multiple retries.');
-        }
-        if (!typesResponse.ok || !subtypesResponse.ok) {
-            throw new Error('API error when fetching master data.');
-        }
         const { data: pokemonTypes } = ApiStringsResponseSchema.parse(await typesResponse.json());
         const { data: pokemonSubtypes } = ApiStringsResponseSchema.parse(
             await subtypesResponse.json()
