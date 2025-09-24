@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CardLedger
 
-## Getting Started
+[![Live Demo](https://img.shields.io/badge/Live-Demo-blue?style=for-the-badge)](https://cardledger.vercel.app/)
 
-First, run the development server:
+CardLedger is a web application for cataloging and tracking Pokémon card collections. It features a custom data pipeline that sources, standardizes, and serves card data from a dedicated database, ensuring high performance and data consistency.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Key Features
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+* **Custom Data Backend:** Card data and images are sourced via a custom ETL script, standardized, and served from a Neon PostgreSQL database and Cloudflare R2 bucket.
+* **Responsive Design:** A clean, mobile-first interface built with Tailwind CSS.
+* **Upcoming - User Accounts:** Sign up and manage your personal card collection.
+* **Upcoming - Investment Tracking:** Monitor the financial value and history of your cards.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Tech Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Application
+* **Framework:** Next.js / React
+* **Language:** TypeScript
+* **Styling:** Tailwind CSS
+* **Deployment:** Vercel
 
-## Learn More
+### Data Pipeline & Infrastructure
+* **Database:** Neon (PostgreSQL)
+* **Image Storage:** Cloudflare R2
+* **ETL Script:** Node.js, Prisma, Zod
 
-To learn more about Next.js, take a look at the following resources:
+## Project Goals
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+This project serves as a portfolio piece to demonstrate full-stack development skills using a modern tech stack. The primary goals are to learn and implement features such as user authentication, database management, and designing a robust data pipeline, while building a practical and useful tool for TCG enthusiasts.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+This project was started on September 15, 2025.
 
-## Deploy on Vercel
+To run this project locally:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1.  Clone the repository:
+    `git clone https://github.com/viet456/CardLedger`
+2.  Install dependencies:
+    `pnpm install`
+3.  Set up your environment variables in a `.env` file.
+4.  Run the development server:
+    `pnpm run dev`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
