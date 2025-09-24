@@ -9,4 +9,5 @@ trailingComma: none
 bracketSpacing: true
 bracketSameLine: false
 plugins:
-  - prettier-plugin-prisma
+    - prettier-plugin-prisma
+    - prettier-plugin-tailwindcss

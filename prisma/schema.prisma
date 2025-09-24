@@ -55,19 +55,19 @@ model Card {
     hp          Int?
     types       TypesOnCards[]
     evolvesFrom String?
-    evolvesTo        String[]
+    evolvesTo   String[]
 
-    abilities Ability[]
-    attacks     Attack[]
-    weaknesses  Weakness[]
-    resistances Resistance[]
+    abilities            Ability[]
+    attacks              Attack[]
+    weaknesses           Weakness[]
+    resistances          Resistance[]
     convertedRetreatCost Int?
 
     rules            String[]
     ancientTraitName String?
     ancientTraitText String?
-    set                  Set    @relation(fields: [setId], references: [id])
-    setId                String
+    set              Set      @relation(fields: [setId], references: [id])
+    setId            String
 
     number                 String
     artist                 String?
@@ -127,11 +127,11 @@ model TypesOnCards {
 }
 
 model Ability {
-    id Int @id @default(autoincrement())
-    name String
-    text String
-    type String
-    card Card @relation(fields: [cardId], references: [id])
+    id     Int    @id @default(autoincrement())
+    name   String
+    text   String
+    type   String
+    card   Card   @relation(fields: [cardId], references: [id])
     cardId String
 }
 
