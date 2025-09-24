@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { MobileNav } from './MobileNav';
 import { Menu } from 'lucide-react';
 import {
     Sheet,
@@ -61,31 +62,7 @@ export function Header() {
                     </nav>
                 </div>
                 {/* Mobile navigation*/}
-                <div className='md:hidden'>
-                    <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-                        <SheetTrigger aria-label='Open navigation menu'>
-                            <Menu className='h-8 w-8' />
-                        </SheetTrigger>
-                        <SheetContent>
-                            <SheetHeader>
-                                <SheetTitle className='text-xl text-white'>CardLedger</SheetTitle>
-                                <SheetDescription className='sr-only'>
-                                    Main navigation menu.
-                                </SheetDescription>
-                            </SheetHeader>
-                            <div className='mt-4 flex flex-col gap-4 p-4 text-xl'>
-                                {navItems.map((item) => (
-                                    <NavLink
-                                        key={item.href}
-                                        href={item.href}
-                                        label={item.label}
-                                        isMobile
-                                    />
-                                ))}
-                            </div>
-                        </SheetContent>
-                    </Sheet>
-                </div>
+                <MobileNav />
             </div>
         </header>
     );
