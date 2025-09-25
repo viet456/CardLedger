@@ -6,10 +6,10 @@ export default function Home() {
         <div className='container mx-auto flex flex-col items-center justify-center gap-16 px-4 py-16 text-center'>
             {/* Hero Section */}
             <section className='flex flex-col items-center gap-4'>
-                <h1 className='text-4xl leading-[1.1] font-bold tracking-tight md:text-6xl'>
-                    The Modern Way to Track Your Pokémon Collection
+                <h1 className='text-4xl font-bold leading-[1.1] tracking-tight md:text-6xl'>
+                    CardLedger is The Modern Way to Track Your Pokémon Collection
                 </h1>
-                <p className='max-w-[700px] text-2xl'>
+                <p className='max-w-[700px] text-2xl text-muted-foreground'>
                     Browse every card ever made and get ready for powerful collection management and
                     financial tools, coming soon.
                 </p>

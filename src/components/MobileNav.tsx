@@ -70,7 +70,7 @@ export function MobileNav() {
                             <Button
                                 variant='ghost'
                                 size='icon'
-                                className='absolute top-4 right-4 h-8 w-8 rounded-sm bg-slate-400 p-0 hover:bg-slate-500'
+                                className='absolute right-4 top-4 h-8 w-8 rounded-sm bg-slate-400 p-0 hover:bg-slate-500'
                             >
                                 <X className='!h-6 !w-6 text-slate-800' />
                                 <span className='sr-only'>Close</span>
@@ -93,7 +93,7 @@ export function MobileNav() {
                             href='https://vietle.me'
                             target='_blank'
                             rel='noopener noreferrer'
-                            className='text-center text-sm text-slate-400'
+                            className='text-center text-sm text-slate-200'
                         >
                             Made by Viet Le, 2025
                         </a>

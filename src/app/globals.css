@@ -1,1 +1,44 @@
-@import 'tailwindcss';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --background: 1 0 0; /* white - #ffffff */
+        --foreground: 0.29 0.021 257; /* slate-800 - #1e293b */
+        --card: 1 0 0; /* white - #ffffff */
+        --card-foreground: 0.29 0.021 257; /* slate-800 - #1e293b */
+        --popover: 1 0 0; /* white - #ffffff */
+        --popover-foreground: 0.29 0.021 257; /* slate-800 - #1e293b */
+        --primary: 0.405 0.023 257.6; /* slate-700 - #334155 */
+        --primary-foreground: 1 0 0; /* white - #ffffff */
+        --secondary: 0.9 0.01 258; /* slate-200 - #e2e8f0 */
+        --secondary-foreground: 0.48 0.017 258; /* slate-600 - #475569 */
+        --muted: 0.9 0.01 258; /* slate-200 - #e2e8f0 */
+        --muted-foreground: 0.48 0.017 258; /* slate-600 - #475569 */
+        --accent: 0.9 0.01 258; /* slate-200 - #e2e8f0 */
+        --accent-foreground: 0.48 0.017 258; /* slate-600 - #475569 */
+        --border: 0.81 0.013 258; /* slate-300 - #cbd5e1 */
+        --ring: 0.48 0.017 258; /* slate-600 - #475569 */
+        --radius: 0.5rem;
+    }
+
+    .dark {
+        --background: 0.29 0.021 257; /* slate-800 - #1e293b */
+        --foreground: 1 0 0; /* white - #ffffff */
+        --card: 0.405 0.023 257.6; /* slate-700 - #334155 */
+        --card-foreground: 1 0 0; /* white - #ffffff */
+        --popover: 0.405 0.023 257.6; /* slate-700 - #334155 */
+        --popover-foreground: 1 0 0; /* white - #ffffff */
+        --primary: 1 0 0; /* white - #ffffff */
+        --primary-foreground: 0.405 0.023 257.6; /* slate-700 - #334155 */
+        --secondary: 0.48 0.017 258; /* slate-600 - #475569 */
+        --secondary-foreground: 0.9 0.01 258; /* slate-200 - #e2e8f0 */
+        --muted: 0.48 0.017 258; /* slate-600 - #475569 */
+        --muted-foreground: 0.81 0.013 258; /* slate-300 - #cbd5e1 */
+        --accent: 0.48 0.017 258; /* slate-600 - #475569 */
+        --accent-foreground: 0.9 0.01 258; /* slate-200 - #e2e8f0 */
+        --border: 0.48 0.017 258; /* slate-600 - #475569 */
+        --ring: 0.9 0.01 258; /* slate-200 - #e2e8f0 */
+    }   
+}
