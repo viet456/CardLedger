@@ -14,7 +14,12 @@ export default function Home() {
                     financial tools, coming soon.
                 </p>
                 <Button asChild size='lg' className='mt-4 text-lg'>
-                    <Link href='/cards'>Explore the Card Catalog</Link>
+                    <Link
+                        href='/cards'
+                        className='hover:bg-primary-hover hover:ring-1 hover:ring-ring focus:ring-1 focus:ring-ring'
+                    >
+                        Explore the Card Catalog
+                    </Link>
                 </Button>
             </section>
 

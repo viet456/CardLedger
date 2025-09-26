@@ -37,8 +37,8 @@ const NavLink = ({
         <Link
             href={href}
             className={`text-xl transition-colors hover:text-slate-300 ${
-                isActive ? 'font-semibold text-white' : 'text-slate-200'
-            }`}
+                isActive ? 'font-semibold text-accent-foreground' : 'text-muted-foreground'
+            } hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground`}
             onClick={onClick}
         >
             {label}
@@ -55,9 +55,9 @@ export function MobileNav() {
                 <SheetTrigger aria-label='Open navigation menu'>
                     <Menu className='h-8 w-8' />
                 </SheetTrigger>
-                <SheetContent className='w-[70%] border-l-slate-600 bg-slate-700 text-slate-200'>
+                <SheetContent className='w-[70%] border-border bg-card text-card-foreground'>
                     <SheetHeader className='flex flex-row items-center justify-between p-4'>
-                        <SheetTitle className='text-2xl text-white'>
+                        <SheetTitle className='text-2xl text-primary'>
                             <Link href='/' className='text-3xl'>
                                 CardLedger
                             </Link>
@@ -68,9 +68,9 @@ export function MobileNav() {
 
                         <SheetClose asChild>
                             <Button
-                                variant='ghost'
+                                variant='secondary'
                                 size='icon'
-                                className='absolute right-4 top-4 h-8 w-8 rounded-sm bg-slate-400 p-0 hover:bg-slate-500'
+                                className='absolute right-4 top-4 h-8 w-8 rounded-sm bg-slate-400 p-0 hover:bg-slate-500 hover:ring-1 hover:ring-ring focus:ring-1 focus:ring-ring'
                             >
                                 <X className='!h-6 !w-6 text-slate-800' />
                                 <span className='sr-only'>Close</span>
@@ -93,7 +93,7 @@ export function MobileNav() {
                             href='https://vietle.me'
                             target='_blank'
                             rel='noopener noreferrer'
-                            className='text-center text-sm text-slate-200'
+                            className='text-center text-sm text-muted-foreground'
                         >
                             Made by Viet Le, 2025
                         </a>

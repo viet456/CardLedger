@@ -4,6 +4,7 @@ import './globals.css';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { Inter } from 'next/font/google';
+import { ThemeProvider } from '@/components/theme-provider';
 
 const inter = Inter({
     subsets: ['latin'],
@@ -25,10 +26,16 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang='en' className={`dark ${inter.variable}`}>
+        <html lang='en' className={`${inter.variable}`} suppressHydrationWarning>
             <body
                 className={`flex min-h-screen flex-col bg-background font-sans text-foreground antialiased`}
             >
+                <ThemeProvider
+                    attribute='class'
+                    defaultTheme='dark'
+                    enableSystem
+                    disableTransitionOnChange
+                />
                 <Header />
                 <main className='flex-grow'>{children}</main>
                 <Footer />
