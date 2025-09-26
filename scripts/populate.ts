@@ -1,4 +1,4 @@
-import { PrismaClient } from '../src/generated/prisma/index.js';
+import { PrismaClient } from '@prisma/client';
 import fetch, { RequestInit, Response } from 'node-fetch';
 import { PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { r2 } from '../src/lib/r2';
@@ -359,6 +359,7 @@ async function syncCards(
             id: true,
             total: true,
             name: true,
+            releaseDate: true,
             _count: { select: { cards: true } }
         }
     });
@@ -530,10 +531,12 @@ async function syncCards(
                                 ancientTraitName: apiCard.ancientTraitName || null,
                                 ancientTraitText: apiCard.ancientTraitText || null,
                                 setId: dbSet.id,
+                                releaseDate: dbSet.releaseDate,
                                 number: apiCard.number,
                                 artist: apiCard.artist || null,
                                 rarity: apiCard.rarity || null,
                                 nationalPokedexNumbers: apiCard.nationalPokedexNumbers || [],
+                                pokedexNumberSort: apiCard.nationalPokedexNumbers?.[0] || null,
                                 standard: apiCard.legalities?.standard || null,
                                 expanded: apiCard.legalities?.expanded || null,
                                 unlimited: apiCard.legalities?.unlimited || null,

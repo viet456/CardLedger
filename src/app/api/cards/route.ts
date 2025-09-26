@@ -1,9 +1,11 @@
-import { PrismaClient } from '@/generated/prisma';
+import { PrismaClient } from '@prisma/client';
 import { NextResponse } from 'next/server';
 
 const prisma = new PrismaClient();
 const BATCH_SIZE = 50;
 
+// add compound sorting, filter terms via WHERE, orderBy
+// add db table indexes
 // http://localhost:3000/api/cards
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
