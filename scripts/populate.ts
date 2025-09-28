@@ -530,11 +530,29 @@ async function syncCards(
                                 rules: apiCard.rules || [],
                                 ancientTraitName: apiCard.ancientTraitName || null,
                                 ancientTraitText: apiCard.ancientTraitText || null,
-                                setId: dbSet.id,
+                                set: {
+                                    connect: {
+                                        id: dbSet.id
+                                    }
+                                },
                                 releaseDate: dbSet.releaseDate,
                                 number: apiCard.number,
-                                artist: apiCard.artist || null,
-                                rarity: apiCard.rarity || null,
+                                rarity: apiCard.rarity
+                                    ? {
+                                          connectOrCreate: {
+                                              where: { name: apiCard.rarity },
+                                              create: { name: apiCard.rarity }
+                                          }
+                                      }
+                                    : undefined,
+                                artist: apiCard.artist
+                                    ? {
+                                          connectOrCreate: {
+                                              where: { name: apiCard.artist },
+                                              create: { name: apiCard.artist }
+                                          }
+                                      }
+                                    : undefined,
                                 nationalPokedexNumbers: apiCard.nationalPokedexNumbers || [],
                                 pokedexNumberSort: apiCard.nationalPokedexNumbers?.[0] || null,
                                 standard: apiCard.legalities?.standard || null,

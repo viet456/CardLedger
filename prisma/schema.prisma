@@ -68,9 +68,12 @@ model Card {
     set              Set      @relation(fields: [setId], references: [id])
     setId            String
 
+    rarity Rarity? @relation(fields: [rarityId], references: [id])
+    rarityId Int?
+    artist Artist? @relation(fields: [artistId], references: [id])
+    artistId Int?
+
     number                 String
-    artist                 String?
-    rarity                 String?
     nationalPokedexNumbers Int[]
     pokedexNumberSort      Int?
     releaseDate            DateTime
@@ -84,12 +87,12 @@ model Card {
 
     // -- Indexes for faster queries -- 
     // filtering only
-    @@index([artist]) // not worth adding compound id index
     @@index([ancientTraitName])
     @@index([ancientTraitText])
     @@index([convertedRetreatCost, id])
     @@index([supertype, id])
-    @@index([rarity, id])
+    @@index([rarityId, id])
+    @@index([artistId, id])
 
     // For paginated sorting 
     @@index([name, setId]) // card within set
@@ -188,4 +191,16 @@ model Resistance {
 
     @@unique([cardId, typeId])
     @@index([typeId])
+}
+
+model Rarity { 
+    id Int @id @default(autoincrement())
+    name String @unique
+    cards Card[]
+}
+
+model Artist {
+    id Int @id @default(autoincrement())
+    name String @unique
+    cards Card[]
 }
