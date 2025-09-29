@@ -1,6 +1,6 @@
-import { router } from '../trpc';
-import { pokemonCardRouter } from './pokemonCardRouter';
-import { pokemonMetadataRouter } from './pokemonMetadata';
+import { router } from './trpc';
+import { pokemonCardRouter } from './routers/pokemonCardRouter';
+import { pokemonMetadataRouter } from './routers/pokemonMetadata';
 
 // combines all routers into one
 export const appRouter = router({

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { HeaderSearchBar } from './search/HeaderSearchBar';
 import { Menu, X } from 'lucide-react';
 import { Button } from './ui/button';
 import {
@@ -14,7 +15,7 @@ import {
     SheetTrigger,
     SheetClose,
     SheetFooter
-} from '@/components/ui/sheet';
+} from '@/src/components/ui/sheet';
 
 const navItems = [
     { href: '/', label: 'Home' },
@@ -77,6 +78,10 @@ export function MobileNav() {
                             </Button>
                         </SheetClose>
                     </SheetHeader>
+
+                    <div className='p-4'>
+                        <HeaderSearchBar onSuggestionClick={() => setIsMenuOpen(false)} />
+                    </div>
 
                     <div className='mt-4 flex flex-col gap-6 p-8'>
                         {navItems.map((item) => (

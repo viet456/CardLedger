@@ -1,5 +1,5 @@
 import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
-import { appRouter } from '@/../server/routers/_app';
+import { appRouter } from '@/src/server';
 
 //http://localhost:3000/api/trpc/pokemonCard.findMany?input=%7B%7D
 const handler = (req: Request) =>

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { MobileNav } from './MobileNav';
+import { HeaderSearchBar } from './search/HeaderSearchBar';
 
 const navItems = [
     { href: '/', label: 'Home' },
@@ -37,7 +38,7 @@ export function Header() {
 
     return (
         <header className='sticky top-0 z-50 bg-card'>
-            <div className='flex h-16 w-full max-w-7xl items-center justify-between px-4 text-xl text-primary'>
+            <div className='flex h-16 w-full items-center justify-between px-4 text-xl text-primary'>
                 {/* Logo + Desktop nav grouped */}
                 <div className='flex items-center gap-10 text-xl'>
                     <Link href='/' className='text-3xl'>
@@ -49,6 +50,9 @@ export function Header() {
                             <NavLink key={item.href} href={item.href} label={item.label} />
                         ))}
                     </nav>
+                </div>
+                <div className='hidden md:flex'>
+                    <HeaderSearchBar />
                 </div>
                 {/* Mobile navigation*/}
                 <MobileNav />
