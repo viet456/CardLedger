@@ -62,9 +62,9 @@ export async function findPokemonCards(params: FindCardsParams) {
     if (setId) whereClause.setId = setId;
     if (releaseDate) whereClause.releaseDate = releaseDate;
     if (supertype) whereClause.supertype = supertype;
-    if (rarity) whereClause.rarity = rarity;
+    if (rarity) whereClause.rarity = { name: rarity };
     if (number) whereClause.number = number;
-    if (artist) whereClause.artist = artist;
+    if (artist) whereClause.artist = { name: artist };
     if (pokedexNumberSort) whereClause.pokedexNumberSort = pokedexNumberSort;
     if (rules) whereClause.rules = { has: rules };
     if (standard) whereClause.standard = standard;

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { Supertype, LegalityStatus } from '@prisma/client';
 
+// the shape of card requests
 export const findCardsInputSchema = z.object({
     // Pagination & Sorting
     cursor: z.string().nullish(),
