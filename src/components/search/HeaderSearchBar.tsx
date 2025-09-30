@@ -13,8 +13,13 @@ interface HeaderSearchBarProps {
 
 export function HeaderSearchBar({ onSuggestionClick }: HeaderSearchBarProps) {
     const router = useRouter();
+    const { filters, setFilters } = useSearchStore();
 
-    const [inputValue, setInputValue] = useState('');
+    const [inputValue, setInputValue] = useState(filters.search);
+
+    useEffect(() => {
+        setInputValue(filters.search);
+    }, [filters.search]);
 
     const debouncedSearchTerm = useDebounce(inputValue, 300);
 
@@ -32,10 +37,13 @@ export function HeaderSearchBar({ onSuggestionClick }: HeaderSearchBarProps) {
     const handleSubmit = (finalSearchTerm: string, setId?: string, cardNumber?: string) => {
         console.log('handleSubmit called with:', { finalSearchTerm, setId, cardNumber });
         setIsFocused(false);
-        setInputValue(finalSearchTerm);
+        setFilters({ search: finalSearchTerm });
+
         if (setId) {
+            setFilters({ search: '' });
             router.push(`/cards/${setId}/${cardNumber}`);
         } else {
+            setFilters({ search: finalSearchTerm });
             router.push(`/cards`);
         }
         onSuggestionClick();
@@ -66,7 +74,7 @@ export function HeaderSearchBar({ onSuggestionClick }: HeaderSearchBarProps) {
                 value={inputValue || ''}
                 onChange={(e) => {
                     setInputValue(e.target.value);
-                    //setFilters({ search: e.target.value });
+                    setFilters({ search: e.target.value });
                 }}
                 onKeyDown={handleKeyDown}
                 onFocus={() => setIsFocused(true)}
