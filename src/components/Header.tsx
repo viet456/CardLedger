@@ -28,7 +28,9 @@ export function Header() {
         return (
             <Link
                 href={href}
-                className={`{ isActive ? 'font-semibold text-accent-foreground' : 'text-muted-foreground' } transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground`}
+                className={`${
+                    isActive ? 'font-semibold text-accent-foreground' : 'text-muted-foreground'
+                } transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground`}
                 onClick={() => isMobile && setIsMenuOpen(false)}
             >
                 {label}
@@ -51,11 +53,13 @@ export function Header() {
                         ))}
                     </nav>
                 </div>
-                <div className='hidden md:flex'>
-                    <HeaderSearchBar />
+                <div className='hidden max-w-sm flex-grow justify-end md:block'>
+                    <HeaderSearchBar onSuggestionClick={() => setIsMenuOpen(false)} />
                 </div>
                 {/* Mobile navigation*/}
-                <MobileNav />
+                <div className='md:hidden'>
+                    <MobileNav />
+                </div>
             </div>
         </header>
     );
