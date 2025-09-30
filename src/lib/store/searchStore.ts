@@ -32,9 +32,10 @@ export const useSearchStore = create<FilterState>()(
                 rules: '',
                 standard: undefined,
                 expanded: undefined,
-                unlimited: undefined
+                unlimited: undefined,
+                sortBy: null,
+                sortOrder: 'asc'
             },
-
             setFilters: (newFilters) => {
                 console.log('setFilters called with:', newFilters);
                 console.log('Stack trace:', new Error().stack);

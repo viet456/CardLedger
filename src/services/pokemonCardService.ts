@@ -9,6 +9,34 @@ export type FindCardsParams = z.infer<typeof findCardsInputSchema>;
 // columns from the card table
 type CardSortableField = keyof Prisma.CardOrderByWithRelationInput;
 
+export async function getFuzzyMatchedCardIds(search: string): Promise<string[]> {
+    if (search.length < 2) {
+        return [];
+    }
+    const results = await prisma.$queryRaw<Array<{ id: string }>>`
+        SELECT "Card"."id"
+        FROM "Card"
+        WHERE 
+            -- exact id match
+            "Card"."id" = ${search}
+            -- prefix match on name
+            OR "Card"."name" ILIKE ${search + '%'}
+            -- fuzzy/typo search fallback
+            OR word_similarity("Card"."name", ${search}) > 0.2
+        ORDER BY 
+            -- Priority: exact ID -> prefix name -> fuzzy similarity
+            CASE
+                WHEN "Card"."id" = ${search} THEN 0
+                WHEN "Card"."name" ILIKE ${search + '%'} THEN 1
+                ELSE 2
+            END,
+            word_similarity("Card"."name", ${search}) DESC
+        LIMIT 200; -- Limit to a reasonable number for performance
+    `;
+
+    return results.map((r) => r.id);
+}
+
 export async function findPokemonCards(params: FindCardsParams) {
     const {
         cursor,
@@ -37,27 +65,8 @@ export async function findPokemonCards(params: FindCardsParams) {
         unlimited
     } = params;
 
-    const sortBy = (sortByInput as CardSortableField) || 'releaseDate';
-    const sortOrder = sortOrderInput || 'desc';
-
+    let matchedIds: string[] | undefined;
     const whereClause: Prisma.CardWhereInput = {};
-
-    //if (search) whereClause.name = { contains: search, mode:'insensitive' };
-    // trigram fuzzy search via Gin index (not supported by Prisma)
-    if (search) {
-        const similarCardIds = await prisma.$queryRaw<Array<{ id: string }>>`
-            SELECT id FROM "Card"
-            WHERE name % ${search}
-            ORDER BY similarity(name, ${search}) DESC
-            LIMIT 2000
-        `;
-        const ids = similarCardIds.map((c) => c.id);
-        // if no cards found, return empty results array
-        if (ids.length === 0) {
-            return { nextCursor: null, cards: [] };
-        }
-        whereClause.id = { in: ids };
-    }
 
     if (setId) whereClause.setId = setId;
     if (releaseDate) whereClause.releaseDate = releaseDate;
@@ -114,25 +123,72 @@ export async function findPokemonCards(params: FindCardsParams) {
         };
     }
 
-    // duplicates sorting for pagination
-    const orderByClause: Prisma.CardOrderByWithRelationInput[] = [
-        { [sortBy]: sortOrder },
-        { id: 'asc' }
-    ];
+    if (search) {
+        matchedIds = await getFuzzyMatchedCardIds(search);
+        if (matchedIds.length === 0) {
+            return { nextCursor: null, cards: [] };
+        }
+        whereClause.id = { in: matchedIds };
+    }
 
-    const cards = await prisma.card.findMany({
-        take: BATCH_SIZE,
-        skip: cursor ? 1 : 0,
-        cursor: cursor ? { id: cursor } : undefined,
-        where: whereClause,
-        orderBy: orderByClause
-    });
+    // const orderByClause = sortByInput
+    //     ? [{ [sortByInput as CardSortableField]: sortOrderInput || 'desc' }, { id: 'asc' }]
+    //     : undefined;
 
-    const lastCardInResults = cards.length === BATCH_SIZE ? cards[BATCH_SIZE - 1] : null;
-    const nextCursor = lastCardInResults ? lastCardInResults.id : null;
+    // const cards = await prisma.card.findMany({
+    //     take: BATCH_SIZE,
+    //     skip: cursor ? 1 : 0,
+    //     cursor: cursor ? { id: cursor } : undefined,
+    //     where: whereClause,
+    //     orderBy: orderByClause
+    // });
+    // let finalCards = cards;
 
-    return {
-        nextCursor,
-        cards
-    };
+    // relevance sort - only query, no sort options selected
+    if (search && matchedIds && !sortByInput) {
+        const cards = await prisma.card.findMany({
+            where: whereClause
+        });
+        const cardMap = new Map(cards.map((card) => [card.id, card]));
+        const orderedCards = matchedIds
+            .map((id) => cardMap.get(id))
+            .filter(Boolean) as typeof cards;
+
+        const startIndex = cursor ? orderedCards.findIndex((c) => c.id === cursor) + 1 : 0;
+        const paginatedCards = orderedCards.slice(startIndex, startIndex + BATCH_SIZE);
+
+        const lastCardInResults =
+            paginatedCards.length === BATCH_SIZE ? paginatedCards[paginatedCards.length - 1] : null;
+        const nextCursor = lastCardInResults ? lastCardInResults.id : null;
+
+        return {
+            nextCursor,
+            cards: paginatedCards
+        };
+    } else {
+        const orderByClause: Prisma.CardOrderByWithRelationInput[] = [];
+        if (sortByInput) {
+            orderByClause.push({ [sortByInput]: sortOrderInput || 'desc' });
+        } else {
+            orderByClause.push({ releaseDate: 'desc' });
+        }
+        orderByClause.push({ id: 'asc' });
+        // const orderByClause = sortByInput
+        //     ? [{ [sortByInput as CardSortableField]: sortOrderInput || 'desc' }, { id: 'asc' }]
+        //     : [{ releaseDate: 'desc' }, { id: 'asc' }]; // Default sort
+        const cards = await prisma.card.findMany({
+            take: BATCH_SIZE,
+            skip: cursor ? 1 : 0,
+            cursor: cursor ? { id: cursor } : undefined,
+            where: whereClause,
+            orderBy: orderByClause
+        });
+        const lastCardInResults = cards.length === BATCH_SIZE ? cards[cards.length - 1] : null;
+        const nextCursor = lastCardInResults ? lastCardInResults.id : null;
+
+        return {
+            nextCursor,
+            cards
+        };
+    }
 }

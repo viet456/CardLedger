@@ -1,12 +1,14 @@
 import { z } from 'zod';
 import { Supertype, LegalityStatus } from '@prisma/client';
 
+const SortableFields = z.enum(['name', 'releaseDate', 'pokedexNumberSort', 'number']);
+
 // the shape of card requests
 export const findCardsInputSchema = z.object({
     // Pagination & Sorting
     cursor: z.string().nullish(),
-    sortBy: z.string().optional(),
-    sortOrder: z.string().optional(),
+    sortBy: SortableFields.nullish(),
+    sortOrder: z.enum(['asc', 'desc']).nullish(),
     hp_gte: z.coerce.number().optional(), // Greater than or equal to
     hp_lte: z.coerce.number().optional(), // Less than or equal to
     convertedRetreatCost_gte: z.number().optional(),
