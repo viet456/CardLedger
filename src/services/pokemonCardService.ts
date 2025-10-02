@@ -126,7 +126,7 @@ export async function findPokemonCards(params: FindCardsParams) {
     if (search) {
         matchedIds = await getFuzzyMatchedCardIds(search);
         if (matchedIds.length === 0) {
-            return { nextCursor: null, cards: [] };
+            return { nextCursor: null, cards: [], totalCount: 0 };
         }
         whereClause.id = { in: matchedIds };
     }
@@ -146,9 +146,16 @@ export async function findPokemonCards(params: FindCardsParams) {
 
     // relevance sort - only query, no sort options selected
     if (search && matchedIds && !sortByInput) {
-        const cards = await prisma.card.findMany({
-            where: whereClause
-        });
+        const [cards, totalCount] = await prisma.$transaction([
+            prisma.card.findMany({
+                where: whereClause,
+                include: {
+                    set: true,
+                    _count: true
+                }
+            }),
+            prisma.card.count({ where: whereClause })
+        ]);
         const cardMap = new Map(cards.map((card) => [card.id, card]));
         const orderedCards = matchedIds
             .map((id) => cardMap.get(id))
@@ -163,7 +170,8 @@ export async function findPokemonCards(params: FindCardsParams) {
 
         return {
             nextCursor,
-            cards: paginatedCards
+            cards: paginatedCards,
+            totalCount // card return count
         };
     } else {
         const orderByClause: Prisma.CardOrderByWithRelationInput[] = [];
@@ -176,19 +184,26 @@ export async function findPokemonCards(params: FindCardsParams) {
         // const orderByClause = sortByInput
         //     ? [{ [sortByInput as CardSortableField]: sortOrderInput || 'desc' }, { id: 'asc' }]
         //     : [{ releaseDate: 'desc' }, { id: 'asc' }]; // Default sort
-        const cards = await prisma.card.findMany({
-            take: BATCH_SIZE,
-            skip: cursor ? 1 : 0,
-            cursor: cursor ? { id: cursor } : undefined,
-            where: whereClause,
-            orderBy: orderByClause
-        });
+        const [cards, totalCount] = await prisma.$transaction([
+            prisma.card.findMany({
+                take: BATCH_SIZE,
+                skip: cursor ? 1 : 0,
+                cursor: cursor ? { id: cursor } : undefined,
+                where: whereClause,
+                orderBy: orderByClause,
+                include: {
+                    set: true
+                }
+            }),
+            prisma.card.count({ where: whereClause })
+        ]);
         const lastCardInResults = cards.length === BATCH_SIZE ? cards[cards.length - 1] : null;
         const nextCursor = lastCardInResults ? lastCardInResults.id : null;
 
         return {
             nextCursor,
-            cards
+            cards,
+            totalCount // card return count
         };
     }
 }

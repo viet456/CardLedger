@@ -1,7 +1,9 @@
+import { AdvancedSearch } from '@/src/components/search/AdvancedSearch';
+
 export default function CardsPage() {
     return (
-        <section>
-            <p>Cards</p>
-        </section>
+        <div className='flex flex-grow'>
+            <AdvancedSearch />
+        </div>
     );
 }

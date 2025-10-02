@@ -50,6 +50,7 @@ export function HeaderSearchBar({ onSuggestionClick }: HeaderSearchBarProps) {
     };
     const handleClear = () => {
         setIsFocused(false);
+        setFilters({ search: '' });
         setInputValue('');
     };
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

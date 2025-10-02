@@ -14,7 +14,7 @@ export function SearchBar() {
     useEffect(() => {
         const timer = setTimeout(() => {
             setGlobalFilters({ search: inputValue });
-        }, 300); // 300ms delay
+        }, 200);
         return () => {
             clearTimeout(timer);
         };
@@ -26,12 +26,14 @@ export function SearchBar() {
     }, [globalSearchTerm]);
 
     return (
-        <input
-            type='text'
-            placeholder='Search for cards...'
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            className='w-full rounded border p-2 text-black'
-        />
+        <>
+            <input
+                type='text'
+                placeholder='Search for cards...'
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                className='w-full rounded border bg-primary p-2 text-primary-foreground'
+            />
+        </>
     );
 }

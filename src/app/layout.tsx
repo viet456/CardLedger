@@ -39,7 +39,7 @@ export default function RootLayout({
                         disableTransitionOnChange
                     >
                         <Header />
-                        <main className='flex-grow'>{children}</main>
+                        <main className='flex flex-grow'>{children}</main>
                         <Footer />
                     </ThemeProvider>
                 </TrpcProvider>
