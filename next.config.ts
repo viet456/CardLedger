@@ -5,7 +5,9 @@ const nextConfig: NextConfig = {
         remotePatterns: [
             {
                 protocol: 'https',
-                hostname: 'assets.cardledger.io'
+                hostname: 'assets.cardledger.io',
+                port: '',
+                pathname: '/**'
             }
         ]
     }

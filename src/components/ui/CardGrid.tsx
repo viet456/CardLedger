@@ -9,6 +9,7 @@ interface CardGridProps {
     cards: DenormalizedCard[];
     totalCount: number;
     isLoading: boolean;
+    priority?: boolean;
 }
 
 const GridList = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
@@ -49,7 +50,11 @@ export function CardGrid({ cards, totalCount, isLoading }: CardGridProps) {
             }}
             itemContent={(index) => (
                 <div className='flex w-full'>
-                    {isLoading ? <PokemonCardSkeleton /> : <PokemonCard card={cards[index]} />}
+                    {isLoading ? (
+                        <PokemonCardSkeleton />
+                    ) : (
+                        <PokemonCard card={cards[index]} priority={index < 8} />
+                    )}
                 </div>
             )}
         />

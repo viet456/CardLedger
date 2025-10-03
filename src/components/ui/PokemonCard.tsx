@@ -3,7 +3,12 @@ import { DenormalizedCard } from '@/src/lib/store/cardStore';
 
 const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
 
-export function PokemonCard({ card }: { card: DenormalizedCard }) {
+interface PokemonCardProps {
+    card: DenormalizedCard;
+    priority?: boolean;
+}
+
+export function PokemonCard({ card, priority = false }: PokemonCardProps) {
     const imageUrl = `${R2_PUBLIC_URL}/${card.img}`;
     return (
         <div className='flex w-full flex-col rounded-xl bg-card text-card-foreground'>
@@ -12,10 +17,11 @@ export function PokemonCard({ card }: { card: DenormalizedCard }) {
                     <Image
                         src={imageUrl}
                         alt={card.n}
-                        fill
-                        className='object-contain'
-                        sizes='(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw'
+                        fill={true}
+                        className='object-cover'
+                        sizes='192px'
                         loading='eager'
+                        priority={priority}
                     />
                 </div>
             ) : (
