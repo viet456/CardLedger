@@ -14,7 +14,8 @@
         "db:generate": "prisma generate",
         "db:populate": "pnpm run db:generate && tsx scripts/populate.ts",
         "db:backfill-pokedex": "tsx scripts/backfillPokedexSort.ts",
-        "db:backfill-release-date": "tsx scripts/backfillReleaseDate.ts"
+        "db:backfill-release-date": "tsx scripts/backfillReleaseDate.ts",
+        "index:cards": "tsx scripts/buildCardIndex.ts"
     },
     "dependencies": {
         "@aws-sdk/client-s3": "^3.890.0",

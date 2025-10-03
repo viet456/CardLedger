@@ -19,7 +19,7 @@ const GridList = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
             {...props}
             style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))',
                 gap: '16px',
                 padding: '16px',
                 ...props.style

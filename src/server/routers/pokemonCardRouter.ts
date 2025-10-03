@@ -19,6 +19,11 @@ type CardForSuggestion = z.infer<typeof cardForSuggestionSchema>;
 
 // imports validator and service to create an api procedure/endpoint
 export const pokemonCardRouter = router({
+    /**
+     *
+     * * @deprecated
+     *
+     * No longer used for Cards grid viewer**/
     findMany: publicProcedure.input(findCardsInputSchema).query(async ({ input }) => {
         // calls on service with the validated input
         const result = await findPokemonCards(input);
