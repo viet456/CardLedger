@@ -1,14 +1,11 @@
 'use client';
 
 import { useSearchStore } from '@/src/lib/store/searchStore';
-import { trpc } from '@/src/utils/trpc';
 import { SearchBar } from './SearchBar';
-import { useDebounce } from '@/src/hooks/useDebounce';
 import { FindCardsParams } from '@/src/services/pokemonCardService';
-import { useEffect, useMemo, useCallback, useRef } from 'react';
-import { PokemonCardType, ClientPokemonCardType } from '@/src/types/data';
-import { PokemonCard } from '../ui/PokemonCard';
-import { PokemonCardSkeleton } from '../ui/PokemonCardSkeleton';
+import { useEffect, useMemo } from 'react';
+import { useCardStore } from '@/src/lib/store/cardStore';
+import { useHasHydrated } from '@/src/hooks/useHasHydrated';
 
 import {
     Sheet,
@@ -19,52 +16,81 @@ import {
 } from '@/src/components/ui/sheet';
 import { CardGrid } from '../ui/CardGrid';
 
+type DenormalizedCard = {
+    id: string;
+    n: string;
+    hp: number | null;
+    num: string;
+    img: string | null;
+    rD: string;
+    pS: number | null;
+    cRC: number | null;
+    supertype: string;
+    artist: string | null;
+    rarity: string | null;
+    set: { id: string; name: string };
+    types: string[];
+    subtypes: string[];
+    weaknesses: string[];
+    resistances: string[];
+};
+
 export function AdvancedSearch() {
     const { filters, setFilters } = useSearchStore();
-    const fetchingRef = useRef(false);
-    const { data: filterOptions } = trpc.pokemonMetadata.getFilterOptions.useQuery();
+    const {
+        cards: allCards,
+        artists,
+        rarities,
+        sets,
+        types,
+        subtypes,
+        supertypes,
+        status,
+        initialize
+    } = useCardStore();
 
-    const debouncedFilters = useMemo(() => {
-        return filters;
-    }, [JSON.stringify(filters)]);
-    const debouncedValue = useDebounce(debouncedFilters, 200);
-
-    const { data, error, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } =
-        trpc.pokemonCard.searchCards.useInfiniteQuery(
-            // use infinitePrefetchQuery??
-            debouncedValue,
-            {
-                getNextPageParam: (lastPage) => lastPage.nextCursor,
-                staleTime: Infinity // keeps data fresh for 5 mins
-            }
-        );
-    // flatten the trpc pages into a single array for React Virtuoso
-    const flatCards = useMemo(
-        () =>
-            (data?.pages.flatMap((page) => page.cards) ?? []) as unknown as ClientPokemonCardType[],
-        [data]
-    );
-    // console.log('Fetched cards:', flatCards);
-    // skeleton rendering and intersection observer
-    const totalCount = data?.pages[0].totalCount ?? 0;
+    const isHydrated = useHasHydrated();
     useEffect(() => {
-        // When a fetch is no longer in progress, release our lock.
-        if (!isFetchingNextPage) {
-            fetchingRef.current = false;
+        if (isHydrated) {
+            initialize();
         }
-    }, [isFetchingNextPage]);
-    const renderItem = useCallback(
-        (index: number) => {
-            const card = flatCards[index];
-            const shouldFetchNextPage = index >= flatCards.length - 10; // A small buffer
-            if (shouldFetchNextPage && hasNextPage && !isFetchingNextPage && !fetchingRef.current) {
-                fetchingRef.current = true;
-                fetchNextPage();
-            }
-            return card ? <PokemonCard card={card} /> : <PokemonCardSkeleton />;
-        },
-        [flatCards, hasNextPage, isFetchingNextPage, fetchNextPage]
-    );
+    }, [isHydrated, initialize]);
+
+    const denormalizedCards: DenormalizedCard[] = useMemo(() => {
+        if (!allCards || allCards.length === 0) return [];
+        return allCards.map((card) => ({
+            id: card.id,
+            n: card.n,
+            hp: card.hp,
+            num: card.num,
+            img: card.img,
+            rD: card.rD,
+            pS: card.pS,
+            cRC: card.cRC,
+            artist: card.a !== null && card.a !== undefined ? artists[card.a] || null : null,
+            rarity: card.r !== null && card.r !== undefined ? rarities[card.r] || null : null,
+            set: sets[card.s] || { id: '', name: '' },
+            supertype: supertypes[card.st] || '',
+            subtypes: card.sb ? card.sb.map((id) => subtypes[id] || '').filter(Boolean) : [],
+            types: card.t ? card.t.map((id) => types[id] || '').filter(Boolean) : [],
+            weaknesses: card.w ? card.w.map((id) => types[id] || '').filter(Boolean) : [],
+            resistances: card.rs ? card.rs.map((id) => types[id] || '').filter(Boolean) : []
+        }));
+    }, [allCards, artists, rarities, sets, types, subtypes, supertypes]);
+
+    const filteredCards = useMemo(() => {
+        if (denormalizedCards.length === 0) return [];
+        return denormalizedCards.filter((card) => {
+            const searchFilter = filters.search?.toLowerCase();
+            if (searchFilter && !card.n.toLowerCase().includes(searchFilter)) return false;
+            if (filters.rarity && card.rarity !== filters.rarity) return false;
+            if (filters.setId && card.set.id !== filters.setId) return false;
+            if (filters.type && !card.types.includes(filters.type)) return false;
+            if (filters.subtype && !card.subtypes.includes(filters.subtype)) return false;
+            if (filters.artist && card.artist !== filters.artist) return false;
+            return true;
+        });
+    }, [denormalizedCards, filters]);
 
     const handleFilterChange = (key: keyof FindCardsParams, value: string | number) => {
         const finalValue =
@@ -72,13 +98,20 @@ export function AdvancedSearch() {
         setFilters({ [key]: finalValue });
     };
 
-    const filterConfig = [
-        { label: 'Types', key: 'type', options: filterOptions?.types },
-        { label: 'Subtypes', key: 'subtype', options: filterOptions?.subtypes },
-        { label: 'Rarities', key: 'rarity', options: filterOptions?.rarities },
-        { label: 'Artists', key: 'artist', options: filterOptions?.artists },
-        { label: 'Weaknesses', key: 'weaknessType', options: filterOptions?.types },
-        { label: 'Resistances', key: 'resistanceType', options: filterOptions?.types }
+    type FilterOption = string | { id: string; name: string };
+
+    const filterConfig: Array<{
+        label: string;
+        key: string;
+        options: FilterOption[];
+    }> = [
+        { label: 'Types', key: 'type', options: Object.values(types) },
+        { label: 'Subtypes', key: 'subtype', options: Object.values(subtypes) },
+        { label: 'Rarities', key: 'rarity', options: Object.values(rarities) },
+        { label: 'Artists', key: 'artist', options: Object.values(artists) },
+        { label: 'Weaknesses', key: 'weaknessType', options: Object.values(types) },
+        { label: 'Resistances', key: 'resistanceType', options: Object.values(types) },
+        { label: 'Sets', key: 'setId', options: Object.values(sets) }
     ];
     return (
         <div className='flex flex-grow flex-col'>
@@ -102,15 +135,9 @@ export function AdvancedSearch() {
                                     <select
                                         name={filter.key}
                                         id={filter.key}
-                                        value={
-                                            filters[
-                                                filter.key as
-                                                    | 'type'
-                                                    | 'subtype'
-                                                    | 'rarity'
-                                                    | 'artist'
-                                            ]
-                                        }
+                                        value={(
+                                            filters[filter.key as keyof typeof filters] || ''
+                                        ).toString()}
                                         className='w-full rounded bg-primary text-primary-foreground'
                                         autoFocus={false}
                                         onChange={(e) =>
@@ -121,11 +148,26 @@ export function AdvancedSearch() {
                                         }
                                     >
                                         <option value=''>{`All ${filter.label}`}</option>
-                                        {filter.options?.map((option) => (
-                                            <option key={option.id} value={option.name}>
-                                                {option.name}
-                                            </option>
-                                        ))}
+                                        {filter.options?.map((option, index) => {
+                                            const isSetObject =
+                                                typeof option === 'object' &&
+                                                option !== null &&
+                                                'id' in option;
+                                            const value = isSetObject
+                                                ? (option as { id: string; name: string }).id
+                                                : (option as string);
+                                            const label = isSetObject
+                                                ? (option as { id: string; name: string }).name
+                                                : (option as string);
+                                            const key = isSetObject
+                                                ? (option as { id: string; name: string }).id
+                                                : `${label}-${index}`;
+                                            return (
+                                                <option key={key} value={value}>
+                                                    {label}
+                                                </option>
+                                            );
+                                        })}
                                     </select>
                                 </div>
                             ))}
@@ -135,15 +177,15 @@ export function AdvancedSearch() {
             </div>
 
             <div className='mt-2 min-h-0 flex-grow'>
-                {isLoading && <p className='text-center'>Loading...</p>}
-                {error && <p className='text-center text-red-500'>Error: {error.message}</p>}
-                {!isLoading && !error && (
+                {status === 'loading' && <p className='text-center'>Loading...</p>}
+                {status === 'error' && (
+                    <p className='text-center text-red-500'>Error loading card data.</p>
+                )}
+                {status.startsWith('ready') && (
                     <CardGrid
-                        //cards={flatCards}
-                        totalCount={totalCount}
-                        isFetchingNextPage={isFetchingNextPage}
-                        itemRenderer={renderItem}
-                        //prefetchTriggerRef={ref}
+                        cards={filteredCards}
+                        isLoading={!status.startsWith('ready')}
+                        totalCount={status.startsWith('ready') ? filteredCards.length : 12}
                     />
                 )}
             </div>

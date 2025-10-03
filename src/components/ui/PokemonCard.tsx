@@ -1,21 +1,21 @@
-import type { ClientPokemonCardType } from '@/src/types/data';
 import Image from 'next/image';
+import { DenormalizedCard } from '@/src/lib/store/cardStore';
 
 const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
 
-export function PokemonCard({ card }: { card: ClientPokemonCardType }) {
-    const imageUrl = `${R2_PUBLIC_URL}/${card.imageKey}`;
-    console.log(imageUrl);
+export function PokemonCard({ card }: { card: DenormalizedCard }) {
+    const imageUrl = `${R2_PUBLIC_URL}/${card.img}`;
     return (
         <div className='flex w-full flex-col rounded-xl bg-card text-card-foreground'>
-            {card.imageKey ? (
+            {card.img ? (
                 <div className='relative aspect-[2.5/3.5] w-full'>
                     <Image
                         src={imageUrl}
-                        alt={card.name}
+                        alt={card.n}
                         fill
                         className='object-contain'
                         sizes='(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw'
+                        loading='eager'
                     />
                 </div>
             ) : (

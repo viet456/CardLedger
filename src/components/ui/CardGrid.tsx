@@ -3,13 +3,12 @@ import { forwardRef, Ref, HTMLAttributes } from 'react';
 import { PokemonCard } from './PokemonCard';
 import { PokemonCardSkeleton } from './PokemonCardSkeleton';
 import { ClientPokemonCardType } from '@/src/types/data';
+import { DenormalizedCard } from '@/src/lib/store/cardStore';
 
 interface CardGridProps {
-    //cards: ClientPokemonCardType[]; // flat array of cards
+    cards: DenormalizedCard[];
     totalCount: number;
-    isFetchingNextPage?: boolean;
-    //prefetchTriggerRef: Ref<HTMLDivElement>
-    itemRenderer: (index: number) => React.ReactNode;
+    isLoading: boolean;
 }
 
 const GridList = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
@@ -39,21 +38,20 @@ const gridComponents: VirtuosoGridProps<ClientPokemonCardType, undefined>['compo
     Item: GridItem
 };
 
-export function CardGrid({ totalCount, isFetchingNextPage, itemRenderer }: CardGridProps) {
+export function CardGrid({ cards, totalCount, isLoading }: CardGridProps) {
     return (
         <VirtuosoGrid
             style={{ height: '100%' }}
-            overscan={20}
+            overscan={2000}
             totalCount={totalCount}
             components={{
-                ...gridComponents,
-                Footer: () => {
-                    return isFetchingNextPage ? (
-                        <p className='p-4 text-center'>Loading more...</p>
-                    ) : null;
-                }
+                ...gridComponents
             }}
-            itemContent={(index) => <div className='flex w-full'>{itemRenderer(index)}</div>}
+            itemContent={(index) => (
+                <div className='flex w-full'>
+                    {isLoading ? <PokemonCardSkeleton /> : <PokemonCard card={cards[index]} />}
+                </div>
+            )}
         />
     );
 }

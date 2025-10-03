@@ -35,6 +35,7 @@
         "client-only": "^0.0.1",
         "clsx": "^2.1.1",
         "dotenv": "^17.2.2",
+        "idb-keyval": "^6.2.2",
         "install": "^0.13.0",
         "lodash-es": "^4.17.21",
         "lucide-react": "^0.544.0",

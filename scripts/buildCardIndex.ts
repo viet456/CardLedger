@@ -25,9 +25,7 @@ async function buildCardIndex() {
     console.log('Starting to build the card index artifact...');
     console.log(' -> Querying all cards from the database...');
     const allCardsFromDb = await prisma.card.findMany({
-        orderBy: {
-            releaseDate: 'asc'
-        },
+        orderBy: [{ releaseDate: 'desc' }, { number: 'asc' }],
         select: {
             id: true,
             name: true,
@@ -46,6 +44,22 @@ async function buildCardIndex() {
             releaseDate: true,
             pokedexNumberSort: true
         }
+    });
+    // sorts the stringed cardnumbers
+    allCardsFromDb.sort((a, b) => {
+        // group by releaseDate
+        if (a.releaseDate.getTime() !== b.releaseDate.getTime()) {
+            return b.releaseDate.getTime() - a.releaseDate.getTime();
+        }
+        const numA = parseInt(a.number, 10);
+        const numB = parseInt(b.number, 10);
+        const aIsNum = !isNaN(numA);
+        const bIsNum = !isNaN(numB);
+
+        if (aIsNum && bIsNum) return numA - numB; // numeric vs numeric
+        if (aIsNum) return -1; // numeric before non-numeric
+        if (bIsNum) return 1;
+        return a.number.localeCompare(b.number); // string fallback
     });
     console.log(` -> Found ${allCardsFromDb.length} cards to process.`);
 
