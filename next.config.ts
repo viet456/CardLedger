@@ -10,6 +10,11 @@ const nextConfig: NextConfig = {
                 pathname: '/**'
             }
         ]
+    },
+    cloudinary: {
+        image: {
+            placeholder: true
+        }
     }
 };
 export default nextConfig;

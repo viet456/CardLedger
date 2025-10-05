@@ -103,7 +103,7 @@ async function buildCardIndex() {
             n: card.name,
             hp: card.hp,
             num: card.number,
-            img: card.imageKey, // remove '/cards png in future and render from bucketUrl/cards/id .png
+            img: card.imageKey,
             rD: card.releaseDate.toISOString().split('T')[0],
             pS: card.pokedexNumberSort,
             cRC: card.convertedRetreatCost,

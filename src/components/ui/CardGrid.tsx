@@ -53,7 +53,7 @@ export function CardGrid({ cards, totalCount, isLoading }: CardGridProps) {
                     {isLoading ? (
                         <PokemonCardSkeleton />
                     ) : (
-                        <PokemonCard card={cards[index]} priority={index < 8} />
+                        <PokemonCard card={cards[index]} priority={index < 12} />
                     )}
                 </div>
             )}

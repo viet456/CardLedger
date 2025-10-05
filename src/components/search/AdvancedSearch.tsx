@@ -58,6 +58,7 @@ export function AdvancedSearch() {
 
     const denormalizedCards: DenormalizedCard[] = useMemo(() => {
         if (!allCards || allCards.length === 0) return [];
+        console.log("First card's image key:", allCards[0].img);
         return allCards.map((card) => ({
             id: card.id,
             n: card.n,
