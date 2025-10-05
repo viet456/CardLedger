@@ -5,6 +5,7 @@ import { SearchBar } from './SearchBar';
 import { FindCardsParams } from '@/src/services/pokemonCardService';
 import { useEffect, useMemo } from 'react';
 import { useCardStore } from '@/src/lib/store/cardStore';
+import { DenormalizedCard, SetObject } from '@/src/shared-types/card-index';
 import { useHasHydrated } from '@/src/hooks/useHasHydrated';
 
 import {
@@ -15,25 +16,8 @@ import {
     SheetTitle
 } from '@/src/components/ui/sheet';
 import { CardGrid } from '../ui/CardGrid';
-
-type DenormalizedCard = {
-    id: string;
-    n: string;
-    hp: number | null;
-    num: string;
-    img: string | null;
-    rD: string;
-    pS: number | null;
-    cRC: number | null;
-    supertype: string;
-    artist: string | null;
-    rarity: string | null;
-    set: { id: string; name: string };
-    types: string[];
-    subtypes: string[];
-    weaknesses: string[];
-    resistances: string[];
-};
+import { a } from 'vitest/dist/chunks/suite.d.FvehnV49.js';
+type FilterOption = string | SetObject;
 
 export function AdvancedSearch() {
     const { filters, setFilters } = useSearchStore();
@@ -58,7 +42,6 @@ export function AdvancedSearch() {
 
     const denormalizedCards: DenormalizedCard[] = useMemo(() => {
         if (!allCards || allCards.length === 0) return [];
-        console.log("First card's image key:", allCards[0].img);
         return allCards.map((card) => ({
             id: card.id,
             n: card.n,
@@ -70,7 +53,7 @@ export function AdvancedSearch() {
             cRC: card.cRC,
             artist: card.a !== null && card.a !== undefined ? artists[card.a] || null : null,
             rarity: card.r !== null && card.r !== undefined ? rarities[card.r] || null : null,
-            set: sets[card.s] || { id: '', name: '' },
+            set: sets[card.s] || { id: '', name: '', printedTotal: 0 },
             supertype: supertypes[card.st] || '',
             subtypes: card.sb ? card.sb.map((id) => subtypes[id] || '').filter(Boolean) : [],
             types: card.t ? card.t.map((id) => types[id] || '').filter(Boolean) : [],
@@ -81,7 +64,8 @@ export function AdvancedSearch() {
 
     const filteredCards = useMemo(() => {
         if (denormalizedCards.length === 0) return [];
-        return denormalizedCards.filter((card) => {
+        // filtering
+        const results = denormalizedCards.filter((card) => {
             const searchFilter = filters.search?.toLowerCase();
             if (searchFilter && !card.n.toLowerCase().includes(searchFilter)) return false;
             if (filters.rarity && card.rarity !== filters.rarity) return false;
@@ -91,6 +75,41 @@ export function AdvancedSearch() {
             if (filters.artist && card.artist !== filters.artist) return false;
             return true;
         });
+        // Only sort if the user has selected a sort option.
+        // Otherwise, respect the pre-sorted order from the JSON file.
+        if (filters.sortBy) {
+            const sortBy = (filters.sortBy || 'rD') as keyof DenormalizedCard;
+            const sortOrder = filters.sortOrder || 'desc';
+            results.sort((a, b) => {
+                const valA = a[sortBy];
+                const valB = b[sortBy];
+                switch (sortBy) {
+                    case 'n': // 'name' -> 'n'
+                        const nameDiff = a.n.localeCompare(b.n);
+                        // If names are the same, sort by release date
+                        if (nameDiff !== 0) return nameDiff;
+                        return new Date(a.rD).getTime() - new Date(b.rD).getTime();
+                        // case 'num': // 'number' -> 'num'
+                        //     const numDiff = (valA as string).localeCompare(valB as string, undefined, { numeric: true });
+                        //     if (numDiff !== 0) return numDiff;
+                        return new Date(a.rD).getTime() - new Date(b.rD).getTime();
+                    case 'pS': // 'pokedexNumberSort' -> 'pS'
+                        // Handle nulls by pushing them to the end
+                        const pokedexDiff = (a.pS || 9999) - (b.pS || 9999);
+                        if (pokedexDiff !== 0) return pokedexDiff;
+                        return new Date(a.rD).getTime() - new Date(b.rD).getTime();
+                    case 'rD': // 'releaseDate' -> 'rD'
+                    default:
+                        const dateDiff = new Date(a.rD).getTime() - new Date(b.rD).getTime();
+                        if (dateDiff !== 0) return dateDiff;
+                        return b.num.localeCompare(a.num, undefined, { numeric: true });
+                }
+            });
+            if (sortOrder === 'desc') {
+                results.reverse();
+            }
+        }
+        return results;
     }, [denormalizedCards, filters]);
 
     const handleFilterChange = (key: keyof FindCardsParams, value: string | number) => {
@@ -98,8 +117,6 @@ export function AdvancedSearch() {
             value === '' || (typeof value === 'number' && isNaN(value)) ? undefined : value;
         setFilters({ [key]: finalValue });
     };
-
-    type FilterOption = string | { id: string; name: string };
 
     const filterConfig: Array<{
         label: string;
@@ -114,10 +131,46 @@ export function AdvancedSearch() {
         { label: 'Resistances', key: 'resistanceType', options: Object.values(types) },
         { label: 'Sets', key: 'setId', options: Object.values(sets) }
     ];
+    const sortOptions = [
+        { label: 'Release Date', value: 'rD' },
+        { label: 'Name', value: 'n' },
+        { label: 'Pokedex Number', value: 'pS' }
+        // { label: 'Card Number', value: 'num' },
+    ];
     return (
         <div className='flex flex-grow flex-col'>
-            <div className='flex-shrink-0 px-4 py-2'>
+            <div className='flex-shrink-0 px-4 pt-2'>
                 <SearchBar />
+                <section className='grid grid-cols-2 gap-4' aria-label='Sort options'>
+                    <div className='mb-4'>
+                        <label htmlFor='sortBySelect'>Sort By:</label>
+                        <select
+                            id='sortBySelect'
+                            value={filters.sortBy || 'rD'}
+                            onChange={(e) => handleFilterChange('sortBy', e.target.value)}
+                            className='w-full rounded bg-primary text-primary-foreground'
+                        >
+                            {sortOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className='mb-4'>
+                        <label htmlFor='sortOrderSelect'>Order:</label>
+                        <select
+                            id='sortOrderSelect'
+                            value={filters.sortOrder || 'desc'}
+                            onChange={(e) => handleFilterChange('sortOrder', e.target.value)}
+                            className='w-full rounded bg-primary text-primary-foreground'
+                        >
+                            <option value='asc'>Ascending</option>
+                            <option value='desc'>Descending</option>
+                        </select>
+                    </div>
+                </section>
+
                 <Sheet>
                     <SheetTrigger
                         aria-label='Open navigation menu'

@@ -1,7 +1,5 @@
-import Image from 'next/image';
 import { CldImage } from 'next-cloudinary';
-import { DenormalizedCard } from '@/src/lib/store/cardStore';
-
+import { DenormalizedCard } from '@/src/shared-types/card-index';
 const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
 
 interface PokemonCardProps {
@@ -30,18 +28,20 @@ export function PokemonCard({ card, priority = false }: PokemonCardProps) {
                 </div>
             ) : (
                 // Placeholder for cards without images
-                <div className='flex aspect-[2.5/3.5] w-full items-center justify-center bg-muted'>
-                    <p className='text-xs text-muted-foreground'>No Image</p>
+                <div className='flex aspect-[2.5/3.5] w-full flex-col items-center justify-center rounded-lg bg-muted'>
+                    <p className='text-md text-muted-foreground'>No Image</p>
                 </div>
             )}
 
-            {/* <div className='p-2'>
-                <p className='truncate font-bold'>{card.name}</p>
-                <p className='text-sm text-muted-foreground'>{card.id}</p>
-                <p className='mt-auto text-xs'>
-                    {card.set.name} - {card.number}/{card.set.printedTotal}
+            {/* --- INFO AREA (Always visible) --- */}
+            <div className='p-2 text-xs'>
+                <p className='truncate text-base font-bold'>{card.n}</p>
+                <p>{card.set.name}</p>
+                <p>{card.rarity}</p>
+                <p>
+                    {card.num}/{card.set.printedTotal}
                 </p>
-            </div> */}
+            </div>
         </div>
     );
 }

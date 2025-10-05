@@ -7,11 +7,13 @@ const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
 const prisma = new PrismaClient();
 const BUCKET_NAME = 'cardledger';
 
+type SetObject = { id: string; name: string; printedTotal: number };
+
 // Helper function to get or create an ID from a lookup map
 function getOrCreateId(
     map: Map<string, number>,
-    array: (string | { id: string; name: string })[],
-    value: string | { id: string; name: string }
+    array: (string | SetObject)[],
+    value: string | SetObject
 ) {
     const key = typeof value === 'string' ? value : value.id;
     if (!map.has(key)) {
@@ -35,7 +37,7 @@ async function buildCardIndex() {
             supertype: true,
             artist: { select: { name: true } }, // Flatten relation
             rarity: { select: { name: true } }, // Flatten relation
-            set: { select: { id: true, name: true } }, // Flatten relation
+            set: { select: { id: true, name: true, printedTotal: true } }, // Flatten relation
             types: { select: { type: { select: { name: true } } } }, // Flatten nested relation
             subtypes: { select: { subtype: { select: { name: true } } } }, // Flatten nested relation
             weaknesses: { select: { type: { select: { name: true } } } },
@@ -71,7 +73,7 @@ async function buildCardIndex() {
     const rarities: string[] = [];
 
     const setMap = new Map<string, number>();
-    const sets: { id: string; name: string }[] = [];
+    const sets: SetObject[] = [];
 
     const typeMap = new Map<string, number>();
     const types: string[] = [];

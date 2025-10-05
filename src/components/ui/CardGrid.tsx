@@ -3,7 +3,7 @@ import { forwardRef, Ref, HTMLAttributes } from 'react';
 import { PokemonCard } from './PokemonCard';
 import { PokemonCardSkeleton } from './PokemonCardSkeleton';
 import { ClientPokemonCardType } from '@/src/types/data';
-import { DenormalizedCard } from '@/src/lib/store/cardStore';
+import { DenormalizedCard } from '@/src/shared-types/card-index';
 
 interface CardGridProps {
     cards: DenormalizedCard[];

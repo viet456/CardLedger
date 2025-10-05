@@ -9,7 +9,8 @@ const nextConfig: NextConfig = {
                 port: '',
                 pathname: '/**'
             }
-        ]
+        ],
+        qualities: [50, 75]
     },
     cloudinary: {
         image: {

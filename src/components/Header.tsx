@@ -14,6 +14,8 @@ const navItems = [
 export function Header() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const pathname = usePathname();
+    // don't show headersearchbar on Cards page
+    const showHeaderSearch = pathname !== '/cards';
 
     const NavLink = ({
         href,
@@ -54,7 +56,9 @@ export function Header() {
                     </nav>
                 </div>
                 <div className='hidden max-w-sm flex-grow justify-end md:block'>
-                    <HeaderSearchBar onSuggestionClick={() => setIsMenuOpen(false)} />
+                    {showHeaderSearch && (
+                        <HeaderSearchBar onSuggestionClick={() => setIsMenuOpen(false)} />
+                    )}
                 </div>
                 {/* Mobile navigation*/}
                 <div className='md:hidden'>

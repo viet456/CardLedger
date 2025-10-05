@@ -1,6 +1,13 @@
 import { create } from 'zustand';
 import { persist, PersistStorage, StorageValue } from 'zustand/middleware';
 import { get, set, del } from 'idb-keyval';
+import {
+    NormalizedCard,
+    DenormalizedCard,
+    PointerFile,
+    LookupTables,
+    FullCardData
+} from '@/src/shared-types/card-index';
 
 const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
 
@@ -11,40 +18,6 @@ type StoreStatus =
     | 'ready_from_cache'
     | 'ready_from_network'
     | 'error';
-type PointerFile = {
-    version: string;
-    url: string;
-    checkSum: string;
-    cardCount: number;
-    updatedAt: string;
-};
-type NormalizedCard = {
-    id: string;
-    n: string; // name
-    hp: number | null;
-    num: string;
-    img: string | null; //image key
-    rD: string; // release date
-    pS: number | null; // pokedex number
-    cRC: number | null; // converted retreat cost
-    st: number; // supertype id
-    a: number | null; // artist id
-    r: number | null; // rarity id
-    s: number; // set id
-    t: number[]; // type ids
-    sb: number[]; // subtype ids
-    w: number[]; // weakness ids
-    rs: number[]; // resistance ids
-};
-type LookupTables = {
-    supertypes: string[];
-    rarities: string[];
-    sets: { id: string; name: string }[];
-    types: string[];
-    subtypes: string[];
-    artists: string[];
-};
-type FullCardData = LookupTables & { cards: NormalizedCard[]; version: string };
 
 // Saved to Zustand
 type PersistedState = LookupTables & {
@@ -76,25 +49,6 @@ type CardStoreState = LookupTables & {
     initialize: () => Promise<void>;
 };
 
-export type DenormalizedCard = {
-    id: string;
-    n: string;
-    hp: number | null;
-    num: string;
-    img: string | null;
-    rD: string;
-    pS: number | null;
-    cRC: number | null;
-    artist: string | null;
-    rarity: string | null;
-    set: { id: string; name: string };
-    supertype: string;
-    subtypes: string[];
-    types: string[];
-    weaknesses: string[];
-    resistances: string[];
-};
-
 // copies IndexedDB to faster Zustand store
 export const useCardStore = create<CardStoreState>()(
     persist(
@@ -109,6 +63,7 @@ export const useCardStore = create<CardStoreState>()(
             version: null,
             status: 'idle',
 
+            // Checks for local cards in Indexeddb and compares to fetched version
             initialize: async () => {
                 if (get().status.startsWith('loading') || get().status.startsWith('ready')) {
                     return;
@@ -127,7 +82,7 @@ export const useCardStore = create<CardStoreState>()(
                         `[Store]: Latest version is ${pointer.version}. Local version is ${get().version || 'none'}.`
                     );
 
-                    // Check if our stored version is the same as the latest
+                    // Check if our stored version is the same as the last created JSON
                     if (get().version === pointer.version) {
                         console.log(' ✅ Local data is up-to-date. Using IndexedDB cache.');
                         set({ status: 'ready_from_cache' });

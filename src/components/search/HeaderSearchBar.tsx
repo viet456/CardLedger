@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useDebounce } from '@/src/hooks/useDebounce';
 import { trpc } from '@/src/utils/trpc';
 import { useClickOutside } from '@/src/hooks/useClickOutside';
+import { Button } from '../ui/button';
 
 interface HeaderSearchBarProps {
     onSuggestionClick: () => void;
@@ -83,15 +84,15 @@ export function HeaderSearchBar({ onSuggestionClick }: HeaderSearchBarProps) {
                 className='w-full rounded border bg-primary p-2 text-primary-foreground'
             />
             {inputValue && (
-                <button
+                <Button
                     onClick={handleClear}
                     className='absolute right-2 top-1/2 -translate-y-1/2 text-xl text-gray-400 hover:text-primary-foreground md:text-base'
                     aria-label='Clear search'
                 >
                     ✕
-                </button>
+                </Button>
             )}
-            {isLoading && <span className='absolute right-8 top-2 animate-spin'>🌀</span>}
+            {isLoading && <span className='absolute right-12 top-2 animate-spin'>🌀</span>}
             {isFocused && suggestions && suggestions.length > 0 && (
                 <ul
                     role='listbox'
