@@ -2,12 +2,11 @@ import { PrismaClient } from '@prisma/client';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { r2 } from '../src/lib/r2';
 import crypto from 'crypto';
+import { SetObject } from '../src/shared-types/card-index';
 
 const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
 const prisma = new PrismaClient();
 const BUCKET_NAME = 'cardledger';
-
-type SetObject = { id: string; name: string; printedTotal: number };
 
 // Helper function to get or create an ID from a lookup map
 function getOrCreateId(
@@ -21,6 +20,17 @@ function getOrCreateId(
         array.push(typeof value === 'string' ? value : value);
     }
     return map.get(key)!;
+}
+
+function sanitizePublicId(id: string): string {
+    const characterMap: { [key: string]: string } = { '?': 'question', '!': 'exclamation' };
+    const regex = new RegExp(
+        Object.keys(characterMap)
+            .map((c) => `\\${c}`)
+            .join('|'),
+        'g'
+    );
+    return id.replace(regex, (match) => `_${characterMap[match]}`);
 }
 
 async function buildCardIndex() {
@@ -37,7 +47,16 @@ async function buildCardIndex() {
             supertype: true,
             artist: { select: { name: true } }, // Flatten relation
             rarity: { select: { name: true } }, // Flatten relation
-            set: { select: { id: true, name: true, printedTotal: true } }, // Flatten relation
+            set: {
+                select: {
+                    id: true,
+                    name: true,
+                    printedTotal: true,
+                    logoImageKey: true,
+                    symbolImageKey: true,
+                    series: true
+                }
+            }, // Flatten relation
             types: { select: { type: { select: { name: true } } } }, // Flatten nested relation
             subtypes: { select: { subtype: { select: { name: true } } } }, // Flatten nested relation
             weaknesses: { select: { type: { select: { name: true } } } },
@@ -99,13 +118,19 @@ async function buildCardIndex() {
         const resistanceIds = card.resistances.map((r) =>
             getOrCreateId(typeMap, types, r.type.name)
         );
+        let cloudinaryPublicId: string | null = null;
+        if (card.imageKey) {
+            const baseId = card.imageKey.replace('cards/', '').replace(/\.[^/.]+$/, '');
+            const sanitizedId = sanitizePublicId(baseId);
+            cloudinaryPublicId = `home/${sanitizedId}`;
+        }
         // Return a compact card object with short keys and integer IDs
         return {
             id: card.id,
             n: card.name,
             hp: card.hp,
             num: card.number,
-            img: card.imageKey,
+            img: cloudinaryPublicId,
             rD: card.releaseDate.toISOString().split('T')[0],
             pS: card.pokedexNumberSort,
             cRC: card.convertedRetreatCost,

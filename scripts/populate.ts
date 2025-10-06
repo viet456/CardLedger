@@ -3,6 +3,18 @@ import fetch, { RequestInit, Response } from 'node-fetch';
 import { PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { r2 } from '../src/lib/r2';
 import { z } from 'zod';
+
+function sanitizePublicId(id: string): string {
+    const characterMap: { [key: string]: string } = { '?': 'question', '!': 'exclamation' };
+    const regex = new RegExp(
+        Object.keys(characterMap)
+            .map((c) => `\\${c}`)
+            .join('|'),
+        'g'
+    );
+    return id.replace(regex, (match) => `_${characterMap[match]}`);
+}
+
 // Note: refactor to use Axios
 
 const prisma = new PrismaClient();
@@ -157,8 +169,11 @@ async function doesImageExistInR2(key: string): Promise<boolean> {
 
 async function uploadImageToR2(
     imageUrl: string,
-    key: string
-): Promise<{ key: string | null; isHardFailure: boolean }> {
+    cardId: string
+): Promise<{ imageKey: string | null; isHardFailure: boolean }> {
+    const sanitizedCardId = sanitizePublicId(cardId);
+    const imageKey = `cards/${sanitizedCardId}.png`;
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
     try {
@@ -170,7 +185,7 @@ async function uploadImageToR2(
         if (!response.ok) {
             if (response.status === 404) {
                 console.log(` -> Image not found at source (404). Skipping.`);
-                return { key: null, isHardFailure: false };
+                return { imageKey: null, isHardFailure: false };
             }
             console.log(`Failed to fetch image: ${response.statusText}`);
             throw new Error(`Failed to fetch image: ${response.statusText}`);
@@ -178,17 +193,17 @@ async function uploadImageToR2(
         const imageBuffer = Buffer.from(await response.arrayBuffer());
         const command = new PutObjectCommand({
             Bucket: BUCKET_NAME,
-            Key: key,
+            Key: imageKey,
             Body: imageBuffer,
             ContentType: response.headers.get('content-type') || 'image/png'
         });
-        console.log(` -> Uploading image to R2 with key: ${key}`);
+        console.log(` -> Uploading image to R2 with key: ${imageKey}`);
         await r2.send(command);
-        console.log(` -> ✅ Successfully uploaded image: ${key}`);
-        return { key: key, isHardFailure: false };
+        console.log(` -> ✅ Successfully uploaded image: ${imageKey}`);
+        return { imageKey: imageKey, isHardFailure: false };
     } catch (error) {
-        console.error(` -> ❌ Error in uploading/verifing image for key ${key}:`, error);
-        return { key: null, isHardFailure: true };
+        console.error(` -> ❌ Error in uploading/verifing image for key ${imageKey}:`, error);
+        return { imageKey: null, isHardFailure: true };
     } finally {
         clearTimeout(timeoutId);
     }
@@ -320,8 +335,8 @@ async function syncSets() {
                         ptcgoCode: apiSet.ptcgoCode,
                         releaseDate: new Date(apiSet.releaseDate),
                         updatedAt: new Date(apiSet.updatedAt),
-                        symbolImageKey: symbolUploadResult.key,
-                        logoImageKey: logoUploadResult.key
+                        symbolImageKey: symbolUploadResult.imageKey,
+                        logoImageKey: logoUploadResult.imageKey
                     }
                 });
             } else if (existingSet.total !== apiSet.total) {
@@ -443,7 +458,7 @@ async function syncCards(
                         const imageExists = await doesImageExistInR2(key);
                         if (!imageExists) {
                             const uploadResult = await uploadImageToR2(apiCard.images.large, key);
-                            imageKey = uploadResult.key;
+                            imageKey = uploadResult.imageKey;
 
                             if (uploadResult.isHardFailure) {
                                 consecutiveUploadFailures++;
@@ -575,13 +590,14 @@ async function syncCards(
                 ) {
                     // Existing card is missing image
                     console.log(` -> Updating missing image for ${apiCard.name}...`);
-                    const key = `cards/${apiCard.id}.png`;
+                    const sanitizedId = sanitizePublicId(apiCard.id);
+                    const key = `cards/${sanitizedId}.png`;
                     const uploadResult = await uploadImageToR2(apiCard.images.large, key);
 
-                    if (uploadResult.key) {
+                    if (uploadResult.imageKey) {
                         await prisma.card.update({
                             where: { id: apiCard.id },
-                            data: { imageKey: uploadResult.key }
+                            data: { imageKey: uploadResult.imageKey }
                         });
                         console.log(` -> ✅ Successfully updated image for ${apiCard.name}.`);
                         consecutiveUploadFailures = 0;

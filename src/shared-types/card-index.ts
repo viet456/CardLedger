@@ -2,6 +2,9 @@ export type SetObject = {
     id: string;
     name: string;
     printedTotal: number;
+    logoImageKey?: string | null;
+    symbolImageKey?: string | null;
+    series: string;
 };
 
 export type LookupTables = {

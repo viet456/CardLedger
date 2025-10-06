@@ -6,8 +6,6 @@ import { FindCardsParams } from '@/src/services/pokemonCardService';
 import { useEffect, useMemo } from 'react';
 import { useCardStore } from '@/src/lib/store/cardStore';
 import { DenormalizedCard, SetObject } from '@/src/shared-types/card-index';
-import { useHasHydrated } from '@/src/hooks/useHasHydrated';
-
 import {
     Sheet,
     SheetTrigger,
@@ -16,11 +14,28 @@ import {
     SheetTitle
 } from '@/src/components/ui/sheet';
 import { CardGrid } from '../ui/CardGrid';
-import { a } from 'vitest/dist/chunks/suite.d.FvehnV49.js';
-type FilterOption = string | SetObject;
+import { SortableKey } from '@/src/services/pokemonCardValidator';
 
-export function AdvancedSearch() {
+type FilterOption = string | SetObject;
+type SortOption = {
+    label: string;
+    value: SortableKey;
+};
+interface AdvancedSearchProps {
+    sortOptions: SortOption[];
+    defaultSort?: {
+        sortBy: SortableKey;
+        sortOrder: 'asc' | 'desc';
+    };
+}
+export function AdvancedSearch({ sortOptions, defaultSort }: AdvancedSearchProps) {
     const { filters, setFilters } = useSearchStore();
+    useEffect(() => {
+        if (!filters.sortBy && defaultSort) {
+            setFilters(defaultSort);
+        }
+    }, [filters.sortBy, defaultSort, setFilters]);
+
     const {
         cards: allCards,
         artists,
@@ -29,16 +44,8 @@ export function AdvancedSearch() {
         types,
         subtypes,
         supertypes,
-        status,
-        initialize
+        status
     } = useCardStore();
-
-    const isHydrated = useHasHydrated();
-    useEffect(() => {
-        if (isHydrated) {
-            initialize();
-        }
-    }, [isHydrated, initialize]);
 
     const denormalizedCards: DenormalizedCard[] = useMemo(() => {
         if (!allCards || allCards.length === 0) return [];
@@ -80,18 +87,16 @@ export function AdvancedSearch() {
         if (filters.sortBy) {
             const sortBy = (filters.sortBy || 'rD') as keyof DenormalizedCard;
             const sortOrder = filters.sortOrder || 'desc';
+            // return back to original, presorted data
+            if (sortBy === 'rD' && sortOrder === 'desc') {
+                return results;
+            }
             results.sort((a, b) => {
-                const valA = a[sortBy];
-                const valB = b[sortBy];
                 switch (sortBy) {
                     case 'n': // 'name' -> 'n'
                         const nameDiff = a.n.localeCompare(b.n);
                         // If names are the same, sort by release date
                         if (nameDiff !== 0) return nameDiff;
-                        return new Date(a.rD).getTime() - new Date(b.rD).getTime();
-                        // case 'num': // 'number' -> 'num'
-                        //     const numDiff = (valA as string).localeCompare(valB as string, undefined, { numeric: true });
-                        //     if (numDiff !== 0) return numDiff;
                         return new Date(a.rD).getTime() - new Date(b.rD).getTime();
                     case 'pS': // 'pokedexNumberSort' -> 'pS'
                         // Handle nulls by pushing them to the end
@@ -131,12 +136,12 @@ export function AdvancedSearch() {
         { label: 'Resistances', key: 'resistanceType', options: Object.values(types) },
         { label: 'Sets', key: 'setId', options: Object.values(sets) }
     ];
-    const sortOptions = [
-        { label: 'Release Date', value: 'rD' },
-        { label: 'Name', value: 'n' },
-        { label: 'Pokedex Number', value: 'pS' }
-        // { label: 'Card Number', value: 'num' },
-    ];
+    // const sortOptions = [
+    //     { label: 'Release Date', value: 'rD' },
+    //     { label: 'Name', value: 'n' },
+    //     { label: 'Pokedex Number', value: 'pS' }
+    //     // { label: 'Card Number', value: 'num' },
+    // ];
     return (
         <div className='flex flex-grow flex-col'>
             <div className='flex-shrink-0 px-4 pt-2'>
@@ -146,7 +151,7 @@ export function AdvancedSearch() {
                         <label htmlFor='sortBySelect'>Sort By:</label>
                         <select
                             id='sortBySelect'
-                            value={filters.sortBy || 'rD'}
+                            value={filters.sortBy || defaultSort?.sortBy || ''}
                             onChange={(e) => handleFilterChange('sortBy', e.target.value)}
                             className='w-full rounded bg-primary text-primary-foreground'
                         >

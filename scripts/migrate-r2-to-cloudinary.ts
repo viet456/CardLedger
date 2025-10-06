@@ -5,6 +5,20 @@ import { cloudinary } from '../src/lib/cloudinary';
 const R2_BUCKET_NAME = 'cardledger';
 const R2_PUBLIC_URL = 'https://assets.cardledger.io';
 
+function sanitizePublicId(id: string): string {
+    const characterMap: { [key: string]: string } = {
+        '?': 'question',
+        '!': 'exclamation'
+    };
+    const regex = new RegExp(
+        Object.keys(characterMap)
+            .map((c) => `\\${c}`)
+            .join('|'),
+        'g'
+    );
+    return id.replace(regex, (match) => `_${characterMap[match]}`);
+}
+
 async function getAllCloudinaryPublicIds(prefix: string): Promise<Set<string>> {
     console.log('Fetching existing image IDs from Cloudinary...');
     const publicIds = new Set<string>();
@@ -31,9 +45,11 @@ async function getAllCloudinaryPublicIds(prefix: string): Promise<Set<string>> {
     return publicIds;
 }
 
-async function migrateImages() {
-    console.log('Starting migration from R2 to Cloudinary...');
-    const existingCloudinaryIds = await getAllCloudinaryPublicIds('cards/');
+async function migratePrefix(r2Prefix: string, cloudinaryPrefix: string) {
+    console.log(
+        `\n--- Migrating R2 prefix "${r2Prefix}" to Cloudinary prefix "${cloudinaryPrefix}" ---`
+    );
+    const existingCloudinaryIds = await getAllCloudinaryPublicIds(cloudinaryPrefix);
     let continuationToken: string | undefined = undefined;
     let totalMigrated = 0;
     let totalSkipped = 0;
@@ -42,7 +58,7 @@ async function migrateImages() {
         console.log('Fetching a batch of objects from R2...');
         const command = new ListObjectsV2Command({
             Bucket: R2_BUCKET_NAME,
-            Prefix: 'cards/', // Only get files from the 'cards' folder
+            Prefix: r2Prefix,
             ContinuationToken: continuationToken
         });
 
@@ -50,22 +66,20 @@ async function migrateImages() {
             await r2.send(command);
 
         if (!Contents || Contents.length === 0) {
-            console.log('No more objects found in R2.');
             break;
         }
 
         const uploadPromises = Contents.map(async (obj) => {
-            if (!obj.Key) return;
+            if (!obj.Key || obj.Key.endsWith('/')) return; // Skip folders
+            const baseId = obj.Key.replace(r2Prefix, '').replace(/\.[^/.]+$/, '');
+            const sanitizedId = sanitizePublicId(baseId);
+            const publicId = `${cloudinaryPrefix}${sanitizedId}`;
 
-            const r2Url = `${R2_PUBLIC_URL}/${obj.Key}`;
-
-            // 'cards/base1-1.png' -> 'cards/base1-1'
-            const publicId = obj.Key.replace(/\.[^/.]+$/, '');
             if (existingCloudinaryIds.has(publicId)) {
                 totalSkipped++;
                 return; // skip the upload entirely
             }
-
+            const r2Url = `${R2_PUBLIC_URL}/${obj.Key}`;
             try {
                 console.log(` -> Uploading ${r2Url} to Cloudinary with Public ID: ${publicId}`);
                 await cloudinary.uploader.upload(r2Url, {
@@ -88,7 +102,16 @@ async function migrateImages() {
         continuationToken = NextContinuationToken;
     }
 
-    console.log(`\n-- ✅ Migration complete! Total images migrated: ${totalMigrated} --`);
+    console.log(
+        `--- Migration for "${r2Prefix}" complete! New: ${totalMigrated}, Skipped: ${totalSkipped} ---`
+    );
 }
 
-migrateImages().catch(console.error);
+async function runAllMigrations() {
+    // Migrate R2's 'cards/' folder to Cloudinary's root folder
+    await migratePrefix('cards/', 'home/');
+    // Migrate R2's 'sets/' folder to Cloudinary's 'sets/' folder
+    await migratePrefix('sets/', 'sets/');
+}
+
+runAllMigrations().catch(console.error);
