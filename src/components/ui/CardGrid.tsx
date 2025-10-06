@@ -17,13 +17,14 @@ const GridList = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
         <div
             ref={ref}
             {...props}
-            style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))',
-                gap: '16px',
-                padding: '16px',
-                ...props.style
-            }}
+            // style={{
+            //     display: 'grid',
+            //     gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))',
+            //     gap: '16px',
+            //     padding: '16px',
+            //     ...props.style
+            // }}
+            className='grid grid-cols-2 gap-4 p-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
         >
             {children}
         </div>

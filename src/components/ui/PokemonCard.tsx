@@ -1,6 +1,6 @@
 import { CldImage } from 'next-cloudinary';
 import { DenormalizedCard } from '@/src/shared-types/card-index';
-const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
+//const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
 
 interface PokemonCardProps {
     card: DenormalizedCard;
@@ -10,7 +10,7 @@ interface PokemonCardProps {
 export function PokemonCard({ card, priority = false }: PokemonCardProps) {
     // const imageUrl = `${R2_PUBLIC_URL}/${card.img}`;
     return (
-        <div className='flex w-full flex-col rounded-xl bg-card text-card-foreground'>
+        <div className='flex w-full flex-col rounded-xl bg-card text-card-foreground will-change-transform'>
             {card.img ? (
                 <div className='relative aspect-[2.5/3.5] w-full'>
                     {/* Get image from Cloudinary store */}
@@ -20,7 +20,7 @@ export function PokemonCard({ card, priority = false }: PokemonCardProps) {
                         fill
                         className='object-cover'
                         sizes='192px'
-                        loading='eager'
+                        loading={priority ? 'eager' : 'lazy'}
                         fetchPriority={priority ? 'high' : 'auto'}
                         quality='50'
                         format='avif'
@@ -34,11 +34,12 @@ export function PokemonCard({ card, priority = false }: PokemonCardProps) {
             )}
 
             {/* --- INFO AREA (Always visible) --- */}
-            <div className='p-2 text-xs'>
+            <div className='p-2'>
                 <p className='truncate text-base font-bold'>{card.n}</p>
-                <p>{card.set.name}</p>
-                <p>{card.rarity}</p>
-                <p>
+                {/* Use text-sm and muted-foreground for better hierarchy */}
+                <p className='text-sm text-muted-foreground'>{card.set.name}</p>
+                <p className='text-sm text-muted-foreground'>{card.rarity}</p>
+                <p className='text-sm text-muted-foreground'>
                     {card.num}/{card.set.printedTotal}
                 </p>
             </div>
