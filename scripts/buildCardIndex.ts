@@ -54,7 +54,8 @@ async function buildCardIndex() {
                     printedTotal: true,
                     logoImageKey: true,
                     symbolImageKey: true,
-                    series: true
+                    series: true,
+                    releaseDate: true
                 }
             }, // Flatten relation
             types: { select: { type: { select: { name: true } } } }, // Flatten nested relation
@@ -108,7 +109,10 @@ async function buildCardIndex() {
         const supertypeId = getOrCreateId(supertypeMap, supertypes, card.supertype);
         const artistId = card.artist ? getOrCreateId(artistMap, artists, card.artist.name) : null;
         const rarityId = card.rarity ? getOrCreateId(rarityMap, rarities, card.rarity.name) : null;
-        const setId = getOrCreateId(setMap, sets, card.set);
+        const setId = getOrCreateId(setMap, sets, {
+            ...card.set,
+            releaseDate: card.set.releaseDate.toISOString().split('T')[0]
+        });
 
         const typeIds = card.types.map((t) => getOrCreateId(typeMap, types, t.type.name));
         const subtypeIds = card.subtypes.map((s) =>
@@ -131,7 +135,7 @@ async function buildCardIndex() {
             hp: card.hp,
             num: card.number,
             img: cloudinaryPublicId,
-            rD: card.releaseDate.toISOString().split('T')[0],
+            // rD: card.releaseDate.toISOString().split('T')[0],
             pS: card.pokedexNumberSort,
             cRC: card.convertedRetreatCost,
             st: supertypeId,

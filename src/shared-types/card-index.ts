@@ -5,6 +5,7 @@ export type SetObject = {
     logoImageKey?: string | null;
     symbolImageKey?: string | null;
     series: string;
+    releaseDate: string;
 };
 
 export type LookupTables = {
@@ -22,7 +23,6 @@ export type NormalizedCard = {
     hp: number | null;
     num: string;
     img: string | null; //image key
-    rD: string; // release date
     pS: number | null; // pokedex number
     cRC: number | null; // converted retreat cost
     st: number; // supertype id
@@ -41,7 +41,6 @@ export type DenormalizedCard = {
     hp: number | null;
     num: string;
     img: string | null;
-    rD: string;
     pS: number | null;
     cRC: number | null;
     artist: string | null;

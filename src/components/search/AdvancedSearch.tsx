@@ -55,7 +55,6 @@ export function AdvancedSearch({ sortOptions, defaultSort }: AdvancedSearchProps
             hp: card.hp,
             num: card.num,
             img: card.img,
-            rD: card.rD,
             pS: card.pS,
             cRC: card.cRC,
             artist: card.a !== null && card.a !== undefined ? artists[card.a] || null : null,
@@ -85,7 +84,7 @@ export function AdvancedSearch({ sortOptions, defaultSort }: AdvancedSearchProps
         // Only sort if the user has selected a sort option.
         // Otherwise, respect the pre-sorted order from the JSON file.
         if (filters.sortBy) {
-            const sortBy = (filters.sortBy || 'rD') as keyof DenormalizedCard;
+            const sortBy = (filters.sortBy || 'rD') as SortableKey;
             const sortOrder = filters.sortOrder || 'desc';
             // return back to original, presorted data
             if (sortBy === 'rD' && sortOrder === 'desc') {
@@ -97,15 +96,23 @@ export function AdvancedSearch({ sortOptions, defaultSort }: AdvancedSearchProps
                         const nameDiff = a.n.localeCompare(b.n);
                         // If names are the same, sort by release date
                         if (nameDiff !== 0) return nameDiff;
-                        return new Date(a.rD).getTime() - new Date(b.rD).getTime();
+                        return (
+                            new Date(a.set.releaseDate).getTime() -
+                            new Date(b.set.releaseDate).getTime()
+                        );
                     case 'pS': // 'pokedexNumberSort' -> 'pS'
                         // Handle nulls by pushing them to the end
                         const pokedexDiff = (a.pS || 9999) - (b.pS || 9999);
                         if (pokedexDiff !== 0) return pokedexDiff;
-                        return new Date(a.rD).getTime() - new Date(b.rD).getTime();
+                        return (
+                            new Date(a.set.releaseDate).getTime() -
+                            new Date(b.set.releaseDate).getTime()
+                        );
                     case 'rD': // 'releaseDate' -> 'rD'
                     default:
-                        const dateDiff = new Date(a.rD).getTime() - new Date(b.rD).getTime();
+                        const dateDiff =
+                            new Date(a.set.releaseDate).getTime() -
+                            new Date(b.set.releaseDate).getTime();
                         if (dateDiff !== 0) return dateDiff;
                         return b.num.localeCompare(a.num, undefined, { numeric: true });
                 }
