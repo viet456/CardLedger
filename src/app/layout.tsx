@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 import type { Viewport } from 'next';
 import './globals.css';
-import { Header } from '../components/Header';
-import { Footer } from '../components/Footer';
+import { Header } from '../components/ui/Header';
+import { Footer } from '../components/ui/Footer';
 import { Inter } from 'next/font/google';
-import { ThemeProvider } from '@/src/components/theme-provider';
+import { ThemeProvider } from '@/src/components/ui/theme-provider';
 import { TrpcProvider } from '../providers/TRPCProvider';
 
 const inter = Inter({

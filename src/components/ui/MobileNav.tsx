@@ -3,9 +3,9 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { HeaderSearchBar } from './search/HeaderSearchBar';
+import { HeaderSearchBar } from '../search/HeaderSearchBar';
 import { Menu, X } from 'lucide-react';
-import { Button } from './ui/button';
+import { Button } from './button';
 import {
     Sheet,
     SheetContent,

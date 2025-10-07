@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { MobileNav } from './MobileNav';
-import { HeaderSearchBar } from './search/HeaderSearchBar';
+import { HeaderSearchBar } from '../search/HeaderSearchBar';
 
 export const navItems = [
     { href: '/', label: 'Home' },
