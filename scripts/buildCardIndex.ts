@@ -55,7 +55,8 @@ async function buildCardIndex() {
                     logoImageKey: true,
                     symbolImageKey: true,
                     series: true,
-                    releaseDate: true
+                    releaseDate: true,
+                    ptcgoCode: true
                 }
             }, // Flatten relation
             types: { select: { type: { select: { name: true } } } }, // Flatten nested relation

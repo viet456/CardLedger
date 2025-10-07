@@ -6,6 +6,7 @@ export type SetObject = {
     symbolImageKey?: string | null;
     series: string;
     releaseDate: string;
+    ptcgoCode: string | null;
 };
 
 export type LookupTables = {

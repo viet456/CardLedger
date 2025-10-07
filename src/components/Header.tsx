@@ -6,9 +6,10 @@ import { usePathname } from 'next/navigation';
 import { MobileNav } from './MobileNav';
 import { HeaderSearchBar } from './search/HeaderSearchBar';
 
-const navItems = [
+export const navItems = [
     { href: '/', label: 'Home' },
-    { href: '/cards', label: 'Cards' }
+    { href: '/cards', label: 'Cards' },
+    { href: '/sets', label: 'Sets' }
 ];
 
 export function Header() {

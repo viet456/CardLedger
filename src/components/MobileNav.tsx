@@ -16,11 +16,7 @@ import {
     SheetClose,
     SheetFooter
 } from '@/src/components/ui/sheet';
-
-const navItems = [
-    { href: '/', label: 'Home' },
-    { href: '/cards', label: 'Cards' }
-];
+import { navItems } from './Header';
 
 const NavLink = ({
     href,
