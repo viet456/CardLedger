@@ -169,11 +169,8 @@ async function doesImageExistInR2(key: string): Promise<boolean> {
 
 async function uploadImageToR2(
     imageUrl: string,
-    cardId: string
+    imageKey: string
 ): Promise<{ imageKey: string | null; isHardFailure: boolean }> {
-    const sanitizedCardId = sanitizePublicId(cardId);
-    const imageKey = `cards/${sanitizedCardId}.png`;
-
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
     try {
@@ -453,11 +450,14 @@ async function syncCards(
                     // Upload card image from API to the bucket
                     let imageKey: string | null = null;
                     if (apiCard.images?.large && !imageUploadsDisabled) {
-                        const key = `cards/${apiCard.id}.png`;
-                        console.log(` -> Checking for image in R2: ${key}`);
-                        const imageExists = await doesImageExistInR2(key);
+                        const finalImageKey = `cards/${sanitizePublicId(apiCard.id)}.png`;
+                        console.log(` -> Checking for image in R2: ${finalImageKey}`);
+                        const imageExists = await doesImageExistInR2(finalImageKey);
                         if (!imageExists) {
-                            const uploadResult = await uploadImageToR2(apiCard.images.large, key);
+                            const uploadResult = await uploadImageToR2(
+                                apiCard.images.large,
+                                finalImageKey
+                            );
                             imageKey = uploadResult.imageKey;
 
                             if (uploadResult.isHardFailure) {
@@ -471,7 +471,7 @@ async function syncCards(
                             }
                         } else {
                             console.log(` -> Image already exists in R2. Skipping upload.`);
-                            imageKey = key;
+                            imageKey = finalImageKey;
                             consecutiveUploadFailures = 0;
                         }
                     }
@@ -590,9 +590,8 @@ async function syncCards(
                 ) {
                     // Existing card is missing image
                     console.log(` -> Updating missing image for ${apiCard.name}...`);
-                    const sanitizedId = sanitizePublicId(apiCard.id);
-                    const key = `cards/${sanitizedId}.png`;
-                    const uploadResult = await uploadImageToR2(apiCard.images.large, key);
+                    const finalImageKey = `cards/${sanitizePublicId(apiCard.id)}.png`;
+                    const uploadResult = await uploadImageToR2(apiCard.images.large, finalImageKey);
 
                     if (uploadResult.imageKey) {
                         await prisma.card.update({
