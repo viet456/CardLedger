@@ -4,8 +4,7 @@ import { useSearchStore } from '@/src/lib/store/searchStore';
 import { SearchBar } from './SearchBar';
 import { FindCardsParams } from '@/src/services/pokemonCardService';
 import { useEffect, useMemo } from 'react';
-import { useCardStore } from '@/src/lib/store/cardStore';
-import { DenormalizedCard, SetObject } from '@/src/shared-types/card-index';
+import { DenormalizedCard, FilterOptions, SetObject } from '@/src/shared-types/card-index';
 import {
     Sheet,
     SheetTrigger,
@@ -13,22 +12,28 @@ import {
     SheetHeader,
     SheetTitle
 } from '@/src/components/ui/sheet';
-import { CardGrid } from '../ui/CardGrid';
+import { CardGrid } from '../cards/CardGrid';
 import { SortableKey } from '@/src/services/pokemonCardValidator';
 
-type FilterOption = string | SetObject;
 type SortOption = {
     label: string;
     value: SortableKey;
 };
 interface AdvancedSearchProps {
+    initialCards: DenormalizedCard[];
+    filterOptions: FilterOptions & { sets?: SetObject[] }; // sets made filterable too
     sortOptions: SortOption[];
     defaultSort?: {
         sortBy: SortableKey;
         sortOrder: 'asc' | 'desc';
     };
 }
-export function AdvancedSearch({ sortOptions, defaultSort }: AdvancedSearchProps) {
+export function AdvancedSearch({
+    initialCards,
+    filterOptions,
+    sortOptions,
+    defaultSort
+}: AdvancedSearchProps) {
     const { filters, setFilters } = useSearchStore();
     useEffect(() => {
         if (!filters.sortBy && defaultSort) {
@@ -36,42 +41,10 @@ export function AdvancedSearch({ sortOptions, defaultSort }: AdvancedSearchProps
         }
     }, [filters.sortBy, defaultSort, setFilters]);
 
-    const {
-        cards: allCards,
-        artists,
-        rarities,
-        sets,
-        types,
-        subtypes,
-        supertypes,
-        status
-    } = useCardStore();
-
-    const denormalizedCards: DenormalizedCard[] = useMemo(() => {
-        if (!allCards || allCards.length === 0) return [];
-        return allCards.map((card) => ({
-            id: card.id,
-            n: card.n,
-            hp: card.hp,
-            num: card.num,
-            img: card.img,
-            pS: card.pS,
-            cRC: card.cRC,
-            artist: card.a !== null && card.a !== undefined ? artists[card.a] || null : null,
-            rarity: card.r !== null && card.r !== undefined ? rarities[card.r] || null : null,
-            set: sets[card.s] || { id: '', name: '', printedTotal: 0 },
-            supertype: supertypes[card.st] || '',
-            subtypes: card.sb ? card.sb.map((id) => subtypes[id] || '').filter(Boolean) : [],
-            types: card.t ? card.t.map((id) => types[id] || '').filter(Boolean) : [],
-            weaknesses: card.w ? card.w.map((id) => types[id] || '').filter(Boolean) : [],
-            resistances: card.rs ? card.rs.map((id) => types[id] || '').filter(Boolean) : []
-        }));
-    }, [allCards, artists, rarities, sets, types, subtypes, supertypes]);
-
     const filteredCards = useMemo(() => {
-        if (denormalizedCards.length === 0) return [];
+        if (!initialCards || initialCards.length === 0) return [];
         // filtering
-        const results = denormalizedCards.filter((card) => {
+        const results = initialCards.filter((card) => {
             const searchFilter = filters.search?.toLowerCase();
             if (searchFilter && !card.n.toLowerCase().includes(searchFilter)) return false;
             if (filters.rarity && card.rarity !== filters.rarity) return false;
@@ -122,7 +95,7 @@ export function AdvancedSearch({ sortOptions, defaultSort }: AdvancedSearchProps
             }
         }
         return results;
-    }, [denormalizedCards, filters]);
+    }, [initialCards, filters]);
 
     const handleFilterChange = (key: keyof FindCardsParams, value: string | number) => {
         const finalValue =
@@ -130,25 +103,16 @@ export function AdvancedSearch({ sortOptions, defaultSort }: AdvancedSearchProps
         setFilters({ [key]: finalValue });
     };
 
-    const filterConfig: Array<{
-        label: string;
-        key: string;
-        options: FilterOption[];
-    }> = [
-        { label: 'Types', key: 'type', options: Object.values(types) },
-        { label: 'Subtypes', key: 'subtype', options: Object.values(subtypes) },
-        { label: 'Rarities', key: 'rarity', options: Object.values(rarities) },
-        { label: 'Artists', key: 'artist', options: Object.values(artists) },
-        { label: 'Weaknesses', key: 'weaknessType', options: Object.values(types) },
-        { label: 'Resistances', key: 'resistanceType', options: Object.values(types) },
-        { label: 'Sets', key: 'setId', options: Object.values(sets) }
+    const filterConfig = [
+        { label: 'Types', key: 'type', options: filterOptions.types || [] },
+        { label: 'Subtypes', key: 'subtype', options: filterOptions.subtypes || [] },
+        { label: 'Rarities', key: 'rarity', options: filterOptions.rarities || [] },
+        { label: 'Artists', key: 'artist', options: filterOptions.artists || [] },
+        { label: 'Weaknesses', key: 'weaknessType', options: filterOptions.types || [] },
+        { label: 'Resistances', key: 'resistanceType', options: filterOptions.types || [] },
+        { label: 'Sets', key: 'setId', options: filterOptions.sets || [] }
     ];
-    // const sortOptions = [
-    //     { label: 'Release Date', value: 'rD' },
-    //     { label: 'Name', value: 'n' },
-    //     { label: 'Pokedex Number', value: 'pS' }
-    //     // { label: 'Card Number', value: 'num' },
-    // ];
+
     return (
         <div className='flex flex-grow flex-col'>
             <div className='flex-shrink-0 px-4 pt-2'>
@@ -243,17 +207,11 @@ export function AdvancedSearch({ sortOptions, defaultSort }: AdvancedSearchProps
             </div>
 
             <div className='mt-2 min-h-0 flex-grow'>
-                {status === 'loading' && <p className='text-center'>Loading...</p>}
-                {status === 'error' && (
-                    <p className='text-center text-red-500'>Error loading card data.</p>
-                )}
-                {status.startsWith('ready') && (
-                    <CardGrid
-                        cards={filteredCards}
-                        isLoading={!status.startsWith('ready')}
-                        totalCount={status.startsWith('ready') ? filteredCards.length : 12}
-                    />
-                )}
+                <CardGrid
+                    cards={filteredCards}
+                    isLoading={false} // managed by parent page.tsx
+                    totalCount={filteredCards.length}
+                />
             </div>
         </div>
     );

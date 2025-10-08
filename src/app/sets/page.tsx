@@ -1,6 +1,4 @@
 import { PrismaClient } from '@prisma/client';
-import Link from 'next/link';
-import { CldImage } from 'next-cloudinary';
 import { SetObject } from '@/src/shared-types/card-index';
 import { SetCard } from '@/src/components/SetCard';
 

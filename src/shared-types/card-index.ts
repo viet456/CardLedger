@@ -1,3 +1,17 @@
+type FilterOptionObject = { id: number | string; name: string };
+export type FilterOptions = {
+    rarities: FilterOptionObject[] | string[];
+    types: FilterOptionObject[] | string[];
+    subtypes: FilterOptionObject[] | string[];
+    artists: FilterOptionObject[] | string[];
+};
+
+export type SetPageProps = {
+    setInfo: SetObject;
+    cards: DenormalizedCard[];
+    filterOptions: FilterOptions;
+};
+
 export type SetObject = {
     id: string;
     name: string;
