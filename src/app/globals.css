@@ -3,6 +3,11 @@
 @tailwind utilities;
 
 @layer base {
+    h1 { @apply text-3xl font-bold; }
+    h2 { @apply text-2xl font-semibold; }
+    p { @apply leading-relaxed text-base; }
+    ul { @apply text-base list-disc pl-6 marker:text-foreground dark:marker:text-foreground; }
+    li { @apply my-1; }
     :root {
         /* Page background and default text color */
         --background: 1 0 0; /* white - #ffffff */

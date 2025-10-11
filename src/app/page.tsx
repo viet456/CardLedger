@@ -26,17 +26,26 @@ export default function Home() {
             {/* Features Section */}
             <section className='grid w-full max-w-4xl grid-cols-1 gap-8 md:grid-cols-2'>
                 <div className='flex flex-col items-center gap-2'>
-                    <h3 className='text-2xl font-bold'>Personal Collections</h3>
-                    <p className='text-muted-foreground'>
+                    <h3 className='text-2xl font-bold leading-tight'>🗂️ Personal Collections</h3>
+                    <p className='leading-relaxed text-muted-foreground'>
                         Create an account to log every card you own, track different versions, and
                         manage your personal portfolio.
                     </p>
                 </div>
                 <div className='flex flex-col items-center gap-2'>
-                    <h3 className='text-2xl font-bold'>Investment Tracking</h3>
-                    <p className='text-muted-foreground'>
+                    <h3 className='text-2xl font-bold leading-tight'>💎 Investment Tracking</h3>
+                    <p className='leading-relaxed text-muted-foreground'>
                         Follow market values from trusted sources to see how your collection&apos;s
                         worth changes over time.
+                    </p>
+                </div>
+                <div className='flex flex-col items-center gap-2'>
+                    <h3 className='text-2xl font-bold leading-tight'>
+                        🧩 Build Decks & Curate Custom Card Sets
+                    </h3>
+                    <p className='leading-relaxed text-muted-foreground'>
+                        Create battle-ready decks or collect by your favorite Pokémon themes - then
+                        share them with others.
                     </p>
                 </div>
             </section>

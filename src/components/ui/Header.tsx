@@ -9,7 +9,8 @@ import { HeaderSearchBar } from '../search/HeaderSearchBar';
 export const navItems = [
     { href: '/', label: 'Home' },
     { href: '/cards', label: 'Cards' },
-    { href: '/sets', label: 'Sets' }
+    { href: '/sets', label: 'Sets' },
+    { href: '/about', label: 'About' }
 ];
 
 export function Header() {

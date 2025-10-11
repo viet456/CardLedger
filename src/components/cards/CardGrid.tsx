@@ -1,3 +1,5 @@
+'use client';
+
 import { VirtuosoGrid, VirtuosoGridProps } from 'react-virtuoso';
 import { forwardRef, Ref, HTMLAttributes } from 'react';
 import { PokemonCard } from './PokemonCard';
@@ -43,7 +45,7 @@ const gridComponents: VirtuosoGridProps<ClientPokemonCardType, undefined>['compo
 export function CardGrid({ cards, totalCount, isLoading }: CardGridProps) {
     return (
         <VirtuosoGrid
-            style={{ height: '100%' }}
+            useWindowScroll
             overscan={2000}
             totalCount={totalCount}
             components={{

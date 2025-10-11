@@ -55,7 +55,10 @@ export function SetCard({ set }: SetCardProps) {
                         </div>
                     )}
                 </div>
-                <span className='mt-2 text-sm text-muted-foreground'>{set.releaseDate}</span>
+                <div className='mt-2 flex flex-col items-center justify-center text-sm text-muted-foreground'>
+                    <p>{set.printedTotal} cards</p>
+                    <p>{set.releaseDate}</p>
+                </div>
             </div>
         </Link>
     );
