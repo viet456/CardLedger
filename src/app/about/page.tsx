@@ -108,6 +108,26 @@ export default function About() {
                     This project represents my dedication to building high-quality, performant, and
                     maintainable web applications by making thoughtful architectural decisions.
                 </p>
+
+                <h2 className='mt-8 border-t pt-6'>About the Creator</h2>
+                <p>
+                    My name is Viet Le, and I'm a full-stack developer with a passion for building
+                    high-quality, performant web applications. CardLedger is my capstone portfolio
+                    project, built from the ground up to master modern application architecture,
+                    from database design and data flow to frontend performance optimization.
+                </p>
+                <p>
+                    You can learn more about my journey and see my other work on my personal site,
+                    or connect with me on X.
+                    <br />
+                    <a href='https://vietle.me' target='_blank' rel='noopener noreferrer'>
+                        vietle.me
+                    </a>
+                    <br />
+                    <a href='https://x.com/vietle683' target='_blank' rel='noopener noreferrer'>
+                        @vietle683
+                    </a>
+                </p>
             </article>
         </main>
     );

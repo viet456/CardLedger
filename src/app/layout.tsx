@@ -6,6 +6,7 @@ import { Footer } from '../components/ui/Footer';
 import { Inter } from 'next/font/google';
 import { ThemeProvider } from '@/src/components/ui/theme-provider';
 import { TrpcProvider } from '../providers/TRPCProvider';
+import { ScrollToTopButton } from '../components/ScrollToTopButton';
 
 const inter = Inter({
     subsets: ['latin'],
@@ -41,6 +42,7 @@ export default function RootLayout({
                         <Header />
                         <main className='flex flex-grow'>{children}</main>
                         <Footer />
+                        <ScrollToTopButton />
                     </ThemeProvider>
                 </TrpcProvider>
             </body>

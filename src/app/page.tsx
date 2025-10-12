@@ -1,5 +1,12 @@
 import { Button } from '@/src/components/ui/button';
 import Link from 'next/link';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+    title: 'CardLedger: Your Pokémon TCG Collection Manager',
+    description:
+        'Track, manage, and browse your entire Pokémon TCG collection. Fast, modern, and powerful tools for every collector.'
+};
 
 export default function Home() {
     return (
@@ -44,7 +51,7 @@ export default function Home() {
                         🧩 Build Decks & Curate Custom Card Sets
                     </h3>
                     <p className='leading-relaxed text-muted-foreground'>
-                        Create battle-ready decks or collect by your favorite Pokémon themes - then
+                        Create battle-ready decks or collect by your favorite Pokémon themes — then
                         share them with others.
                     </p>
                 </div>

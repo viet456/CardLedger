@@ -2,8 +2,30 @@ import { PrismaClient } from '@prisma/client';
 import { notFound } from 'next/navigation';
 import { SetPageView } from './SetPageView';
 import { DenormalizedCard, FilterOptions, SetObject } from '@/src/shared-types/card-index';
+import { Metadata } from 'next';
 
 const prisma = new PrismaClient();
+
+export async function generateMetadata({
+    params
+}: {
+    params: { setId: string };
+}): Promise<Metadata> {
+    const set = await prisma.set.findUnique({
+        where: { id: params.setId }
+    });
+
+    if (!set) {
+        return {
+            title: 'Set Not Found | CardLedger'
+        };
+    }
+
+    return {
+        title: `${set.name} | CardLedger`,
+        description: `Browse all ${set.printedTotal} cards from the ${set.name} set.`
+    };
+}
 
 export async function generateStaticParams() {
     const sets = await prisma.set.findMany({

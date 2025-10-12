@@ -1,8 +1,14 @@
 import { PrismaClient } from '@prisma/client';
 import { SetObject } from '@/src/shared-types/card-index';
 import { SetCard } from '@/src/components/SetCard';
+import { Metadata } from 'next';
 
 const prisma = new PrismaClient();
+
+export const metadata: Metadata = {
+    title: 'All Sets | CardLedger',
+    description: 'Browse a complete list of all Pokémon TCG sets, grouped by series.'
+};
 
 async function getGroupedSets() {
     const allSets = await prisma.set.findMany({
