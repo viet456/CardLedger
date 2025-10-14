@@ -51,12 +51,15 @@ async function getSetData(setId: string) {
                     weaknesses: { include: { type: true } },
                     resistances: { include: { type: true } },
                     abilities: true
-                },
-                orderBy: { number: 'asc' }
+                }
             }
         }
     });
     if (!setWithCardsRaw) return null;
+
+    setWithCardsRaw.cards.sort((a, b) =>
+        a.number.localeCompare(b.number, undefined, { numeric: true })
+    );
 
     // Helper functions for transformations
     const setInfo: SetObject = {
