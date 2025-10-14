@@ -3,8 +3,26 @@ import { notFound } from 'next/navigation';
 import { SetPageView } from './SetPageView';
 import { DenormalizedCard, FilterOptions, SetObject } from '@/src/shared-types/card-index';
 import { Metadata } from 'next';
+import { Suspense } from 'react';
 
 const prisma = new PrismaClient();
+
+function SetPageSkeleton() {
+    return (
+        <div className='container mx-auto p-4'>
+            <div className='h-10 w-1/2 animate-pulse rounded bg-muted'></div>
+            <div className='mt-4 h-8 w-full animate-pulse rounded bg-muted'></div>
+            <div className='mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'>
+                {Array.from({ length: 12 }).map((_, i) => (
+                    <div
+                        key={i}
+                        className='flex aspect-[2.5/3.5] w-full animate-pulse rounded-xl border bg-card'
+                    />
+                ))}
+            </div>
+        </div>
+    );
+}
 
 export async function generateMetadata({
     params
@@ -109,6 +127,12 @@ export default async function SingleSetPage({ params }: { params: { setId: strin
     const data = await getSetData(params.setId);
     if (!data) notFound();
     return (
-        <SetPageView setInfo={data.setInfo} cards={data.cards} filterOptions={data.filterOptions} />
+        <Suspense fallback={<SetPageSkeleton />}>
+            <SetPageView
+                setInfo={data.setInfo}
+                cards={data.cards}
+                filterOptions={data.filterOptions}
+            />
+        </Suspense>
     );
 }
