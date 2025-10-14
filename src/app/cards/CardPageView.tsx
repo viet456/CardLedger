@@ -7,7 +7,8 @@ import { useMemo } from 'react';
 import { DenormalizedCard } from '@/src/shared-types/card-index';
 
 export default function CardPageView() {
-    const { cards, artists, rarities, sets, types, subtypes, supertypes, status } = useCardStore();
+    const { cards, artists, rarities, sets, types, subtypes, supertypes, abilities, status } =
+        useCardStore();
     const denormalizedCards: DenormalizedCard[] = useMemo(() => {
         if (!cards || cards.length === 0) return [];
         return cards.map((card) => ({
@@ -25,9 +26,11 @@ export default function CardPageView() {
             subtypes: card.sb.map((id) => subtypes[id]),
             types: card.t.map((id) => types[id]),
             weaknesses: card.w.map((id) => types[id]),
-            resistances: card.rs.map((id) => types[id])
+            resistances: card.rs.map((id) => types[id]),
+            // Empty array fallback for old Json without abilities
+            abilities: (card.ab || []).map((id) => abilities[id])
         }));
-    }, [cards, artists, rarities, sets, types, subtypes, supertypes]);
+    }, [cards, artists, rarities, sets, types, subtypes, supertypes, abilities]);
     const filterOptions = { rarities, types, subtypes, artists, sets };
     const allCardsSortOptions: { label: string; value: SortableKey }[] = [
         { label: 'Release Date', value: 'rD' },

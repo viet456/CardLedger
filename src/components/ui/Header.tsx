@@ -8,7 +8,7 @@ import { HeaderSearchBar } from '../search/HeaderSearchBar';
 
 export const navItems = [
     { href: '/', label: 'Home' },
-    { href: '/cards', label: 'Cards' },
+    { href: '/cards?sortBy=rD&sortOrder=desc', label: 'Cards' },
     { href: '/sets', label: 'Sets' },
     { href: '/about', label: 'About' }
 ];
@@ -28,7 +28,8 @@ export function Header() {
         label: string;
         isMobile?: boolean;
     }) => {
-        const isActive = pathname === href;
+        const isActive = pathname === href.split('?')[0];
+
         return (
             <Link
                 href={href}

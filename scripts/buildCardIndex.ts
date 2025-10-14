@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { r2 } from '../src/lib/r2';
 import crypto from 'crypto';
-import { SetObject } from '../src/shared-types/card-index';
+import { SetObject, AbilityObject } from '../src/shared-types/card-index';
 
 const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
 const prisma = new PrismaClient();
@@ -20,6 +20,19 @@ function getOrCreateId(
         array.push(typeof value === 'string' ? value : value);
     }
     return map.get(key)!;
+}
+
+function getOrCreateAbilityId(
+    map: Map<string, number>,
+    array: AbilityObject[],
+    value: AbilityObject
+) {
+    const key = value.name;
+    if (!map.has(key)) {
+        map.set(key, array.length);
+        array.push(value);
+    }
+    return map.get(key);
 }
 
 function sanitizePublicId(id: string): string {
@@ -65,7 +78,8 @@ async function buildCardIndex() {
             resistances: { select: { type: { select: { name: true } } } },
             imageKey: true,
             releaseDate: true,
-            pokedexNumberSort: true
+            pokedexNumberSort: true,
+            abilities: true
         }
     });
     // sorts the stringed cardnumbers
@@ -105,6 +119,9 @@ async function buildCardIndex() {
     const artistMap = new Map<string, number>();
     const artists: string[] = [];
 
+    const abilityMap = new Map<string, number>();
+    const abilities: AbilityObject[] = [];
+
     // Post-process the cards for the client by pruning and flattening
     const normalizedCards = allCardsFromDb.map((card) => {
         const supertypeId = getOrCreateId(supertypeMap, supertypes, card.supertype);
@@ -122,6 +139,13 @@ async function buildCardIndex() {
         const weaknessIds = card.weaknesses.map((w) => getOrCreateId(typeMap, types, w.type.name));
         const resistanceIds = card.resistances.map((r) =>
             getOrCreateId(typeMap, types, r.type.name)
+        );
+        const abilityIds = card.abilities.map((ability) =>
+            getOrCreateAbilityId(abilityMap, abilities, {
+                name: ability.name,
+                text: ability.text,
+                type: ability.type
+            })
         );
         let cloudinaryPublicId: string | null = null;
         if (card.imageKey) {
@@ -146,7 +170,8 @@ async function buildCardIndex() {
             t: typeIds,
             sb: subtypeIds,
             w: weaknessIds,
-            rs: resistanceIds
+            rs: resistanceIds,
+            ab: abilityIds
         };
     });
     console.log(` -> Processed and normalized ${normalizedCards.length} cards.`);
@@ -161,6 +186,7 @@ async function buildCardIndex() {
         types: types,
         subtypes: subtypes,
         artists: artists,
+        abilities: abilities,
         cards: normalizedCards
     };
     const jsonData = JSON.stringify(finalJsonObject);

@@ -49,7 +49,8 @@ async function getSetData(setId: string) {
                     artist: true,
                     rarity: true,
                     weaknesses: { include: { type: true } },
-                    resistances: { include: { type: true } }
+                    resistances: { include: { type: true } },
+                    abilities: true
                 },
                 orderBy: { number: 'asc' }
             }
@@ -85,7 +86,12 @@ async function getSetData(setId: string) {
         types: card.types.map((t) => t.type.name),
         subtypes: card.subtypes.map((s) => s.subtype.name),
         weaknesses: card.weaknesses.map((w) => w.type.name),
-        resistances: card.resistances.map((r) => r.type.name)
+        resistances: card.resistances.map((r) => r.type.name),
+        abilities: card.abilities.map((ability) => ({
+            name: ability.name,
+            text: ability.text,
+            type: ability.type
+        }))
     }));
     const filterOptions: FilterOptions = {
         rarities: await prisma.rarity.findMany(),

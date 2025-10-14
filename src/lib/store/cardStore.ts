@@ -60,6 +60,7 @@ export const useCardStore = create<CardStoreState>()(
             subtypes: [],
             artists: [],
             cards: [],
+            abilities: [],
             version: null,
             status: 'idle',
 
@@ -132,6 +133,7 @@ export const useCardStore = create<CardStoreState>()(
                 subtypes: state.subtypes,
                 supertypes: state.supertypes,
                 cards: state.cards,
+                abilities: state.abilities,
                 version: state.version
             })
         }

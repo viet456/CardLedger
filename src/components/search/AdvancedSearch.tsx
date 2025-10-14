@@ -1,9 +1,9 @@
 'use client';
 
-import { useSearchStore } from '@/src/lib/store/searchStore';
+import { useSearchStore, FilterState } from '@/src/lib/store/searchStore';
 import { SearchBar } from './SearchBar';
 import { FindCardsParams } from '@/src/services/pokemonCardService';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { DenormalizedCard, FilterOptions, SetObject } from '@/src/shared-types/card-index';
 import {
     Sheet,
@@ -14,6 +14,7 @@ import {
 } from '@/src/components/ui/sheet';
 import { CardGrid } from '../cards/CardGrid';
 import { SortableKey } from '@/src/services/pokemonCardValidator';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 type SortOption = {
     label: string;
@@ -34,7 +35,37 @@ export function AdvancedSearch({
     sortOptions,
     defaultSort
 }: AdvancedSearchProps) {
-    const { filters, setFilters } = useSearchStore();
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const { filters, setFilters, replaceFilters } = useSearchStore();
+    const isInitialMount = useRef(true);
+
+    // Sync URL to search store on intial mount
+    useEffect(() => {
+        const params = new URLSearchParams(searchParams.toString());
+        const urlFilters: { [key: string]: string } = {};
+        for (const [key, value] of params.entries()) {
+            urlFilters[key] = value;
+        }
+        replaceFilters(urlFilters as Partial<FilterState>);
+    }, []);
+
+    // Sync store to URL on change
+    useEffect(() => {
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+        const params = new URLSearchParams();
+        Object.entries(filters).forEach(([key, value]) => {
+            if (value !== undefined && value !== null && value !== '') {
+                params.set(key, String(value));
+            }
+        });
+        router.replace(`${pathname}?${params.toString()}`);
+    }, [filters, pathname, router]);
+
     useEffect(() => {
         if (!filters.sortBy && defaultSort) {
             setFilters(defaultSort);

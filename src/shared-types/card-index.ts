@@ -1,3 +1,9 @@
+export type AbilityObject = {
+    name: string;
+    text: string;
+    type: string;
+};
+
 type FilterOptionObject = { id: number | string; name: string };
 export type FilterOptions = {
     rarities: FilterOptionObject[] | string[];
@@ -30,6 +36,7 @@ export type LookupTables = {
     types: string[];
     subtypes: string[];
     artists: string[];
+    abilities: AbilityObject[];
 };
 
 export type NormalizedCard = {
@@ -48,6 +55,7 @@ export type NormalizedCard = {
     sb: number[]; // subtype ids
     w: number[]; // weakness ids
     rs: number[]; // resistance ids
+    ab: number[];
 };
 
 export type DenormalizedCard = {
@@ -66,6 +74,7 @@ export type DenormalizedCard = {
     types: string[];
     weaknesses: string[];
     resistances: string[];
+    abilities: AbilityObject[];
 };
 
 export type PointerFile = {
