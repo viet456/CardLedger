@@ -1,5 +1,6 @@
 import { CldImage } from 'next-cloudinary';
 import { DenormalizedCard } from '@/src/shared-types/card-index';
+import Link from 'next/link';
 //const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
 
 interface PokemonCardProps {
@@ -10,7 +11,10 @@ interface PokemonCardProps {
 export function PokemonCard({ card, priority = false }: PokemonCardProps) {
     // const imageUrl = `${R2_PUBLIC_URL}/${card.img}`;
     return (
-        <div className='flex w-full flex-col rounded-xl bg-card text-card-foreground will-change-transform'>
+        <Link
+            href={`/cards/${card.id}`}
+            className='flex w-full flex-col rounded-xl bg-card text-card-foreground will-change-transform'
+        >
             {card.img ? (
                 <div className='relative aspect-[2.5/3.5] w-full'>
                     {/* Get image from Cloudinary store */}
@@ -43,6 +47,6 @@ export function PokemonCard({ card, priority = false }: PokemonCardProps) {
                     {card.num}/{card.set.printedTotal}
                 </p>
             </div>
-        </div>
+        </Link>
     );
 }

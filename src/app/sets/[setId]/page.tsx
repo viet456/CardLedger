@@ -68,7 +68,14 @@ async function getSetData(setId: string) {
                     rarity: true,
                     weaknesses: { include: { type: true } },
                     resistances: { include: { type: true } },
-                    abilities: true
+                    abilities: true,
+                    attacks: {
+                        include: {
+                            cost: {
+                                include: { type: true }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -104,15 +111,40 @@ async function getSetData(setId: string) {
         rarity: card.rarity?.name || null,
         set: setInfo,
         supertype: card.supertype,
+        evolvesFrom: card.evolvesFrom || null,
+        evolvesTo: card.evolvesTo,
         types: card.types.map((t) => t.type.name),
         subtypes: card.subtypes.map((s) => s.subtype.name),
-        weaknesses: card.weaknesses.map((w) => w.type.name),
-        resistances: card.resistances.map((r) => r.type.name),
+        weaknesses: card.weaknesses.map((w) => ({
+            type: w.type.name,
+            value: w.value || null
+        })),
+        resistances: card.resistances.map((r) => ({
+            type: r.type.name,
+            value: r.value || null
+        })),
         abilities: card.abilities.map((ability) => ({
             name: ability.name,
             text: ability.text,
             type: ability.type
-        }))
+        })),
+        rules: card.rules,
+        attacks: card.attacks.map((attack) => ({
+            name: attack.name,
+            cost: attack.cost.map((c) => c.type.name),
+            damage: attack.damage || null,
+            text: attack.text || null
+        })),
+        legalities: {
+            standard: card.standard,
+            expanded: card.expanded,
+            unlimited: card.unlimited
+        },
+        pokedexNumbers: card.nationalPokedexNumbers,
+        ancientTrait:
+            card.ancientTraitName && card.ancientTraitText
+                ? { name: card.ancientTraitName, text: card.ancientTraitText }
+                : null
     }));
     const filterOptions: FilterOptions = {
         rarities: await prisma.rarity.findMany(),

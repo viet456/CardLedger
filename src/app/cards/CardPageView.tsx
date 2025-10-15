@@ -11,8 +11,19 @@ import { useHasHydrated } from '@/src/hooks/useHasHydrated';
 
 export default function CardPageView() {
     const isHydrated = useHasHydrated();
-    const { cards, artists, rarities, sets, types, subtypes, supertypes, abilities, status } =
-        useCardStore();
+    const {
+        cards,
+        artists,
+        rarities,
+        sets,
+        types,
+        subtypes,
+        supertypes,
+        abilities,
+        attacks,
+        rules,
+        status
+    } = useCardStore();
     const denormalizedCards: DenormalizedCard[] = useMemo(() => {
         if (!cards || cards.length === 0) return [];
         return cards.map((card) => ({
@@ -29,12 +40,22 @@ export default function CardPageView() {
             supertype: supertypes[card.st],
             subtypes: card.sb.map((id) => subtypes[id]),
             types: card.t.map((id) => types[id]),
-            weaknesses: card.w.map((id) => types[id]),
-            resistances: card.rs.map((id) => types[id]),
-            // Empty array fallback for old Json without abilities
-            abilities: (card.ab || []).map((id) => abilities[id])
+            weaknesses: (card.w || []).map((w) => ({ type: types[w.t], value: w.v })),
+            resistances: (card.rs || []).map((r) => ({ type: types[r.t], value: r.v })),
+            abilities: (card.ab || []).map((id) => abilities[id]),
+            pokedexNumbers: card.pdx,
+            ancientTrait: card.aT ? { name: card.aT.n, text: card.aT.t } : null,
+            rules: (card.ru || []).map((id) => rules[id]),
+            attacks: (card.ak || []).map((id) => attacks[id]),
+            evolvesFrom: card.eF,
+            evolvesTo: card.eT || [],
+            legalities: {
+                standard: card.leg?.s,
+                expanded: card.leg?.e,
+                unlimited: card.leg?.u
+            }
         }));
-    }, [cards, artists, rarities, sets, types, subtypes, supertypes, abilities]);
+    }, [cards, artists, rarities, sets, types, subtypes, supertypes, abilities, attacks, rules]);
     const filterOptions = { rarities, types, subtypes, artists, sets };
     const allCardsSortOptions: { label: string; value: SortableKey }[] = [
         { label: 'Release Date', value: 'rD' },

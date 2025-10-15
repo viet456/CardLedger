@@ -12,6 +12,7 @@ export function SetCard({ set }: SetCardProps) {
     return (
         <Link
             href={`/sets/${set.id}?sortBy=num&sortOrder=asc`}
+            prefetch={false}
             className='hover:bg-muted/50 group flex flex-col items-center justify-between rounded-lg border bg-card p-4 text-card-foreground transition-colors'
         >
             {/* Header */}
@@ -24,8 +25,8 @@ export function SetCard({ set }: SetCardProps) {
                             width={30}
                             height={30}
                             className='object-contain'
-                            format='auto'
-                            quality='auto'
+                            format='avif'
+                            quality='50'
                         />
                     )}
                     <p className='text-md font-semibold'>{set.name}</p>

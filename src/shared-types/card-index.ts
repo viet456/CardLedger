@@ -1,3 +1,14 @@
+export type WeaknessResistanceObject = {
+    type: string;
+    value: string | null;
+};
+export type AttackObject = {
+    name: string;
+    cost: string[];
+    damage: string | null;
+    text: string | null;
+};
+
 export type AbilityObject = {
     name: string;
     text: string;
@@ -37,6 +48,8 @@ export type LookupTables = {
     subtypes: string[];
     artists: string[];
     abilities: AbilityObject[];
+    attacks: AttackObject[];
+    rules: string[];
 };
 
 export type NormalizedCard = {
@@ -53,9 +66,16 @@ export type NormalizedCard = {
     s: number; // set id
     t: number[]; // type ids
     sb: number[]; // subtype ids
-    w: number[]; // weakness ids
-    rs: number[]; // resistance ids
+    w: { t: number; v: string | null }[]; // weakness { typeId, value }
+    rs: { t: number; v: string | null }[]; // resistance { typeId, value }
     ab: number[];
+    ru: number[]; // rules
+    ak: number[]; // attacks
+    eF: string | null; // evolvesFrom
+    eT: string[]; // evolvesTo
+    leg: { s?: string; e?: string; u?: string }; // legalities
+    pdx: number[] | null; // pokedexNumbers
+    aT: { n: string; t: string } | null; // ancientTrait
 };
 
 export type DenormalizedCard = {
@@ -72,9 +92,23 @@ export type DenormalizedCard = {
     supertype: string;
     subtypes: string[];
     types: string[];
-    weaknesses: string[];
-    resistances: string[];
+    rules: string[];
+    attacks: AttackObject[];
+    weaknesses: WeaknessResistanceObject[];
+    resistances: WeaknessResistanceObject[];
+    evolvesFrom: string | null;
+    evolvesTo: string[];
     abilities: AbilityObject[];
+    legalities: {
+        standard?: string | null;
+        expanded?: string | null;
+        unlimited?: string | null;
+    };
+    pokedexNumbers: number[] | null;
+    ancientTrait: {
+        name: string;
+        text: string;
+    } | null;
 };
 
 export type PointerFile = {

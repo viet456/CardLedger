@@ -62,10 +62,18 @@ export function useCardFilters({ initialCards, defaultSort }: UseCardFiltersProp
             if (filters.type && !card.types.includes(filters.type)) return false;
             if (filters.subtype && !card.subtypes.includes(filters.subtype)) return false;
             if (filters.artist && card.artist !== filters.artist) return false;
-            if (filters.weaknessType && !card.weaknesses.includes(filters.weaknessType))
+            if (
+                filters.weaknessType &&
+                !card.weaknesses.some((w) => w.type === filters.weaknessType)
+            ) {
                 return false;
-            if (filters.resistanceType && !card.resistances.includes(filters.resistanceType))
+            }
+            if (
+                filters.resistanceType &&
+                !card.resistances.some((r) => r.type === filters.resistanceType)
+            ) {
                 return false;
+            }
             return true;
         });
         // Only sort if the user has selected a sort option.
