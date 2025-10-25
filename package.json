@@ -15,9 +15,11 @@
         "db:populate": "pnpm run db:generate && tsx scripts/populate.ts",
         "db:backfill-pokedex": "tsx scripts/backfillPokedexSort.ts",
         "db:backfill-release-date": "tsx scripts/backfillReleaseDate.ts",
+        "db:backfill-tcg": "tsx scripts/backfillTcgPlayerSetIds.ts",
         "index:cards": "tsx scripts/buildCardIndex.ts",
         "images:migrate": "tsx scripts/migrate-r2-to-cloudinary.ts",
-        "db:sync": "pnpm run db:populate && pnpm run images:migrate"
+        "db:sync": "pnpm run db:populate && pnpm run images:migrate",
+        "cards": "tsx scripts/fetchMarketData.ts"
     },
     "dependencies": {
         "@aws-sdk/client-s3": "^3.890.0",
@@ -33,6 +35,7 @@
         "@trpc/server": "^11.6.0",
         "@trpc/tanstack-react-query": "^11.6.0",
         "@uidotdev/usehooks": "^2.4.1",
+        "axios": "^1.12.2",
         "class-variance-authority": "^0.7.1",
         "client-only": "^0.0.1",
         "cloudinary": "^2.7.0",

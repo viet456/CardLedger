@@ -9,7 +9,7 @@ async function backfillReleaseDate() {
 
     const totalCardsToUpdate = await prisma.card.count({
         where: {
-            releaseDate: null
+            releaseDate: undefined
         }
     });
 
@@ -26,7 +26,7 @@ async function backfillReleaseDate() {
     while (updatedCount < totalCardsToUpdate) {
         const cardsToUpdate = await prisma.card.findMany({
             where: {
-                releaseDate: null
+                releaseDate: undefined
             },
             take: BATCH_SIZE,
             include: {

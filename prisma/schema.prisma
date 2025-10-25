@@ -18,6 +18,7 @@ model Set {
     id           String   @id
     name         String
     series       String
+    tcgPlayerSetId String? @unique
     printedTotal Int
     total        Int
     ptcgoCode    String?
@@ -85,6 +86,9 @@ model Card {
 
     imageKey String?
 
+    marketStats MarketStats? // Curret price
+    priceHistory PriceHistory[]  
+
     // -- Indexes for faster queries -- 
     // filtering only
     @@index([ancientTraitName])
@@ -99,6 +103,85 @@ model Card {
     @@index([name, id])
     @@index([pokedexNumberSort, id])
     @@index([releaseDate, id])
+}
+
+model MarketStats { // Price of all cards for current day
+    id Int @id @default(autoincrement())
+    card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+    cardId String @unique
+
+    // TCGplayer prices
+    tcgNearMintLatest         Decimal? @db.Decimal(10, 2)
+    tcgLightlyPlayedLatest    Decimal? @db.Decimal(10, 2)
+    tcgModeratelyPlayedLatest Decimal? @db.Decimal(10, 2)
+    tcgHeavilyPlayedLatest    Decimal? @db.Decimal(10, 2)
+    tcgDamagedLatest          Decimal? @db.Decimal(10, 2)
+
+    // TCGplayer maket trends
+    tcgNearMintTrend         String?
+    tcgLightlyPlayedTrend    String?
+    tcgModeratelyPlayedTrend String?
+    tcgHeavilyPlayedTrend    String?
+    tcgDamagedTrend          String?
+
+    // TCGplayer listings count
+    tcgNearMintListings Int?
+    tcgLightlyPlayedListings Int?
+    tcgModeratelyPlayedListings Int?
+    tcgHeavilyPlayedListings Int?
+    tcgDamagedListings Int?
+
+    // PSA pricing 
+    psa8MedianPrice Decimal? @db.Decimal(10,2)
+    psa9MedianPrice Decimal? @db.Decimal(10,2)
+    psa10MedianPrice Decimal? @db.Decimal(10,2)
+
+    // PSA market trends
+    psa8MarketTrend String?
+    psa9MarketTrend String?
+    psa10MarketTrend String?
+
+    // PSA listings count
+    psa8SaleCount Int?
+    psa9SaleCount Int?
+    psa10SaleCount Int?
+
+    tcgPlayerUpdatedAt DateTime?
+    ebayLastUpdatedAt DateTime?
+
+}
+
+model PriceHistory { // Card price history for graphing
+    id        String   @id @default(cuid())
+    timestamp DateTime @default(now())
+
+    // TCGplayer prices
+    tcgNearMint Decimal?  @db.Decimal(10, 2)
+    tcgLightlyPlayed Decimal?  @db.Decimal(10, 2)
+    tcgModeratelyPlayed Decimal?  @db.Decimal(10, 2)
+    tcgHeavilyPlayed Decimal? @db.Decimal(10,2)
+    tcgDamaged Decimal? @db.Decimal(10,2)
+
+    tcgNearMintVolume Int?
+    tcgLightlyPlayedVolume Int?
+    tcgModeratelyPlayedVolume Int?
+    tcgHeavilyPlayedVolume Int?
+    tcgDamagedVolume Int?
+
+    // PSA pricing 
+    psa8MedianPrice Decimal? @db.Decimal(10,2)
+    psa9MedianPrice Decimal? @db.Decimal(10,2)
+    psa10MedianPrice Decimal? @db.Decimal(10,2)
+
+    psa8SaleCount Int?
+    psa9SaleCount Int?
+    psa10SaleCount Int?
+
+    cardId String
+    card   Card   @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+    @@index([cardId, timestamp])
+    @@unique([cardId, timestamp])
 }
 
 model Subtype {

@@ -6,7 +6,7 @@ import { SingleCardView } from './SingleCardView';
 
 const prisma = new PrismaClient();
 
-export const revalidate = 604800;
+export const revalidate = 86400;
 
 export async function generateMetadata({
     params
