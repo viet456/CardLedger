@@ -15,16 +15,16 @@ enum LegalityStatus {
 }
 
 model Set {
-    id           String   @id
-    name         String
-    series       String
-    tcgPlayerSetId String? @unique
-    printedTotal Int
-    total        Int
-    ptcgoCode    String?
-    releaseDate  DateTime
-    updatedAt    DateTime
-    cards        Card[]
+    id             String   @id
+    name           String
+    series         String
+    tcgPlayerSetId String?  @unique
+    printedTotal   Int
+    total          Int
+    ptcgoCode      String?
+    releaseDate    DateTime
+    updatedAt      DateTime
+    cards          Card[]
 
     // Flattened legalities using the enum
     unlimited LegalityStatus?
@@ -86,8 +86,8 @@ model Card {
 
     imageKey String?
 
-    marketStats MarketStats? // Curret price
-    priceHistory PriceHistory[]  
+    marketStats  MarketStats? // Curret price
+    priceHistory PriceHistory[]
 
     // -- Indexes for faster queries -- 
     // filtering only
@@ -105,9 +105,9 @@ model Card {
     @@index([releaseDate, id])
 }
 
-model MarketStats { // Price of all cards for current day
-    id Int @id @default(autoincrement())
-    card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+model MarketStats {
+    id     Int    @id @default(autoincrement())
+    card   Card   @relation(fields: [cardId], references: [id], onDelete: Cascade)
     cardId String @unique
 
     // TCGplayer prices
@@ -125,63 +125,62 @@ model MarketStats { // Price of all cards for current day
     tcgDamagedTrend          String?
 
     // TCGplayer listings count
-    tcgNearMintListings Int?
-    tcgLightlyPlayedListings Int?
+    tcgNearMintListings         Int?
+    tcgLightlyPlayedListings    Int?
     tcgModeratelyPlayedListings Int?
-    tcgHeavilyPlayedListings Int?
-    tcgDamagedListings Int?
+    tcgHeavilyPlayedListings    Int?
+    tcgDamagedListings          Int?
 
     // PSA pricing 
-    psa8MedianPrice Decimal? @db.Decimal(10,2)
-    psa9MedianPrice Decimal? @db.Decimal(10,2)
-    psa10MedianPrice Decimal? @db.Decimal(10,2)
+    psa8MedianPrice  Decimal? @db.Decimal(10, 2)
+    psa9MedianPrice  Decimal? @db.Decimal(10, 2)
+    psa10MedianPrice Decimal? @db.Decimal(10, 2)
 
     // PSA market trends
-    psa8MarketTrend String?
-    psa9MarketTrend String?
+    psa8MarketTrend  String?
+    psa9MarketTrend  String?
     psa10MarketTrend String?
 
     // PSA listings count
-    psa8SaleCount Int?
-    psa9SaleCount Int?
+    psa8SaleCount  Int?
+    psa9SaleCount  Int?
     psa10SaleCount Int?
 
     tcgPlayerUpdatedAt DateTime?
-    ebayLastUpdatedAt DateTime?
-
+    ebayLastUpdatedAt  DateTime?
 }
 
-model PriceHistory { // Card price history for graphing
+model PriceHistory {
     id        String   @id @default(cuid())
     timestamp DateTime @default(now())
 
     // TCGplayer prices
-    tcgNearMint Decimal?  @db.Decimal(10, 2)
-    tcgLightlyPlayed Decimal?  @db.Decimal(10, 2)
-    tcgModeratelyPlayed Decimal?  @db.Decimal(10, 2)
-    tcgHeavilyPlayed Decimal? @db.Decimal(10,2)
-    tcgDamaged Decimal? @db.Decimal(10,2)
+    tcgNearMint         Decimal? @db.Decimal(10, 2)
+    tcgLightlyPlayed    Decimal? @db.Decimal(10, 2)
+    tcgModeratelyPlayed Decimal? @db.Decimal(10, 2)
+    tcgHeavilyPlayed    Decimal? @db.Decimal(10, 2)
+    tcgDamaged          Decimal? @db.Decimal(10, 2)
 
-    tcgNearMintVolume Int?
-    tcgLightlyPlayedVolume Int?
+    tcgNearMintVolume         Int?
+    tcgLightlyPlayedVolume    Int?
     tcgModeratelyPlayedVolume Int?
-    tcgHeavilyPlayedVolume Int?
-    tcgDamagedVolume Int?
+    tcgHeavilyPlayedVolume    Int?
+    tcgDamagedVolume          Int?
 
     // PSA pricing 
-    psa8MedianPrice Decimal? @db.Decimal(10,2)
-    psa9MedianPrice Decimal? @db.Decimal(10,2)
-    psa10MedianPrice Decimal? @db.Decimal(10,2)
+    psa8MedianPrice  Decimal? @db.Decimal(10, 2)
+    psa9MedianPrice  Decimal? @db.Decimal(10, 2)
+    psa10MedianPrice Decimal? @db.Decimal(10, 2)
 
-    psa8SaleCount Int?
-    psa9SaleCount Int?
+    psa8SaleCount  Int?
+    psa9SaleCount  Int?
     psa10SaleCount Int?
 
     cardId String
     card   Card   @relation(fields: [cardId], references: [id], onDelete: Cascade)
 
-    @@index([cardId, timestamp])
     @@unique([cardId, timestamp])
+    @@index([cardId, timestamp])
 }
 
 model Subtype {

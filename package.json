@@ -16,6 +16,7 @@
         "db:backfill-pokedex": "tsx scripts/backfillPokedexSort.ts",
         "db:backfill-release-date": "tsx scripts/backfillReleaseDate.ts",
         "db:backfill-tcg": "tsx scripts/backfillTcgPlayerSetIds.ts",
+        "db:backfill-price-history": "tsx scripts/backfillPriceHistory.ts",
         "index:cards": "tsx scripts/buildCardIndex.ts",
         "images:migrate": "tsx scripts/migrate-r2-to-cloudinary.ts",
         "db:sync": "pnpm run db:populate && pnpm run images:migrate",
