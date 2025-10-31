@@ -2,115 +2,18 @@ import { PrismaClient } from '@prisma/client';
 import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
+import {
+    PriceHistoryDbRow,
+    ApiCard,
+    conditionsMarketMap,
+    conditionsVolumeMap
+} from '../src/shared-types/price-api';
 
 const POKEPRICETRACKER_KEY = process.env.POKEPRICETRACKER_KEY;
 const prisma = new PrismaClient();
 const API_BASE_URL = 'https://www.pokemonpricetracker.com/api/v2/cards/';
 // Track completed sets
 const COMPLETED_SETS_FILE = path.join(__dirname, '_completed_backfill_sets.txt');
-
-interface ApiHistoryEntry {
-    date: string;
-    market: number | string;
-    volume: number | string | null;
-}
-
-// interface ApiEbayHistoryEntry {
-//     average: number | string;
-//     count: number | string | null;
-// }
-
-interface ApiCard {
-    cardNumber: string | number;
-    name: string;
-    priceHistory: {
-        conditions: { [key: string]: { history: ApiHistoryEntry[] } | undefined };
-    };
-    prices?: {
-        conditions?: {
-            [key: string]: {
-                // "Near Mint", "Lightly Played", etc
-                price?: number | null;
-            };
-        };
-    };
-    // ebay?: {
-    //     priceHistory: {
-    //         [grade: string]:
-    //             | {
-    //                   //psa 8, 9, 10
-    //                   [date: string]: ApiEbayHistoryEntry;
-    //               }
-    //             | undefined;
-    //     };
-    // };
-}
-
-interface PriceHistoryDbRow {
-    cardId: string;
-    timestamp: Date;
-    tcgNearMint?: number | null;
-    tcgLightlyPlayed?: number | null;
-    tcgModeratelyPlayed?: number | null;
-    tcgHeavilyPlayed?: number | null;
-    tcgDamaged?: number | null;
-    tcgNearMintVolume?: number | null;
-    tcgLightlyPlayedVolume?: number | null;
-    tcgModeratelyPlayedVolume?: number | null;
-    tcgHeavilyPlayedVolume?: number | null;
-    tcgDamagedVolume?: number | null;
-
-    // psa8MedianPrice?: number | null;
-    // psa9MedianPrice?: number | null;
-    // psa10MedianPrice?: number | null;
-    // psa8SaleCount?: number | null;
-    // psa9SaleCount?: number | null;
-    // psa10SaleCount?: number | null;
-}
-
-type MarketKey =
-    | 'tcgNearMint'
-    | 'tcgLightlyPlayed'
-    | 'tcgModeratelyPlayed'
-    | 'tcgHeavilyPlayed'
-    | 'tcgDamaged';
-type VolumeKey =
-    | 'tcgNearMintVolume'
-    | 'tcgLightlyPlayedVolume'
-    | 'tcgModeratelyPlayedVolume'
-    | 'tcgHeavilyPlayedVolume'
-    | 'tcgDamagedVolume';
-
-// type PsaMarketKey = 'psa8MedianPrice' | 'psa9MedianPrice' | 'psa10MedianPrice';
-// type PsaVolumeKey = 'psa8SaleCount' | 'psa9SaleCount' | 'psa10SaleCount';
-
-const conditionsMarketMap: { [key: string]: MarketKey } = {
-    'Near Mint': 'tcgNearMint',
-    'Lightly Played': 'tcgLightlyPlayed',
-    'Moderately Played': 'tcgModeratelyPlayed',
-    'Heavily Played': 'tcgHeavilyPlayed',
-    Damaged: 'tcgDamaged'
-};
-
-const conditionsVolumeMap: { [key: string]: VolumeKey } = {
-    'Near Mint': 'tcgNearMintVolume',
-    'Lightly Played': 'tcgLightlyPlayedVolume',
-    'Moderately Played': 'tcgModeratelyPlayedVolume',
-    'Heavily Played': 'tcgHeavilyPlayedVolume',
-    Damaged: 'tcgDamagedVolume'
-};
-
-// const psaGradeMarketMap: { [key: string]: PsaMarketKey } = {
-//     psa8: 'psa8MedianPrice',
-//     psa9: 'psa9MedianPrice',
-//     psa10: 'psa10MedianPrice'
-// };
-
-// const psaGradeVolumeMap: { [key: string]: PsaVolumeKey } = {
-//     psa8: 'psa8SaleCount',
-//     psa9: 'psa9SaleCount',
-//     psa10: 'psa10SaleCount'
-// };
 
 async function getSets() {
     const dbSets = await prisma.set.findMany({
@@ -357,7 +260,17 @@ async function main() {
             }
             continue;
         }
-        console.log(`  Found ${apiCards.length} cards in API response for ${set.name}.`);
+        console.log(` Found ${apiCards.length} cards in API response for ${set.name}.`);
+        console.log(` Fetching ${set.name} cards from local DB...`);
+
+        const dbCards = await prisma.card.findMany({
+            where: { setId: set.id },
+            select: {
+                id: true,
+                number: true,
+                name: true
+            }
+        });
 
         let setProcessingFullySuccessful = true;
         for (const apiCard of apiCards) {
@@ -365,19 +278,8 @@ async function main() {
             const apiCardName = apiCard.name;
             const normalizedApiCardName = normalizePokemonName(apiCardName);
             const normalizedApiNumberString = apiCardNumberRaw.replace(/^0+/, '');
-            const myCard = await prisma.card.findFirst({
-                where: {
-                    setId: set.id,
-                    number: {
-                        endsWith: normalizedApiNumberString
-                    }
-                },
-                select: {
-                    id: true,
-                    number: true,
-                    name: true
-                }
-            });
+            const myCard = dbCards.find((c) => c.number.endsWith(normalizedApiNumberString));
+
             let cardMatchIsValid = false;
             if (!myCard) {
                 console.log(
