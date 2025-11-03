@@ -161,6 +161,8 @@ async function processAndWriteHistory(myCardId: string, myCardNumber: string, ap
     const latestModeratelyPlayedPrice = prices?.['Moderately Played']?.price;
     const latestHeavilyPlayedPrice = prices?.['Heavily Played']?.price;
     const latestDamagedPrice = prices?.['Damaged']?.price;
+    const tcgLastUpdatedAt = apiCard.prices?.lastUpdated;
+    const validTcgUpdatedAt = tcgLastUpdatedAt ? new Date(tcgLastUpdatedAt) : undefined;
 
     if (latestNearMintPrice !== null && latestNearMintPrice !== undefined) {
         try {
@@ -172,7 +174,7 @@ async function processAndWriteHistory(myCardId: string, myCardNumber: string, ap
                     tcgModeratelyPlayedLatest: latestModeratelyPlayedPrice ?? null,
                     tcgHeavilyPlayedLatest: latestHeavilyPlayedPrice ?? null,
                     tcgDamagedLatest: latestDamagedPrice ?? null,
-                    tcgPlayerUpdatedAt: new Date()
+                    tcgPlayerUpdatedAt: validTcgUpdatedAt
                 },
                 create: {
                     cardId: myCardId,
@@ -181,7 +183,7 @@ async function processAndWriteHistory(myCardId: string, myCardNumber: string, ap
                     tcgModeratelyPlayedLatest: latestModeratelyPlayedPrice ?? null,
                     tcgHeavilyPlayedLatest: latestHeavilyPlayedPrice ?? null,
                     tcgDamagedLatest: latestDamagedPrice ?? null,
-                    tcgPlayerUpdatedAt: new Date()
+                    tcgPlayerUpdatedAt: validTcgUpdatedAt ?? new Date()
                     // PSA fields will be null by default
                 }
             });
@@ -226,7 +228,7 @@ async function main() {
     }
 
     const dbSets = await getSets();
-    console.log(`Found ${dbSets.length} sets to process.`);
+    console.log(`Found ${dbSets.length - completedSetIds.size} sets to process.`);
 
     for (const set of dbSets) {
         if (completedSetIds.has(set.id)) {
@@ -238,8 +240,6 @@ async function main() {
             console.log(`Skipping set ${set.name} (${set.id}) due to missing tcgPlayerSetId.`);
             continue;
         }
-        console.log(`Waiting 60s before next set...`);
-        await new Promise((resolve) => setTimeout(resolve, 60000));
 
         console.log(`\nProcessing set: ${set.name} (${set.id})...`);
         const setPriceHistory = await getSetPriceHistory(set.tcgPlayerSetId, set.name);
@@ -248,12 +248,17 @@ async function main() {
             continue;
         }
         const apiCards = setPriceHistory.data;
+        const cardsFetched = apiCards.length;
+        // 1 request = 8.7 cards fetched from pricing API
+        const requestCost = Math.ceil(cardsFetched / 8.7);
+        const waitTimeInSeconds = requestCost + 1;
+
         if (!apiCards) {
-            console.warn(` ⚠️ No 'data' array found for set ${set.name}. Skipping.`);
+            console.warn(` ⚠️  No 'data' array found for set ${set.name}. Skipping.`);
             try {
                 fs.appendFileSync(COMPLETED_SETS_FILE, `${set.id}\n`);
                 console.log(
-                    ` ✅ Marked set ${set.name} (${set.id}) as completed (no cards found).`
+                    ` ✅  Marked set ${set.name} (${set.id}) as completed (no cards found).`
                 );
             } catch (error) {
                 console.error(`Error writing completed set ID to file for set ${set.id}:`, error);
@@ -293,13 +298,13 @@ async function main() {
                 normalizedApiCardName.includes(normalizedDbCardName)
             ) {
                 console.log(
-                    ` ✅ Match found! DB: ${myCard.number} (${myCard.name}), API: ${apiCardNumberRaw} (${apiCardName})`
+                    ` ✅  Match found! DB: ${myCard.number} (${myCard.name}), API: ${apiCardNumberRaw} (${apiCardName})`
                 );
                 cardMatchIsValid = true;
             } else {
                 // Number match but names don't
                 console.log(
-                    `  - ⚠️  Number match (${myCard.number} ends with ${normalizedApiNumberString}), but normalized names differ! DB_norm: '${normalizedDbCardName}', API_norm: '${normalizedApiCardName}'. Skipping.`
+                    ` - ⚠️  Number match (${myCard.number} ends with ${normalizedApiNumberString}), but normalized names differ! DB_norm: '${normalizedDbCardName}', API_norm: '${normalizedApiCardName}'. Skipping.`
                 );
             }
             if (!cardMatchIsValid) {
@@ -309,7 +314,7 @@ async function main() {
                 await processAndWriteHistory(myCard!.id, myCard!.number, apiCard);
             } catch (error) {
                 console.error(
-                    `❌ Error processing history write for card ${apiCard.cardNumber} (${apiCardName}) in set ${set.name}:`,
+                    ` ❌  Error processing history write for card ${apiCard.cardNumber} (${apiCardName}) in set ${set.name}:`,
                     error
                 );
                 setProcessingFullySuccessful = false;
@@ -318,7 +323,7 @@ async function main() {
         if (setProcessingFullySuccessful) {
             try {
                 fs.appendFileSync(COMPLETED_SETS_FILE, `${set.id}\n`);
-                console.log(`✅ Marked set ${set.name} (${set.id}) as completed.`);
+                console.log(` ✅  Marked set ${set.name} (${set.id}) as completed.`);
             } catch (error) {
                 console.error(`Error writing completed set ID to file for set ${set.id}:`, error);
             }
@@ -327,6 +332,10 @@ async function main() {
                 ` -> Set ${set.name} (${set.id}) processing incomplete due to errors. Will retry remaining/failed cards on next run.`
             );
         }
+        console.log(
+            ` -> Fetched ${cardsFetched} cards (cost: ~${requestCost} reqs). Waiting ${waitTimeInSeconds}s...`
+        );
+        await new Promise((resolve) => setTimeout(resolve, waitTimeInSeconds * 1000));
     }
 }
 

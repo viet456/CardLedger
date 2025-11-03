@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+/scripts/_completed_backfill_sets.txt
 
 # debug
 npm-debug.log*

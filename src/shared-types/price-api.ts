@@ -22,6 +22,7 @@ export type ApiCard = {
                 price?: number | null;
             };
         };
+        lastUpdated?: Date | string;
     };
     // ebay?: {
     //     priceHistory: {
