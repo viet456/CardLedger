@@ -22,7 +22,7 @@ function normalizePokemonName(name: string): string {
     );
 }
 
-async function getCardPage(setId: string, limit: number, offset: number) {
+async function getSetPrices(setId: string) {
     try {
         const response = await axios.get(`${API_BASE_URL}`, {
             headers: {
@@ -30,14 +30,13 @@ async function getCardPage(setId: string, limit: number, offset: number) {
             },
             params: {
                 setId: `${setId}`,
-                limit: limit,
-                offset: offset
+                fetchAllInSet: true
             },
             timeout: 60000
         });
         return response.data;
     } catch (error) {
-        console.error(` ❌ FAILED to fetch data for ${setId} at offset ${offset}:`, error.message);
+        console.error(` ❌ FAILED to fetch data for ${setId}`, error.message);
         return null;
     }
 }
@@ -82,6 +81,8 @@ async function upsertCardMarketStats(myCardId: string, apiCard: ApiCard) {
 }
 
 async function main() {
+    let failCount = 0;
+    const MAX_FAILS = 3;
     const dbSets = await prisma.set.findMany({
         select: {
             id: true,
@@ -99,6 +100,7 @@ async function main() {
     const alternatingSets = dbSets.filter((_, index) => {
         return (index % 2 === 0) === isEvenDay;
     });
+    isEvenDay ? console.log('Fetching even sets') : console.log('Fetching odd sets');
     const setsToProcessMap = new Map(alternatingSets.map((set) => [set.id, set]));
     if (latestSet) {
         setsToProcessMap.set(latestSet.id, latestSet);
@@ -124,76 +126,69 @@ async function main() {
                 name: true
             }
         });
-        // Paginate api requests
-        // 8.7 cards = 1 request / 60 / minute
-        const PAGE_SIZE = 200; // Max call size
-        let currentOffset = 0;
-        let keepFetching = true;
 
-        while (keepFetching) {
-            const pageData = await getCardPage(set.tcgPlayerSetId, PAGE_SIZE, currentOffset);
-            if (!pageData || !pageData.data || pageData.data.length === 0) {
-                // This set is done, or the first page was empty
-                keepFetching = false;
+        const pageData = await getSetPrices(set.tcgPlayerSetId);
+        if (!pageData) {
+            console.log(` -> Skipping set ${set.name} due to API fetch failure.`);
+            failCount++;
+            if (failCount >= MAX_FAILS) {
+                console.error(
+                    `\n❌ CRITICAL: Hit ${failCount} consecutive API failures. Halting script to avoid ban.`
+                );
+                process.exit(1);
             }
-            const apiCards: ApiCard[] = pageData.data;
-            const cardsFetched = apiCards.length;
-            // 1 request = 8.7 cards fetched from pricing API
-            const requestCost = Math.ceil(cardsFetched / 8.7);
-            const waitTimeInSeconds = requestCost + 1;
+            break;
+        }
+        failCount = 0;
 
-            for (const apiCard of apiCards) {
-                const apiCardNumberRaw = String(apiCard.cardNumber);
-                const normalizedApiNumberString = apiCardNumberRaw.replace(/^0+/, '');
-                const apiCardName = apiCard.name;
-                const normalizedApiCardName = normalizePokemonName(apiCardName);
-                const myCard = dbCards.find((c) => c.number.endsWith(normalizedApiNumberString));
+        const apiCards: ApiCard[] = pageData.data;
 
-                let cardMatchIsValid = false;
+        for (const apiCard of apiCards) {
+            const apiCardNumberRaw = String(apiCard.cardNumber);
+            const normalizedApiNumberString = apiCardNumberRaw.replace(/^0+/, '');
+            const apiCardName = apiCard.name;
+            const normalizedApiCardName = normalizePokemonName(apiCardName);
+            const myCard = dbCards.find((c) => c.number.endsWith(normalizedApiNumberString));
 
-                if (!myCard) {
-                    console.log(
-                        ` - ℹ️  No match found for API card number: ${apiCardNumberRaw} (${apiCardName})`
-                    );
-                    continue;
-                }
-                const normalizedDbCardName = normalizePokemonName(myCard.name);
-                if (
-                    normalizedDbCardName.includes(normalizedApiCardName) ||
-                    normalizedApiCardName.includes(normalizedDbCardName)
-                ) {
-                    console.log(
-                        ` ✅ Match found! DB: ${myCard.number} (${myCard.name}), API: ${apiCardNumberRaw} (${apiCardName})`
-                    );
-                    cardMatchIsValid = true;
-                } else {
-                    // Number match but names don't
-                    console.log(
-                        `  - ⚠️  Number match (${myCard.number} ends with ${normalizedApiNumberString}), but normalized names differ! DB_norm: '${normalizedDbCardName}', API_norm: '${normalizedApiCardName}'. Skipping.`
-                    );
-                }
-                if (!cardMatchIsValid) {
-                    continue;
-                }
-                try {
-                    await upsertCardMarketStats(myCard!.id, apiCard);
-                } catch (error) {
-                    console.error(
-                        `❌ Error processing history write for card ${apiCard.cardNumber} (${apiCardName}) in set ${set.name}:`,
-                        error
-                    );
-                }
+            let cardMatchIsValid = false;
+
+            if (!myCard) {
+                console.log(
+                    ` - ℹ️  No match found for API card number: ${apiCardNumberRaw} (${apiCardName})`
+                );
+                continue;
             }
-
-            console.log(
-                ` -> Fetched ${cardsFetched} cards (cost: ~${requestCost} reqs). Waiting ${waitTimeInSeconds}s...`
-            );
-            await new Promise((resolve) => setTimeout(resolve, waitTimeInSeconds * 1000));
-            currentOffset += PAGE_SIZE;
-            if (apiCards.length < PAGE_SIZE) {
-                keepFetching = false;
+            const normalizedDbCardName = normalizePokemonName(myCard.name);
+            if (
+                normalizedDbCardName.includes(normalizedApiCardName) ||
+                normalizedApiCardName.includes(normalizedDbCardName)
+            ) {
+                console.log(
+                    ` ✅ Match found! DB: ${myCard.number} (${myCard.name}), API: ${apiCardNumberRaw} (${apiCardName})`
+                );
+                cardMatchIsValid = true;
+            } else {
+                // Number match but names don't
+                console.log(
+                    `  - ⚠️  Number match (${myCard.number} ends with ${normalizedApiNumberString}), but normalized names differ! DB_norm: '${normalizedDbCardName}', API_norm: '${normalizedApiCardName}'. Skipping.`
+                );
+            }
+            if (!cardMatchIsValid) {
+                continue;
+            }
+            try {
+                await upsertCardMarketStats(myCard!.id, apiCard);
+            } catch (error) {
+                console.error(
+                    `❌ Error processing history write for card ${apiCard.cardNumber} (${apiCardName}) in set ${set.name}:`,
+                    error
+                );
             }
         }
+        const waitTime = 31;
+        console.log(`Waiting ${waitTime} seconds`);
+        await new Promise((resolve) => setTimeout(resolve, waitTime * 1000));
+
         console.log(` -> Finished processing set: ${set.name}.`);
     }
     console.log('✅ Daily MarketStats update complete.');
