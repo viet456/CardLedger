@@ -46,7 +46,7 @@ function sanitizePublicId(id: string): string {
     return id.replace(regex, (match) => `_${characterMap[match]}`);
 }
 
-async function buildCardIndex() {
+async function generateCardIndex() {
     console.log('Starting to build the card index artifact...');
     console.log(' -> Querying all cards from the database...');
     const allCardsFromDb = await prisma.card.findMany({
@@ -228,7 +228,7 @@ async function buildCardIndex() {
 
 async function main() {
     try {
-        await buildCardIndex();
+        await generateCardIndex();
         console.log('\n-- ✅ Card index build complete! --');
     } catch (error) {
         console.error('\n❌ An error occurred during the build process:', error);

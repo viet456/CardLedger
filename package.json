@@ -18,10 +18,10 @@
         "db:backfill-tcg": "tsx scripts/backfillTcgPlayerSetIds.ts",
         "db:backfill-price-history": "tsx scripts/backfillPriceHistory.ts",
         "db:update-market-stats": "tsx scripts/updateMarketStats.ts",
-        "index:cards": "tsx scripts/buildCardIndex.ts",
+        "index:cards": "tsx scripts/generateCardIndex.ts",
+        "index:market": "tsx scripts/generateMarketIndex.ts",
         "images:migrate": "tsx scripts/migrate-r2-to-cloudinary.ts",
-        "db:sync": "pnpm run db:populate && pnpm run images:migrate",
-        "cards": "tsx scripts/fetchMarketData.ts"
+        "db:sync": "pnpm run db:populate && pnpm run images:migrate"
     },
     "dependencies": {
         "@aws-sdk/client-s3": "^3.890.0",
