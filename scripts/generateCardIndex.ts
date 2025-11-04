@@ -75,8 +75,8 @@ async function generateCardIndex() {
             }, // Flatten relation
             types: { select: { type: { select: { name: true } } } }, // Flatten nested relation
             subtypes: { select: { subtype: { select: { name: true } } } }, // Flatten nested relation
-            weaknesses: { select: { type: { select: { name: true } } } },
-            resistances: { select: { type: { select: { name: true } } } },
+            weaknesses: { select: { type: { select: { name: true } }, value: true } },
+            resistances: { select: { type: { select: { name: true } }, value: true } },
             imageKey: true,
             releaseDate: true,
             pokedexNumberSort: true,
@@ -137,10 +137,16 @@ async function generateCardIndex() {
         const subtypeIds = card.subtypes.map((s) =>
             getOrCreateId(subtypeMap, subtypes, s.subtype.name)
         );
-        const weaknessIds = card.weaknesses.map((w) => getOrCreateId(typeMap, types, w.type.name));
-        const resistanceIds = card.resistances.map((r) =>
-            getOrCreateId(typeMap, types, r.type.name)
-        );
+
+        const weaknessObjects = card.weaknesses.map((w) => ({
+            t: getOrCreateId(typeMap, types, w.type.name),
+            v: w.value
+        }));
+        const resistanceObjects = card.resistances.map((r) => ({
+            t: getOrCreateId(typeMap, types, r.type.name),
+            v: r.value
+        }));
+
         const abilityIds = card.abilities.map((ability) =>
             getOrCreateAbilityId(abilityMap, abilities, {
                 name: ability.name,
@@ -170,8 +176,8 @@ async function generateCardIndex() {
             s: setId,
             t: typeIds,
             sb: subtypeIds,
-            w: weaknessIds,
-            rs: resistanceIds,
+            w: weaknessObjects,
+            rs: resistanceObjects,
             ab: abilityIds
         };
     });

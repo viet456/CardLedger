@@ -63,6 +63,8 @@ export const useCardStore = create<CardStoreState>()(
             abilities: [],
             attacks: [],
             rules: [],
+            weaknesses: [],
+            resistances: [],
             version: null,
             status: 'idle',
 
@@ -138,6 +140,8 @@ export const useCardStore = create<CardStoreState>()(
                 abilities: state.abilities,
                 attacks: state.attacks,
                 rules: state.rules,
+                weaknesses: state.weaknesses,
+                resistances: state.resistances,
                 version: state.version
             })
         }

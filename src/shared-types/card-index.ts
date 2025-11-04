@@ -50,6 +50,8 @@ export type LookupTables = {
     abilities: AbilityObject[];
     attacks: AttackObject[];
     rules: string[];
+    weaknesses: WeaknessResistanceObject[];
+    resistances: WeaknessResistanceObject[];
 };
 
 export type NormalizedCard = {
