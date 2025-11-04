@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { r2 } from '../src/lib/r2';
 import crypto from 'crypto';
-import { stat } from 'fs';
+import zlib from 'zlib';
 
 const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
 const prisma = new PrismaClient();
@@ -39,17 +39,23 @@ async function generateMarketIndex() {
         prices: dailyPrices
     };
     const jsonData = JSON.stringify(finalJsonObject);
+    const compressedData = zlib.brotliCompressSync(jsonData);
+
+    // Browser automatically decompresses brotli files,
+    // so we derive checksum off the original JSON file
     const checkSum = crypto.createHash('sha256').update(jsonData).digest('hex');
-    const artifactFileName = `market-index.v${version}.json`;
-    console.log(` -> Final JSON size: ${(jsonData.length / 1024 / 1024).toFixed(2)} MB`);
+    const artifactFileName = `market-index.v${version}.json.br`;
+
+    console.log(` -> Final JSON size: ${(compressedData.length / 1024 / 1024).toFixed(2)} MB`);
     console.log(` -> Generated version: ${version}, checksum: ${checkSum.substring(0, 12)}...`);
 
     console.log(` -> Uploading main artifact to R2: ${artifactFileName}`);
     const putArtifactCommand = new PutObjectCommand({
         Bucket: BUCKET_NAME,
         Key: `market/${artifactFileName}`,
-        Body: jsonData,
+        Body: compressedData,
         ContentType: 'applications/json',
+        ContentEncoding: 'br',
         CacheControl: 'public, max-age=172800, immutable' // 2 days
     });
     await r2.send(putArtifactCommand);
@@ -59,8 +65,8 @@ async function generateMarketIndex() {
         version: version,
         url: `${R2_PUBLIC_URL}/market/${artifactFileName}`,
         checkSum: checkSum,
-        cardCount: dailyPrices.length,
-        updatedAt: new Date().toISOString
+        cardCount: Object.keys(dailyPrices).length,
+        updatedAt: new Date().toISOString()
     };
     const pointerFileName = 'market-index.current.json';
     console.log(`-> Uploading pointer file to R2: ${pointerFileName}`);

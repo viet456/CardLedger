@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { r2 } from '../src/lib/r2';
 import crypto from 'crypto';
+import zlib from 'zlib';
 import { SetObject, AbilityObject } from '../src/shared-types/card-index';
 
 const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
@@ -190,17 +191,23 @@ async function generateCardIndex() {
         cards: normalizedCards
     };
     const jsonData = JSON.stringify(finalJsonObject);
+    const compressedData = zlib.brotliCompressSync(jsonData);
+
+    // Browser automatically decompresses brotli files,
+    // so we derive checksum off the original JSON file
     const checkSum = crypto.createHash('sha256').update(jsonData).digest('hex');
-    const artifactFileName = `card-index.v${version}.json`;
-    console.log(` -> Final JSON size: ${(jsonData.length / 1024 / 1024).toFixed(2)} MB`);
+    const artifactFileName = `card-index.v${version}.json.br`;
+
+    console.log(` -> Final JSON size: ${(compressedData.length / 1024 / 1024).toFixed(2)} MB`);
     console.log(` -> Generated version: ${version}, checksum: ${checkSum.substring(0, 12)}...`);
 
     console.log(` -> Uploading main artifact to R2: ${artifactFileName}`);
     const putArtifactCommand = new PutObjectCommand({
         Bucket: BUCKET_NAME,
         Key: `indices/${artifactFileName}`,
-        Body: jsonData,
+        Body: compressedData,
         ContentType: 'applications/json',
+        ContentEncoding: 'br',
         CacheControl: 'public, max-age=31536000, immutable' // Cache for 1 year, never changes
     });
     await r2.send(putArtifactCommand);
