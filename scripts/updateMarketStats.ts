@@ -127,9 +127,9 @@ async function main() {
         // Paginate api requests
         // 10 cards = 1 request / 60 / minute according to API dev
         // The daily 20000 credit limit is only consumed by *actual cards returned*.
-        // We pace our script based on the number of cards we previously
-        // fetched (10 cards = 1 request-cost) to stay under the minute limit.
-        const PAGE_SIZE = 200; // Max call size
+        // We pace our script based on the number of cards we call for,
+        // not the amount of cards actually returned.
+        const PAGE_SIZE = 50;
         let currentOffset = 0;
         let keepFetching = true;
 
@@ -141,9 +141,8 @@ async function main() {
             }
             const apiCards: ApiCard[] = pageData.data;
             const cardsFetched = apiCards.length;
-            // 1 request = 10 cards fetched from pricing API
-            const requestCost = Math.ceil(cardsFetched / 10);
-            const waitTimeInSeconds = requestCost + 1;
+
+            const waitTimeInSeconds = Math.ceil(PAGE_SIZE / 10) + 2; // 10 cards = 1 request / minute / 60 max
 
             for (const apiCard of apiCards) {
                 const apiCardNumberRaw = String(apiCard.cardNumber);
@@ -188,9 +187,7 @@ async function main() {
                 }
             }
 
-            console.log(
-                ` -> Fetched ${cardsFetched} cards (cost: ~${requestCost} reqs). Waiting ${waitTimeInSeconds}s...`
-            );
+            console.log(` -> Fetched ${cardsFetched} cards. Waiting ${waitTimeInSeconds}s...`);
             await new Promise((resolve) => setTimeout(resolve, waitTimeInSeconds * 1000));
             currentOffset += PAGE_SIZE;
             if (apiCards.length < PAGE_SIZE) {

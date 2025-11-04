@@ -56,7 +56,7 @@ async function generateMarketIndex() {
         Body: compressedData,
         ContentType: 'applications/json',
         ContentEncoding: 'br',
-        CacheControl: 'public, max-age=172800, immutable' // 2 days
+        CacheControl: 'public, max-age=86400, immutable' // 1 day
     });
     await r2.send(putArtifactCommand);
     console.log(' -> ✅ Main artifact uploaded successfully');
