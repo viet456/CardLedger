@@ -70,7 +70,7 @@ export default function CardPageView() {
 
     return (
         <div className='w-full'>
-            <CardDataInitializer />
+            {/* <CardDataInitializer /> */}
             <CardFilterControls filterOptions={filterOptions} sortOptions={allCardsSortOptions} />
             <div className='mt-2'>
                 <CardGrid

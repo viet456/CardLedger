@@ -7,6 +7,7 @@ import { Inter } from 'next/font/google';
 import { ThemeProvider } from '@/src/components/ui/theme-provider';
 import { TrpcProvider } from '../providers/TRPCProvider';
 import { ScrollToTopButton } from '../components/ScrollToTopButton';
+import { CardDataInitializer } from '../components/CardDataInitializer';
 
 const inter = Inter({
     subsets: ['latin'],
@@ -39,6 +40,7 @@ export default function RootLayout({
                         enableSystem
                         disableTransitionOnChange
                     >
+                        <CardDataInitializer />
                         <Header />
                         <main className='flex flex-grow'>{children}</main>
                         <Footer />
