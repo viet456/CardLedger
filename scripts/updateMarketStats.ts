@@ -49,35 +49,73 @@ async function upsertCardMarketStats(myCardId: string, apiCard: ApiCard) {
     const latestModeratelyPlayedPrice = prices?.['Moderately Played']?.price;
     const latestHeavilyPlayedPrice = prices?.['Heavily Played']?.price;
     const latestDamagedPrice = prices?.['Damaged']?.price;
+
     const tcgLastUpdatedAt = apiCard.prices?.lastUpdated;
     const validTcgUpdatedAt = tcgLastUpdatedAt ? new Date(tcgLastUpdatedAt) : undefined;
+    const priceDate = tcgLastUpdatedAt ? new Date(tcgLastUpdatedAt) : new Date();
+    priceDate.setHours(0, 0, 0, 0);
 
     if (latestNearMintPrice === null || latestNearMintPrice === undefined) {
         return;
     }
-    try {
-        await prisma.marketStats.upsert({
-            where: { cardId: myCardId },
-            update: {
-                tcgNearMintLatest: latestNearMintPrice,
-                tcgLightlyPlayedLatest: latestLightlyPlayedPrice,
-                tcgModeratelyPlayedLatest: latestModeratelyPlayedPrice,
-                tcgHeavilyPlayedLatest: latestHeavilyPlayedPrice,
-                tcgDamagedLatest: latestDamagedPrice,
-                tcgPlayerUpdatedAt: validTcgUpdatedAt
-            },
-            create: {
+    const upsertMarketStats = prisma.marketStats.upsert({
+        where: { cardId: myCardId },
+        // no ?? null, client pulls previous existing price
+        update: {
+            tcgNearMintLatest: latestNearMintPrice,
+            tcgLightlyPlayedLatest: latestLightlyPlayedPrice,
+            tcgModeratelyPlayedLatest: latestModeratelyPlayedPrice,
+            tcgHeavilyPlayedLatest: latestHeavilyPlayedPrice,
+            tcgDamagedLatest: latestDamagedPrice,
+            tcgPlayerUpdatedAt: validTcgUpdatedAt
+        },
+        create: {
+            cardId: myCardId,
+            tcgNearMintLatest: latestNearMintPrice,
+            tcgLightlyPlayedLatest: latestLightlyPlayedPrice,
+            tcgModeratelyPlayedLatest: latestModeratelyPlayedPrice,
+            tcgHeavilyPlayedLatest: latestHeavilyPlayedPrice,
+            tcgDamagedLatest: latestDamagedPrice,
+            tcgPlayerUpdatedAt: validTcgUpdatedAt ?? new Date()
+        }
+    });
+
+    const upsertPriceHistory = prisma.priceHistory.upsert({
+        where: {
+            cardId_timestamp: {
                 cardId: myCardId,
-                tcgNearMintLatest: latestNearMintPrice,
-                tcgLightlyPlayedLatest: latestLightlyPlayedPrice,
-                tcgModeratelyPlayedLatest: latestModeratelyPlayedPrice,
-                tcgHeavilyPlayedLatest: latestHeavilyPlayedPrice,
-                tcgDamagedLatest: latestDamagedPrice,
-                tcgPlayerUpdatedAt: validTcgUpdatedAt ?? new Date()
+                timestamp: priceDate
             }
-        });
-    } catch (error) {
-        console.error(` ❌ FAILED to upsert MarketStats for ${myCardId}:`, error.message);
+        },
+        update: {
+            tcgNearMint: latestNearMintPrice,
+            tcgLightlyPlayed: latestLightlyPlayedPrice,
+            tcgModeratelyPlayed: latestModeratelyPlayedPrice,
+            tcgHeavilyPlayed: latestHeavilyPlayedPrice,
+            tcgDamaged: latestDamagedPrice
+        },
+        create: {
+            cardId: myCardId,
+            timestamp: priceDate,
+            tcgNearMint: latestNearMintPrice ?? null,
+            tcgLightlyPlayed: latestLightlyPlayedPrice ?? null,
+            tcgModeratelyPlayed: latestModeratelyPlayedPrice ?? null,
+            tcgHeavilyPlayed: latestHeavilyPlayedPrice ?? null,
+            tcgDamaged: latestDamagedPrice
+        }
+    });
+    const [marketStatsResult, priceHistoryResult] = await Promise.allSettled([
+        upsertMarketStats,
+        upsertPriceHistory
+    ]);
+    if (marketStatsResult.status === 'rejected') {
+        console.error(
+            ` ❌ FAILED to upsert MarketStats for ${myCardId}:`,
+            marketStatsResult.reason
+        );
+    }
+    if (priceHistoryResult.status === 'rejected') {
+        console.error(` ❌ FAILED to write history for ${myCardId}:`, priceHistoryResult.reason);
     }
 }
 
@@ -142,7 +180,7 @@ async function main() {
             const apiCards: ApiCard[] = pageData.data;
             const cardsFetched = apiCards.length;
 
-            const waitTimeInSeconds = Math.ceil(PAGE_SIZE / 10) + 2; // 10 cards = 1 request / minute / 60 max
+            const waitTimeInSeconds = Math.ceil(PAGE_SIZE / 10) + 1; // 10 cards = 1 request / minute / 60 max
 
             for (const apiCard of apiCards) {
                 const apiCardNumberRaw = String(apiCard.cardNumber);
