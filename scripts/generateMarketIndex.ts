@@ -3,10 +3,13 @@ import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { r2 } from '../src/lib/r2';
 import crypto from 'crypto';
 import zlib from 'zlib';
+import { MarketStats } from '../src/shared-types/price-api';
 
 const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
 const prisma = new PrismaClient();
 const BUCKET_NAME = 'cardledger';
+
+type FinalJsonType = MarketStats & { version: string };
 
 async function getDailyPrices() {
     console.log('Starting to build the market price index artifact...');
@@ -34,7 +37,7 @@ async function getDailyPrices() {
 async function generateMarketIndex() {
     const dailyPrices = await getDailyPrices();
     const version = new Date().toISOString().replace(/[-:.]/g, '');
-    const finalJsonObject = {
+    const finalJsonObject: FinalJsonType = {
         version: version,
         prices: dailyPrices
     };

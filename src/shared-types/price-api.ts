@@ -1,3 +1,7 @@
+export type MarketStats = {
+    prices: Record<string, number>;
+};
+
 export type ApiHistoryEntry = {
     date: string;
     market: number | string;

@@ -1,32 +1,17 @@
 import { create } from 'zustand';
 import { persist, PersistStorage, StorageValue } from 'zustand/middleware';
 import { get, set, del } from 'idb-keyval';
-import {
-    NormalizedCard,
-    DenormalizedCard,
-    PointerFile,
-    LookupTables,
-    FullCardData
-} from '@/src/shared-types/card-index';
+import { MarketStats } from '@/src/shared-types/price-api';
+import { PointerFile } from '@/src/shared-types/card-index';
 
 const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
 
-type StoreStatus =
-    | 'idle'
-    | 'loading_cache'
-    | 'loading_network'
-    | 'ready_from_cache'
-    | 'ready_from_network'
-    | 'error';
-
-// Saved to Zustand
-type PersistedState = LookupTables & {
-    cards: NormalizedCard[];
+// Saved to Zustand in memory
+type PersistedState = MarketStats & {
     version: string | null;
 };
 
-type CardStoreState = LookupTables & {
-    cards: NormalizedCard[];
+type MarketStoreState = MarketStats & {
     version: string | null;
     status: 'idle' | 'loading' | 'ready_from_cache' | 'ready_from_network' | 'error';
     initialize: () => Promise<void>;
@@ -50,41 +35,30 @@ const indexedDbStorage: PersistStorage<PersistedState> = {
 };
 
 // copies IndexedDB to faster Zustand store
-export const useCardStore = create<CardStoreState>()(
+export const useMarketStore = create<MarketStoreState>()(
     persist(
         (set, get) => ({
-            supertypes: [],
-            rarities: [],
-            sets: [],
-            types: [],
-            subtypes: [],
-            artists: [],
-            cards: [],
-            abilities: [],
-            attacks: [],
-            rules: [],
-            weaknesses: [],
-            resistances: [],
+            prices: {},
             version: null,
             status: 'idle',
 
-            // Checks for local cards in Indexeddb and compares to fetched version
             initialize: async () => {
                 if (get().status.startsWith('loading') || get().status.startsWith('ready')) {
                     return;
                 }
-                console.log('[CardStore]: Initializing card data...');
+                console.log('[MarketStore]: Initializing current price data...');
                 set({ status: 'loading' });
 
+                // Check if our stored version is the same as the last created JSON
                 try {
-                    console.log('[CardStore]: Fetching pointer file...');
+                    console.log('[MarketStore]: Fetching pointer file...');
                     const pointerRes = await fetch(
-                        `${R2_PUBLIC_URL}/indices/card-index.current.json`
+                        `${R2_PUBLIC_URL}/market/market-index.current.json`
                     );
-                    if (!pointerRes.ok) throw new Error("Failed to fetch card's pointer file.");
+                    if (!pointerRes.ok) throw new Error("Failed to fetch market's pointer file.");
                     const pointer: PointerFile = await pointerRes.json();
                     console.log(
-                        `[CardStore]: Latest version is ${pointer.version}. Local version is ${get().version || 'none'}.`
+                        `[MarketStore]: Latest version is ${pointer.version}. Local version is ${get().version || 'none'}.`
                     );
 
                     // Check if our stored version is the same as the last created JSON
@@ -97,7 +71,7 @@ export const useCardStore = create<CardStoreState>()(
                     console.log('New data version found. Fetching from network...');
                     const cardsRes = await fetch(pointer.url);
                     if (!cardsRes.ok) throw new Error('Failed to fetch card data artifact.');
-                    console.log('[CardStore]: Download complete. Verifying checksum...');
+                    console.log('[MarketStore]: Download complete. Verifying checksum...');
                     const cardsDataString = await cardsRes.text();
 
                     const encoder = new TextEncoder();
@@ -111,37 +85,26 @@ export const useCardStore = create<CardStoreState>()(
                     if (calculatedCheckSum !== pointer.checkSum) {
                         throw new Error('Checksum validation failed! Data is corrupt.');
                     }
-                    console.log('[CardStore]: ✅ Checksum validation successful.');
+                    console.log('[MarketStore]: ✅ Checksum validation successful.');
 
-                    const fullData: FullCardData = JSON.parse(cardsDataString);
+                    const fullData: PersistedState = JSON.parse(cardsDataString);
                     console.log(
-                        `[CardStore]: ✅ Loaded ${fullData.cards.length} cards from network. Updating state.`
+                        `[MarketStore]: ✅ Loaded ${Object.keys(fullData.prices).length} card prices from network. Updating state.`
                     );
                     set({ ...fullData, status: 'ready_from_network' });
                 } catch (error) {
                     const errorMessage =
                         error instanceof Error ? error.message : 'An unknown error occurred';
-                    console.error(`[CardStore]: ❌ Error during initialization: ${errorMessage}`);
+                    console.error(`[MarketStore]: ❌ Error during initialization: ${errorMessage}`);
                     set({ status: 'error' });
                 }
             }
         }),
         {
-            name: 'card-data-storage',
+            name: 'market-data-store',
             storage: indexedDbStorage,
             partialize: (state): PersistedState => ({
-                artists: state.artists,
-                rarities: state.rarities,
-                sets: state.sets,
-                types: state.types,
-                subtypes: state.subtypes,
-                supertypes: state.supertypes,
-                cards: state.cards,
-                abilities: state.abilities,
-                attacks: state.attacks,
-                rules: state.rules,
-                weaknesses: state.weaknesses,
-                resistances: state.resistances,
+                prices: state.prices,
                 version: state.version
             })
         }
