@@ -200,13 +200,13 @@ function normalizePokemonName(name: string): string {
         name
             .toLowerCase()
             .replace(/lv\.x/g, 'level x') // Handle Lv.X variations
-            .replace(/ ★/g, ' star') // Handle Star symbol
-            .replace(/ δ/g, ' delta species') // Handle Delta Species symbol
+            .replace(/ ★/g, 'star') // Handle Star symbol
+            .replace(/ δ/g, 'deltaspecies') // Handle Delta Species symbol
             // Remove accents
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^\w\s]|_/g, '') // Remove punctuation except spaces
-            .replace(/\s+/g, ' ') // Collapse multiple spaces
+            .replace(/[^\w\s]|_/g, '') // Remove punctuation and spaces
+            .replace(/\s+/g, '') // Collapse multiple spaces
             .trim()
     );
 }
