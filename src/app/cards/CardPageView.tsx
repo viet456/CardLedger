@@ -1,7 +1,7 @@
 'use client';
-import { CardDataInitializer } from '@/src/components/CardDataInitializer';
 import { SortableKey } from '@/src/services/pokemonCardValidator';
 import { useCardStore } from '@/src/lib/store/cardStore';
+import { useMarketStore } from '@/src/lib/store/marketStore';
 import { useMemo } from 'react';
 import { DenormalizedCard } from '@/src/shared-types/card-index';
 import { CardFilterControls } from '@/src/components/search/CardFilterControls';
@@ -24,6 +24,8 @@ export default function CardPageView() {
         rules,
         status
     } = useCardStore();
+    const { prices } = useMarketStore();
+
     const denormalizedCards: DenormalizedCard[] = useMemo(() => {
         if (!cards || cards.length === 0) return [];
         return cards.map((card) => ({
@@ -53,14 +55,28 @@ export default function CardPageView() {
                 standard: card.leg?.s,
                 expanded: card.leg?.e,
                 unlimited: card.leg?.u
-            }
+            },
+            price: prices[card.id] ?? null
         }));
-    }, [cards, artists, rarities, sets, types, subtypes, supertypes, abilities, attacks, rules]);
+    }, [
+        cards,
+        artists,
+        rarities,
+        sets,
+        types,
+        subtypes,
+        supertypes,
+        abilities,
+        attacks,
+        rules,
+        prices
+    ]);
     const filterOptions = { rarities, types, subtypes, artists, sets };
     const allCardsSortOptions: { label: string; value: SortableKey }[] = [
         { label: 'Release Date', value: 'rD' },
         { label: 'Name', value: 'n' },
-        { label: 'Pokedex Number', value: 'pS' }
+        { label: 'Pokedex Number', value: 'pS' },
+        { label: 'Price', value: 'price' }
         //{ label: 'Card Number', value: 'num' }
     ];
     const defaultSort = { sortBy: 'rD' as SortableKey, sortOrder: 'desc' as const };

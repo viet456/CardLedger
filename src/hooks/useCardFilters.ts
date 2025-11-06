@@ -97,6 +97,10 @@ export function useCardFilters({ initialCards, defaultSort }: UseCardFiltersProp
                         );
                     case 'num':
                         return a.num.localeCompare(b.num, undefined, { numeric: true });
+                    case 'price':
+                        const priceA = a.price ?? 0;
+                        const priceB = b.price ?? 0;
+                        return priceA - priceB;
                     case 'pS': // 'pokedexNumberSort' -> 'pS'
                         // Handle nulls by pushing them to the end
                         const pokedexDiff = (a.pS || 9999) - (b.pS || 9999);
