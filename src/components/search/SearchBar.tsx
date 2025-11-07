@@ -24,7 +24,7 @@ export function SearchBar() {
                 placeholder='Search for cards...'
                 value={filters.search || ''}
                 onChange={handleSearchChange}
-                className='w-full rounded border bg-primary p-2 text-primary-foreground'
+                className='h-10 w-full rounded border bg-primary p-2 text-primary-foreground'
             />
             {filters.search && (
                 <Button
