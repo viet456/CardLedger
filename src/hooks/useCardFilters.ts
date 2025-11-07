@@ -98,9 +98,17 @@ export function useCardFilters({ initialCards, defaultSort }: UseCardFiltersProp
                     case 'num':
                         return a.num.localeCompare(b.num, undefined, { numeric: true });
                     case 'price':
-                        const priceA = a.price ?? 0;
-                        const priceB = b.price ?? 0;
-                        return priceA - priceB;
+                        const priceA = a.price;
+                        const priceB = b.price;
+                        // Push cards of null price to the bottom
+                        if (priceA === null && priceB !== null) return 1;
+                        if (priceA !== null && priceB === null) return -1;
+                        if (priceA === null && priceB === null) return 0;
+                        if (sortOrder === 'desc') {
+                            return priceB! - priceA!; // Descending sort
+                        } else {
+                            return priceA! - priceB!; // Ascending sort
+                        }
                     case 'pS': // 'pokedexNumberSort' -> 'pS'
                         // Handle nulls by pushing them to the end
                         const pokedexDiff = (a.pS || 9999) - (b.pS || 9999);
