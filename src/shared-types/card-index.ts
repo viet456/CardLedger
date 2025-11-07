@@ -111,7 +111,7 @@ export type DenormalizedCard = {
         name: string;
         text: string;
     } | null;
-    price: number;
+    price: number | null;
 };
 
 export type PointerFile = {

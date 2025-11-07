@@ -6,6 +6,7 @@ import { Metadata } from 'next';
 import { Suspense } from 'react';
 
 const prisma = new PrismaClient();
+export const revalidate = 86400;
 
 function SetPageSkeleton() {
     return (
@@ -81,10 +82,20 @@ async function getSetData(setId: string) {
         }
     });
     if (!setWithCardsRaw) return null;
-
     setWithCardsRaw.cards.sort((a, b) =>
         a.number.localeCompare(b.number, undefined, { numeric: true })
     );
+
+    // Cards' current market prices
+    const cardIds = setWithCardsRaw.cards.map((card) => card.id);
+    const priceData = await prisma.marketStats.findMany({
+        where: { cardId: { in: cardIds } },
+        select: {
+            cardId: true,
+            tcgNearMintLatest: true
+        }
+    });
+    const priceMap = new Map(priceData.map((p) => [p.cardId, p.tcgNearMintLatest]));
 
     // Helper functions for transformations
     const setInfo: SetObject = {
@@ -144,7 +155,8 @@ async function getSetData(setId: string) {
         ancientTrait:
             card.ancientTraitName && card.ancientTraitText
                 ? { name: card.ancientTraitName, text: card.ancientTraitText }
-                : null
+                : null,
+        price: priceMap.get(card.id)?.toNumber() ?? null
     }));
     const filterOptions: FilterOptions = {
         rarities: await prisma.rarity.findMany(),
