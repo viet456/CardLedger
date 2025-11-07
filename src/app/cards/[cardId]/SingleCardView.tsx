@@ -23,7 +23,13 @@ const DetailItem = ({ label, children }: { label: string; children: React.ReactN
     </div>
 );
 
-export function SingleCardView({ card }: { card: DenormalizedCard }) {
+export function SingleCardView({
+    card,
+    children
+}: {
+    card: DenormalizedCard;
+    children: React.ReactNode;
+}) {
     return (
         <main className='container mx-auto max-w-6xl p-4 sm:p-6 lg:p-8'>
             {/* Breadcrumb Navigation */}
@@ -76,9 +82,7 @@ export function SingleCardView({ card }: { card: DenormalizedCard }) {
                     {/* Prices Section (Placeholder for V2) */}
                     <section className='rounded-lg border bg-card p-4 shadow-sm'>
                         <h2 className='mb-2 text-2xl font-semibold tracking-tight'>Prices</h2>
-                        <div className='flex h-48 items-center justify-center rounded-md bg-muted text-sm text-muted-foreground'>
-                            Price chart coming soon...
-                        </div>
+                        {children}
                     </section>
 
                     {/* Details Section */}

@@ -3,10 +3,12 @@ import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { DenormalizedCard, SetObject } from '@/src/shared-types/card-index';
 import { SingleCardView } from './SingleCardView';
+import { PriceHistoryChart } from '@/src/components/cards/PriceHistoryChart';
+import { PriceHistoryDataPoint } from '@/src/shared-types/price-api';
 
 const prisma = new PrismaClient();
 
-export const revalidate = 86400;
+export const revalidate = 86400; // Daily
 
 export async function generateMetadata({
     params
@@ -45,6 +47,30 @@ export async function generateStaticParams() {
     }));
 }
 
+async function getPriceHistory(cardId: string): Promise<PriceHistoryDataPoint[]> {
+    const history = await prisma.priceHistory.findMany({
+        where: { cardId: cardId },
+        orderBy: { timestamp: 'asc' },
+        select: {
+            timestamp: true,
+            tcgNearMint: true,
+            tcgLightlyPlayed: true,
+            tcgModeratelyPlayed: true,
+            tcgHeavilyPlayed: true,
+            tcgDamaged: true
+        }
+    });
+    return history.map((row) => ({
+        ...row,
+        timestamp: row.timestamp,
+        tcgNearMint: row.tcgNearMint?.toNumber() ?? null,
+        tcgLightlyPlayed: row.tcgLightlyPlayed?.toNumber() ?? null,
+        tcgModeratelyPlayed: row.tcgModeratelyPlayed?.toNumber() ?? null,
+        tcgHeavilyPlayed: row.tcgHeavilyPlayed?.toNumber() ?? null,
+        tcgDamaged: row.tcgDamaged?.toNumber() ?? null
+    }));
+}
+
 async function getCardData(cardId: string): Promise<DenormalizedCard | null> {
     const rawCard = await prisma.card.findUnique({
         where: { id: cardId },
@@ -63,7 +89,8 @@ async function getCardData(cardId: string): Promise<DenormalizedCard | null> {
                         include: { type: true }
                     }
                 }
-            }
+            },
+            marketStats: true
         }
     });
     if (!rawCard) return null;
@@ -123,13 +150,23 @@ async function getCardData(cardId: string): Promise<DenormalizedCard | null> {
         ancientTrait:
             rawCard.ancientTraitName && rawCard.ancientTraitText
                 ? { name: rawCard.ancientTraitName, text: rawCard.ancientTraitText }
-                : null
+                : null,
+        price: rawCard.marketStats?.tcgNearMintLatest?.toNumber() ?? null
     };
     return denormalizedCard;
 }
 
 export default async function SingleCardPage({ params }: { params: { cardId: string } }) {
-    const card = await getCardData(params.cardId);
-    if (!card) notFound();
-    return <SingleCardView card={card} />;
+    const [card, priceHistory] = await Promise.all([
+        getCardData(params.cardId),
+        getPriceHistory(params.cardId)
+    ]);
+    if (!card) {
+        notFound();
+    }
+    return (
+        <SingleCardView card={card}>
+            <PriceHistoryChart initialData={priceHistory} />
+        </SingleCardView>
+    );
 }
