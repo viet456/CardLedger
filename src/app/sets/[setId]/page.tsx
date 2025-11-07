@@ -102,20 +102,12 @@ async function getSetData(setId: string) {
         ...setWithCardsRaw,
         releaseDate: setWithCardsRaw.releaseDate.toISOString().split('T')[0]
     };
-    // Cloudinary stores card images in its /home folder
-    const transformImageKey = (imageKey: string | null): string | null => {
-        if (!imageKey) return null;
-        // Remove the 'cards/' prefix and file extension
-        const baseId = imageKey.replace('cards/', '').replace(/\.[^/.]+$/, '');
-        // Prepend the correct 'home/' prefix
-        return `home/${baseId}`;
-    };
     const cards: DenormalizedCard[] = setWithCardsRaw.cards.map((card) => ({
         id: card.id,
         n: card.name,
         hp: card.hp,
         num: card.number,
-        img: transformImageKey(card.imageKey),
+        img: card.imageKey,
         pS: card.pokedexNumberSort,
         cRC: card.convertedRetreatCost,
         artist: card.artist?.name || null,

@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { CldImage } from 'next-cloudinary';
+import Image from 'next/image';
 import { SetObject } from '@/src/shared-types/card-index';
 
+const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
 interface SetCardProps {
     set: SetObject;
 }
@@ -19,14 +20,13 @@ export function SetCard({ set }: SetCardProps) {
             <div className='flex w-full flex-col items-center text-center'>
                 <div className='mb-2 flex items-center justify-center gap-2'>
                     {set.symbolImageKey && (
-                        <CldImage
-                            src={set.symbolImageKey}
-                            alt={`${set.name} symbol`}
+                        <Image
+                            src={`${R2_PUBLIC_URL}/${set.symbolImageKey}`}
+                            alt={`${set.name} 'symbol'`}
                             width={30}
                             height={30}
                             className='object-contain'
-                            format='avif'
-                            quality='50'
+                            quality={50}
                         />
                     )}
                     <p className='text-md font-semibold'>{set.name}</p>
@@ -42,14 +42,13 @@ export function SetCard({ set }: SetCardProps) {
             <div className='flex w-full flex-col items-center justify-center'>
                 <div className='relative flex aspect-[2/1] w-full items-center justify-center'>
                     {set.logoImageKey ? (
-                        <CldImage
-                            src={set.logoImageKey}
-                            alt={`${set.name} logo`}
+                        <Image
+                            src={`${R2_PUBLIC_URL}/${set.logoImageKey}`}
+                            alt={set.name}
                             fill
-                            sizes='(min-width: 1024px) 20vw, (min-width: 768px) 25vw, (min-width: 640px) 33vw, 50vw'
                             className='object-contain transition-transform group-hover:scale-110'
-                            format='auto'
-                            quality='auto'
+                            fetchPriority='high'
+                            quality={50}
                         />
                     ) : (
                         <div className='bg-muted/50 flex h-full w-full items-center justify-center rounded-sm text-xs text-muted-foreground'>

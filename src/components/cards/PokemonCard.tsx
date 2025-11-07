@@ -1,7 +1,8 @@
-import { CldImage } from 'next-cloudinary';
 import { DenormalizedCard } from '@/src/shared-types/card-index';
 import Link from 'next/link';
-//const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
+import Image from 'next/image';
+
+const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
 
 interface PokemonCardProps {
     card: DenormalizedCard;
@@ -9,7 +10,7 @@ interface PokemonCardProps {
 }
 
 export function PokemonCard({ card, priority = false }: PokemonCardProps) {
-    // const imageUrl = `${R2_PUBLIC_URL}/${card.img}`;
+    const imageUrl = `${R2_PUBLIC_URL}/${card.img}`;
     return (
         <Link
             href={`/cards/${card.id}`}
@@ -17,17 +18,15 @@ export function PokemonCard({ card, priority = false }: PokemonCardProps) {
         >
             {card.img ? (
                 <div className='relative aspect-[2.5/3.5] w-full'>
-                    {/* Get image from Cloudinary store */}
-                    <CldImage
-                        src={card.img}
+                    <Image
+                        src={imageUrl}
                         alt={card.n}
                         fill
                         className='object-cover'
                         sizes='192px'
                         loading={priority ? 'eager' : 'lazy'}
                         fetchPriority={priority ? 'high' : 'auto'}
-                        quality='50'
-                        format='avif'
+                        quality={50}
                     />
                 </div>
             ) : (

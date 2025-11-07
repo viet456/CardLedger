@@ -95,19 +95,12 @@ async function getCardData(cardId: string): Promise<DenormalizedCard | null> {
     });
     if (!rawCard) return null;
 
-    // Convert R2 key to Cloudinary
-    const transformImageKey = (imageKey: string | null): string | null => {
-        if (!imageKey) return null;
-        const baseId = imageKey.replace('cards/', '').replace(/\.[^/.]+$/, '');
-        return `home/${baseId}`;
-    };
-
     const denormalizedCard: DenormalizedCard = {
         id: rawCard.id,
         n: rawCard.name,
         hp: rawCard.hp,
         num: rawCard.number,
-        img: transformImageKey(rawCard.imageKey),
+        img: rawCard.imageKey,
         pS: rawCard.pokedexNumberSort,
         cRC: rawCard.convertedRetreatCost,
         artist: rawCard.artist?.name || null,

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { CldImage } from 'next-cloudinary';
+import Image from 'next/image';
 import { DenormalizedCard, AbilityObject } from '@/src/shared-types/card-index';
 import { ChevronRight } from 'lucide-react';
 
@@ -50,15 +50,14 @@ export function SingleCardView({
                 {/* --- LEFT COLUMN: CARD IMAGE --- */}
                 <div className='md:col-span-1'>
                     {card.img ? (
-                        <CldImage
+                        <Image
                             src={card.img}
                             alt={card.n}
                             width={500}
                             height={700}
                             sizes='(max-width: 768px) 100vw, 33vw'
                             className='w-full rounded-xl shadow-lg'
-                            quality='auto'
-                            format='auto'
+                            quality={50}
                             priority
                         />
                     ) : (

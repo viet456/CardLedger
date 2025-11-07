@@ -154,19 +154,13 @@ async function generateCardIndex() {
                 type: ability.type
             })
         );
-        let cloudinaryPublicId: string | null = null;
-        if (card.imageKey) {
-            const baseId = card.imageKey.replace('cards/', '').replace(/\.[^/.]+$/, '');
-            const sanitizedId = sanitizePublicId(baseId);
-            cloudinaryPublicId = `home/${sanitizedId}`;
-        }
         // Return a compact card object with short keys and integer IDs
         return {
             id: card.id,
             n: card.name,
             hp: card.hp,
             num: card.number,
-            img: cloudinaryPublicId,
+            img: card.imageKey,
             // rD: card.releaseDate.toISOString().split('T')[0],
             pS: card.pokedexNumberSort,
             cRC: card.convertedRetreatCost,

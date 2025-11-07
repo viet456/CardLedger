@@ -98,9 +98,8 @@ export default function About() {
                     </li>
                     <li>
                         <b>Image Optimization</b>: Card images are stored in <b>Cloudflare R2</b>{' '}
-                        and served via <b>Cloudinary</b> for on-the-fly optimization, automatically
-                        converting them to modern formats like AVIF/WebP and compressing them for
-                        fast delivery.
+                        and served via <b>Sharp image processing</b>, converting them to modern
+                        formats like AVIF/WebP and compressing them for fast delivery.
                     </li>
                 </ul>
 

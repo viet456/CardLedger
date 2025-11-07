@@ -20,7 +20,6 @@
         "db:update-market": "tsx scripts/updateMarketStats.ts",
         "index:cards": "tsx scripts/generateCardIndex.ts",
         "index:market": "tsx scripts/generateMarketIndex.ts",
-        "images:migrate": "tsx scripts/migrate-r2-to-cloudinary.ts",
         "db:sync": "pnpm run db:populate && pnpm run images:migrate"
     },
     "dependencies": {
@@ -43,7 +42,6 @@
         "chartjs-plugin-crosshair": "^2.0.0",
         "class-variance-authority": "^0.7.1",
         "client-only": "^0.0.1",
-        "cloudinary": "^2.7.0",
         "clsx": "^2.1.1",
         "date-fns": "^4.1.0",
         "dotenv": "^17.2.2",
@@ -52,7 +50,6 @@
         "lodash-es": "^4.17.21",
         "lucide-react": "^0.544.0",
         "next": "15.5.3",
-        "next-cloudinary": "^6.16.0",
         "next-themes": "^0.4.6",
         "node-fetch": "^3.3.2",
         "react": "19.1.0",
