@@ -46,6 +46,11 @@ export function PokemonCard({ card, priority = false }: PokemonCardProps) {
                 <p className='text-sm text-muted-foreground'>
                     {card.num}/{card.set.printedTotal}
                 </p>
+                {card.price ? (
+                    <p className='text-lg font-semibold text-green-400'>${card.price.toFixed(2)}</p>
+                ) : (
+                    <p className='text-lg text-muted-foreground'>N/A</p>
+                )}
             </div>
         </Link>
     );

@@ -10,7 +10,6 @@ import { DenormalizedCard } from '@/src/shared-types/card-index';
 interface CardGridProps {
     cards: DenormalizedCard[];
     totalCount: number;
-    isLoading: boolean;
     priority?: boolean;
 }
 
@@ -42,7 +41,7 @@ const gridComponents: VirtuosoGridProps<ClientPokemonCardType, undefined>['compo
     Item: GridItem
 };
 
-export function CardGrid({ cards, totalCount, isLoading }: CardGridProps) {
+export function CardGrid({ cards, totalCount }: CardGridProps) {
     return (
         <VirtuosoGrid
             useWindowScroll
@@ -53,11 +52,7 @@ export function CardGrid({ cards, totalCount, isLoading }: CardGridProps) {
             }}
             itemContent={(index) => (
                 <div className='flex w-full'>
-                    {isLoading ? (
-                        <PokemonCardSkeleton />
-                    ) : (
-                        <PokemonCard card={cards[index]} priority={index < 12} />
-                    )}
+                    <PokemonCard card={cards[index]} priority={index < 6} />
                 </div>
             )}
         />

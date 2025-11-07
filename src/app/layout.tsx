@@ -42,7 +42,7 @@ export default function RootLayout({
                     >
                         <CardDataInitializer />
                         <Header />
-                        <main className='flex flex-grow'>{children}</main>
+                        <main className='flex-grow'>{children}</main>
                         <Footer />
                         <ScrollToTopButton />
                     </ThemeProvider>

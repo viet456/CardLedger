@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 
 export default function About() {
     return (
-        <main className='mx-auto my-10 px-4'>
+        <main className='mx-auto my-10 flex px-4'>
             <article className='prose dark:prose-invert'>
                 <h1>About CardLedger: A Deep Dive into Full-Stack Development</h1>
                 <p>

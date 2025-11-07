@@ -8,6 +8,7 @@ import { CardFilterControls } from '@/src/components/search/CardFilterControls';
 import { useCardFilters } from '@/src/hooks/useCardFilters';
 import { CardGrid } from '@/src/components/cards/CardGrid';
 import { useHasHydrated } from '@/src/hooks/useHasHydrated';
+import { PokemonCardSkeleton } from '@/src/components/cards/PokemonCardSkeleton';
 
 export default function CardPageView() {
     const isHydrated = useHasHydrated();
@@ -85,15 +86,19 @@ export default function CardPageView() {
     const { filteredCards } = useCardFilters({ initialCards: denormalizedCards, defaultSort });
 
     return (
-        <div className='w-full'>
+        <div className='flex w-full flex-grow flex-col'>
             {/* <CardDataInitializer /> */}
             <CardFilterControls filterOptions={filterOptions} sortOptions={allCardsSortOptions} />
-            <div className='mt-2'>
-                <CardGrid
-                    cards={filteredCards}
-                    totalCount={isLoading ? 20 : filteredCards.length}
-                    isLoading={isLoading}
-                />
+            <div className='mt-2 min-h-screen flex-grow'>
+                {isLoading ? (
+                    <div className='grid grid-cols-2 gap-4 px-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'>
+                        {Array.from({ length: 20 }).map((_, i) => (
+                            <PokemonCardSkeleton key={i} />
+                        ))}
+                    </div>
+                ) : (
+                    <CardGrid cards={filteredCards} totalCount={filteredCards.length} />
+                )}
             </div>
         </div>
     );
