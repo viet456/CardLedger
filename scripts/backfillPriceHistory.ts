@@ -282,13 +282,13 @@ async function main() {
             const apiCardNumberRaw = String(apiCard.cardNumber);
             const apiCardName = apiCard.name;
             const normalizedApiCardName = normalizePokemonName(apiCardName);
-            const normalizedApiNumberString = apiCardNumberRaw.replace(/^0+/, '');
-            const myCard = dbCards.find((c) => c.number.endsWith(normalizedApiNumberString));
+            const normalizedApiNumberString = apiCardNumberRaw.split('/')[0].replace(/^0+/, '');
+            const myCard = dbCards.find((c) => c.number === normalizedApiNumberString);
 
             let cardMatchIsValid = false;
             if (!myCard) {
                 console.log(
-                    ` - ℹ️  No match found for API card number: ${apiCardNumberRaw} (${apiCardName})`
+                    ` - ℹ️  No match found for API card number: '${apiCardNumberRaw}' (${apiCardName})`
                 );
                 continue;
             }
