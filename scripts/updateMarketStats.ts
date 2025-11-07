@@ -139,6 +139,12 @@ async function main() {
         setsToProcessMap.set(latestSet.id, latestSet);
     }
     const setsToProcess = Array.from(setsToProcessMap.values());
+    // Force the latest set to be processed first
+    setsToProcess.sort((a, b) => {
+        if (a.id === latestSet.id) return -1; // 'a' (latest set) comes first
+        if (b.id === latestSet.id) return 1; // 'b' (latest set) comes first
+        return 0; // Keep original alternating order for all others
+    });
 
     console.log(`Starting daily MarketStats update for ${dbSets.length} sets...`);
 

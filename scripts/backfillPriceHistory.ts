@@ -144,16 +144,42 @@ async function processAndWriteHistory(myCardId: string, myCardNumber: string, ap
     }));
 
     if (dataForPrisma.length > 0) {
-        try {
-            const result = await prisma.priceHistory.createMany({
-                data: dataForPrisma,
-                skipDuplicates: true
-            });
-            console.log(`  ✅ Saved ${result.count} history entries for card ${myCardId}`);
-        } catch (error) {
-            console.error(`  ❌ FAILED to write history for ${myCardId}:`, error.message);
-            throw error;
+        console.log(
+            `  ⏳ Upserting ${dataForPrisma.length} history entries for card ${myCardId}...`
+        );
+        let processedCount = 0;
+        for (const row of dataForPrisma) {
+            try {
+                await prisma.priceHistory.upsert({
+                    where: {
+                        cardId_timestamp: {
+                            cardId: row.cardId,
+                            timestamp: row.timestamp
+                        }
+                    },
+                    update: row,
+                    create: row
+                });
+                processedCount++;
+            } catch (upsertError) {
+                console.error(
+                    ` ❌ FAILED to upsert history for ${myCardId} on ${row.timestamp}:`,
+                    upsertError.message
+                );
+                throw upsertError;
+            }
         }
+        console.log(` ✅ Processed ${processedCount} history entries for card ${myCardId}`);
+        // try {
+        //     const result = await prisma.priceHistory.createMany({
+        //         data: dataForPrisma,
+        //         skipDuplicates: true
+        //     });
+        //     console.log(`  ✅ Saved ${result.count} history entries for card ${myCardId}`);
+        // } catch (error) {
+        //     console.error(`  ❌ FAILED to write history for ${myCardId}:`, error.message);
+        //     throw error;
+        // }
     }
     const prices = apiCard.prices?.conditions;
     const latestNearMintPrice = prices?.['Near Mint']?.price;
@@ -164,34 +190,32 @@ async function processAndWriteHistory(myCardId: string, myCardNumber: string, ap
     const tcgLastUpdatedAt = apiCard.prices?.lastUpdated;
     const validTcgUpdatedAt = tcgLastUpdatedAt ? new Date(tcgLastUpdatedAt) : undefined;
 
-    if (latestNearMintPrice !== null && latestNearMintPrice !== undefined) {
-        try {
-            await prisma.marketStats.upsert({
-                where: { cardId: myCardId },
-                update: {
-                    tcgNearMintLatest: latestNearMintPrice,
-                    tcgLightlyPlayedLatest: latestLightlyPlayedPrice ?? null,
-                    tcgModeratelyPlayedLatest: latestModeratelyPlayedPrice ?? null,
-                    tcgHeavilyPlayedLatest: latestHeavilyPlayedPrice ?? null,
-                    tcgDamagedLatest: latestDamagedPrice ?? null,
-                    tcgPlayerUpdatedAt: validTcgUpdatedAt
-                },
-                create: {
-                    cardId: myCardId,
-                    tcgNearMintLatest: latestNearMintPrice,
-                    tcgLightlyPlayedLatest: latestLightlyPlayedPrice ?? null,
-                    tcgModeratelyPlayedLatest: latestModeratelyPlayedPrice ?? null,
-                    tcgHeavilyPlayedLatest: latestHeavilyPlayedPrice ?? null,
-                    tcgDamagedLatest: latestDamagedPrice ?? null,
-                    tcgPlayerUpdatedAt: validTcgUpdatedAt ?? new Date()
-                    // PSA fields will be null by default
-                }
-            });
-            console.log(` 📊 Upserted MarketStats for card ${myCardId}`);
-        } catch (error) {
-            console.error(` ❌ FAILED to upsert MarketStats for ${myCardId}:`, error.message);
-            throw error;
-        }
+    try {
+        await prisma.marketStats.upsert({
+            where: { cardId: myCardId },
+            update: {
+                tcgNearMintLatest: latestNearMintPrice,
+                tcgLightlyPlayedLatest: latestLightlyPlayedPrice ?? null,
+                tcgModeratelyPlayedLatest: latestModeratelyPlayedPrice ?? null,
+                tcgHeavilyPlayedLatest: latestHeavilyPlayedPrice ?? null,
+                tcgDamagedLatest: latestDamagedPrice ?? null,
+                tcgPlayerUpdatedAt: validTcgUpdatedAt
+            },
+            create: {
+                cardId: myCardId,
+                tcgNearMintLatest: latestNearMintPrice,
+                tcgLightlyPlayedLatest: latestLightlyPlayedPrice ?? null,
+                tcgModeratelyPlayedLatest: latestModeratelyPlayedPrice ?? null,
+                tcgHeavilyPlayedLatest: latestHeavilyPlayedPrice ?? null,
+                tcgDamagedLatest: latestDamagedPrice ?? null,
+                tcgPlayerUpdatedAt: validTcgUpdatedAt ?? new Date()
+                // PSA fields will be null by default
+            }
+        });
+        console.log(` 📊 Upserted MarketStats for card ${myCardId}`);
+    } catch (error) {
+        console.error(` ❌ FAILED to upsert MarketStats for ${myCardId}:`, error.message);
+        throw error;
     }
 }
 
@@ -249,9 +273,6 @@ async function main() {
         }
         const apiCards = setPriceHistory.data;
         const cardsFetched = apiCards.length;
-        // 1 request = 8.7 cards fetched from pricing API
-        const requestCost = Math.ceil(cardsFetched / 8.7);
-        const waitTimeInSeconds = requestCost + 1;
 
         if (!apiCards) {
             console.warn(` ⚠️  No 'data' array found for set ${set.name}. Skipping.`);
@@ -332,10 +353,8 @@ async function main() {
                 ` -> Set ${set.name} (${set.id}) processing incomplete due to errors. Will retry remaining/failed cards on next run.`
             );
         }
-        console.log(
-            ` -> Fetched ${cardsFetched} cards (cost: ~${requestCost} reqs). Waiting ${waitTimeInSeconds}s...`
-        );
-        await new Promise((resolve) => setTimeout(resolve, waitTimeInSeconds * 1000));
+        console.log(` -> Fetched ${cardsFetched} cards. Waiting 31s...`);
+        await new Promise((resolve) => setTimeout(resolve, 31000));
     }
 }
 

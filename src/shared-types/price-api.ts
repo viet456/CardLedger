@@ -1,3 +1,12 @@
+export type PriceHistoryDataPoint = {
+    timestamp: Date;
+    tcgNearMint: number | null;
+    tcgLightlyPlayed: number | null;
+    tcgModeratelyPlayed: number | null;
+    tcgHeavilyPlayed: number | null;
+    tcgDamaged: number | null;
+};
+
 export type MarketStats = {
     prices: Record<string, number>;
 };
