@@ -46,6 +46,7 @@ export function SetCard({ set }: SetCardProps) {
                             src={set.logoImageKey}
                             alt={`${set.name} logo`}
                             fill
+                            sizes='(min-width: 1024px) 20vw, (min-width: 768px) 25vw, (min-width: 640px) 33vw, 50vw'
                             className='object-contain transition-transform group-hover:scale-110'
                             format='auto'
                             quality='auto'
