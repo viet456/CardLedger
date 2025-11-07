@@ -100,14 +100,17 @@ export function useCardFilters({ initialCards, defaultSort }: UseCardFiltersProp
                     case 'price':
                         const priceA = a.price;
                         const priceB = b.price;
-                        // Push cards of null price to the bottom
-                        if (priceA === null && priceB !== null) return 1;
-                        if (priceA !== null && priceB === null) return -1;
-                        if (priceA === null && priceB === null) return 0;
+                        // Push cards of null and undefined price to the bottom
+                        const isAInvalid = priceA === null || priceA === undefined;
+                        const isBInvalid = priceB === null || priceB === undefined;
+                        if (isAInvalid && isBInvalid) return 0;
+                        if (isAInvalid) return 1;
+                        if (isBInvalid) return -1;
+
                         if (sortOrder === 'desc') {
-                            return priceB! - priceA!; // Descending sort
+                            return (priceB as number) - (priceA as number);
                         } else {
-                            return priceA! - priceB!; // Ascending sort
+                            return (priceA as number) - (priceB as number);
                         }
                     case 'pS': // 'pokedexNumberSort' -> 'pS'
                         // Handle nulls by pushing them to the end
@@ -126,7 +129,7 @@ export function useCardFilters({ initialCards, defaultSort }: UseCardFiltersProp
                         return a.num.localeCompare(b.num, undefined, { numeric: true });
                 }
             });
-            if (sortOrder === 'desc') {
+            if (sortOrder === 'desc' && sortBy !== 'price') {
                 results.reverse();
             }
         }
