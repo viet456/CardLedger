@@ -9,7 +9,8 @@ export function SetPageView({ setInfo, cards, filterOptions }: SetPageProps) {
     const sortOptions: { label: string; value: SortableKey }[] = [
         { label: 'Card Number', value: 'num' },
         { label: 'Name', value: 'n' },
-        { label: 'Pokedex Number', value: 'pS' }
+        { label: 'Pokedex Number', value: 'pS' },
+        { label: 'Price', value: 'price' }
     ];
     const defaultSort = {
         sortBy: 'num' as SortableKey,
