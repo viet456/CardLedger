@@ -5,6 +5,8 @@ import Image from 'next/image';
 import { DenormalizedCard, AbilityObject } from '@/src/shared-types/card-index';
 import { ChevronRight } from 'lucide-react';
 
+const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
+
 // Helper component for creating consistent filter links
 const FilterLink = ({ field, value }: { field: string; value: string }) => (
     <Link
@@ -30,6 +32,7 @@ export function SingleCardView({
     card: DenormalizedCard;
     children: React.ReactNode;
 }) {
+    const imageUrl = `${R2_PUBLIC_URL}/${card.img}`;
     return (
         <main className='container mx-auto max-w-6xl p-4 sm:p-6 lg:p-8'>
             {/* Breadcrumb Navigation */}
@@ -51,13 +54,12 @@ export function SingleCardView({
                 <div className='md:col-span-1'>
                     {card.img ? (
                         <Image
-                            src={card.img}
+                            src={imageUrl}
                             alt={card.n}
                             width={500}
                             height={700}
                             sizes='(max-width: 768px) 100vw, 33vw'
                             className='w-full rounded-xl shadow-lg'
-                            quality={50}
                             priority
                         />
                     ) : (

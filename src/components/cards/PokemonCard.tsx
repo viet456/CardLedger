@@ -26,7 +26,6 @@ export function PokemonCard({ card, priority = false }: PokemonCardProps) {
                         sizes='192px'
                         loading={priority ? 'eager' : 'lazy'}
                         fetchPriority={priority ? 'high' : 'auto'}
-                        quality={50}
                     />
                 </div>
             ) : (

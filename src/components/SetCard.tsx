@@ -26,7 +26,6 @@ export function SetCard({ set }: SetCardProps) {
                             width={30}
                             height={30}
                             className='object-contain'
-                            quality={50}
                         />
                     )}
                     <p className='text-md font-semibold'>{set.name}</p>
@@ -48,7 +47,6 @@ export function SetCard({ set }: SetCardProps) {
                             fill
                             className='object-contain transition-transform group-hover:scale-110'
                             fetchPriority='high'
-                            quality={50}
                         />
                     ) : (
                         <div className='bg-muted/50 flex h-full w-full items-center justify-center rounded-sm text-xs text-muted-foreground'>
