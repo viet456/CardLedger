@@ -24,6 +24,8 @@
 .DS_Store
 *.pem
 /scripts/_completed_backfill_sets.txt
+/scripts/_completed_images.txt
+
 
 # debug
 npm-debug.log*

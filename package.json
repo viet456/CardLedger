@@ -18,9 +18,10 @@
         "db:backfill-tcg": "tsx scripts/backfillTcgPlayerSetIds.ts",
         "db:backfill-price": "tsx scripts/backfillPriceHistory.ts",
         "db:update-market": "tsx scripts/updateMarketStats.ts",
+        "db:sync": "pnpm run db:populate && pnpm run images:migrate",
         "index:cards": "tsx scripts/generateCardIndex.ts",
         "index:market": "tsx scripts/generateMarketIndex.ts",
-        "db:sync": "pnpm run db:populate && pnpm run images:migrate"
+        "optimize:images": "tsx scripts/optimizeImages.ts"
     },
     "dependencies": {
         "@aws-sdk/client-s3": "^3.890.0",
@@ -52,11 +53,13 @@
         "next": "15.5.3",
         "next-themes": "^0.4.6",
         "node-fetch": "^3.3.2",
+        "p-limit": "^7.2.0",
         "react": "19.1.0",
         "react-dom": "19.1.0",
         "react-intersection-observer": "^9.16.0",
         "react-virtuoso": "^4.14.1",
         "server-only": "^0.0.1",
+        "sharp": "^0.34.5",
         "superjson": "^2.2.2",
         "tailwind-merge": "^3.3.1",
         "zod": "^4.1.9",
