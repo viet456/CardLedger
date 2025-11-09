@@ -37,6 +37,7 @@ jobs:
       - name: Run card population script
         run: pnpm tsx scripts/populate.ts
         env:
+          NODE_OPTIONS: 'DEFAULT@SECLEVEL=1'
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           POKEMONTCG_API_KEY: ${{ secrets.POKEMONTCG_API_KEY }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
