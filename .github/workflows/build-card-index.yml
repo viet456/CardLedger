@@ -54,6 +54,7 @@ jobs:
       - name: Build card index artifact
         run: pnpm tsx scripts/generateCardIndex.ts
         env:
+          NODE_OPTIONS: 'DEFAULT@SECLEVEL=1'
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           NEXT_PUBLIC_R2_PUBLIC_URL: ${{ vars.NEXT_PUBLIC_R2_PUBLIC_URL }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
