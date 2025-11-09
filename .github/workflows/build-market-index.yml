@@ -1,0 +1,63 @@
+name: Build Market Index
+
+on:
+  # 1. Trigger when "Update Market Stats" workflow completes
+  workflow_run:
+    workflows: ["Update Market Stats"]
+    types:
+      - completed
+
+  # 2. Trigger when the generator script changes
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/generateMarketIndex.ts'
+
+  # 3. Trigger for manual runs
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    # 1. Runs if the workflow_run event was successful.
+    # 2. OR it runs if the trigger was a 'push'.
+    # 3. OR it runs if the trigger was a 'workflow_dispatch'.
+    if: |
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 'latest'
+
+      - name: Setup Node.js and cache pnpm store
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm prisma generate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Build market price index
+        run: pnpm tsx scripts/generateMarketIndex.ts
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXT_PUBLIC_R2_PUBLIC_URL: ${{ vars.NEXT_PUBLIC_R2_PUBLIC_URL }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}s
