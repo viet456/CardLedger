@@ -68,8 +68,12 @@ const ApiCardSchema = z.object({
     convertedRetreatCost: z.number().optional(),
 
     rules: z.array(z.string()).optional(),
-    ancientTraitName: z.string().optional(),
-    ancientTraitText: z.string().optional(),
+    ancientTrait: z
+        .object({
+            name: z.string(),
+            text: z.string()
+        })
+        .optional(),
     number: z.string(),
     artist: z.string().optional(),
     rarity: z.string().optional(),
@@ -97,7 +101,8 @@ const ApiSetSchema = z.object({
     images: z.object({
         symbol: z.string(),
         logo: z.string()
-    })
+    }),
+    legalities: ApiLegalitySchema.optional()
 });
 
 const ApiSetResponseSchema = z.object({
@@ -333,7 +338,10 @@ async function syncSets() {
                         releaseDate: new Date(apiSet.releaseDate),
                         updatedAt: new Date(apiSet.updatedAt),
                         symbolImageKey: symbolUploadResult.imageKey,
-                        logoImageKey: logoUploadResult.imageKey
+                        logoImageKey: logoUploadResult.imageKey,
+                        standard: apiSet.legalities?.standard || null,
+                        expanded: apiSet.legalities?.expanded || null,
+                        unlimited: apiSet.legalities?.unlimited || null
                     }
                 });
             } else if (existingSet.total !== apiSet.total) {
@@ -543,8 +551,8 @@ async function syncCards(
                                 },
                                 convertedRetreatCost: apiCard.convertedRetreatCost || null,
                                 rules: apiCard.rules || [],
-                                ancientTraitName: apiCard.ancientTraitName || null,
-                                ancientTraitText: apiCard.ancientTraitText || null,
+                                ancientTraitName: apiCard.ancientTrait?.name || null,
+                                ancientTraitText: apiCard.ancientTrait?.text || null,
                                 set: {
                                     connect: {
                                         id: dbSet.id
