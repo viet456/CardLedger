@@ -38,7 +38,7 @@ async function getCardPage(setId: string, limit: number, offset: number) {
         return response.data;
     } catch (error) {
         console.error(` ❌ FAILED to fetch data for ${setId} at offset ${offset}:`, error.message);
-        return null;
+        throw error;
     }
 }
 
@@ -175,10 +175,24 @@ async function main() {
         let keepFetching = true;
 
         while (keepFetching) {
-            const pageData = await getCardPage(set.tcgPlayerSetId, PAGE_SIZE, currentOffset);
+            let pageData;
+
+            try {
+                pageData = await getCardPage(set.tcgPlayerSetId, PAGE_SIZE, currentOffset);
+            } catch (error) {
+                if (axios.isAxiosError(error) && error.response?.status === 429) {
+                    console.log(`- ⚠️ Got 429. Waiting 60 seconds to retry...`);
+                    await new Promise((resolve) => setTimeout(resolve, 60000));
+                    continue;
+                } else {
+                    console.log(` -> Fetch failed, skipping rest of set ${set.name}.`);
+                    break;
+                }
+            }
             if (!pageData || !pageData.data || pageData.data.length === 0) {
                 // This set is done, or the first page was empty
                 keepFetching = false;
+                break;
             }
             const apiCards: ApiCard[] = pageData.data;
             const cardsFetched = apiCards.length;
