@@ -3,7 +3,7 @@ import { useSearchStore, FilterState } from '@/src/lib/store/searchStore';
 import { DenormalizedCard } from '@/src/shared-types/card-index';
 import { useMemo, useEffect, useRef } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { SortableKey } from '../services/pokemonCardValidator';
+import { SortableKey } from '../src/services/pokemonCardValidator';
 
 interface UseCardFiltersProps {
     initialCards: DenormalizedCard[];

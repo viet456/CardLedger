@@ -1,7 +1,7 @@
 'use client';
 
 import { useCardStore } from '../lib/store/cardStore';
-import { useHasHydrated } from '../hooks/useHasHydrated';
+import { useHasHydrated } from '../../hooks/useHasHydrated';
 import { useEffect } from 'react';
 import { useMarketStore } from '../lib/store/marketStore';
 
