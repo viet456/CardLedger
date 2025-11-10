@@ -25,8 +25,6 @@ export type FilterOptions = {
 
 export type SetPageProps = {
     setInfo: SetObject;
-    cards: DenormalizedCard[];
-    filterOptions: FilterOptions;
 };
 
 export type SetObject = {
