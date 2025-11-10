@@ -19,7 +19,7 @@ export function SetPageView({ setInfo, cards, filterOptions }: SetPageProps) {
     const { filteredCards } = useCardFilters({ initialCards: cards, defaultSort });
 
     return (
-        <div className='flex flex-grow flex-col p-4'>
+        <div className='flex flex-grow flex-col'>
             <header className='flex gap-6 px-4 text-lg'>
                 <h1 className='font-bold'>{setInfo.name}</h1>
                 <p className='text-muted-foreground'>Series: {setInfo.series}</p>
