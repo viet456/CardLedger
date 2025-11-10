@@ -3,9 +3,9 @@
 import { useRouter } from 'next/navigation';
 import { useSearchStore } from '@/src/lib/store/searchStore';
 import { useState, useEffect, useRef } from 'react';
-import { useDebounce } from '@/src/hooks/useDebounce';
+import { useDebounce } from '@/hooks/useDebounce';
 import { trpc } from '@/src/utils/trpc';
-import { useClickOutside } from '@/src/hooks/useClickOutside';
+import { useClickOutside } from '@/hooks/useClickOutside';
 import { Button } from '../ui/button';
 
 interface HeaderSearchBarProps {

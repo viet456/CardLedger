@@ -1,7 +1,7 @@
 'use client';
 import { SortableKey } from '@/src/services/pokemonCardValidator';
 import { SetPageProps } from '@/src/shared-types/card-index';
-import { useCardFilters } from '@/src/hooks/useCardFilters';
+import { useCardFilters } from '@/hooks/useCardFilters';
 import { CardFilterControls } from '@/src/components/search/CardFilterControls';
 import { SimpleCardGrid } from '@/src/components/cards/SimpleCardGrid';
 

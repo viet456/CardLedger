@@ -5,9 +5,9 @@ import { useMarketStore } from '@/src/lib/store/marketStore';
 import { useMemo } from 'react';
 import { DenormalizedCard } from '@/src/shared-types/card-index';
 import { CardFilterControls } from '@/src/components/search/CardFilterControls';
-import { useCardFilters } from '@/src/hooks/useCardFilters';
+import { useCardFilters } from '@/hooks/useCardFilters';
 import { CardGrid } from '@/src/components/cards/CardGrid';
-import { useHasHydrated } from '@/src/hooks/useHasHydrated';
+import { useHasHydrated } from '@/hooks/useHasHydrated';
 import { PokemonCardSkeleton } from '@/src/components/cards/PokemonCardSkeleton';
 
 export default function CardPageView() {
