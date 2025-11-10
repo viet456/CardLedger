@@ -22,8 +22,8 @@ const S3 = new S3Client({
     },
     requestHandler: new NodeHttpHandler({
         httpsAgent: agent,
-        connectionTimeout: 5000, // 5 seconds to connect
-        requestTimeout: 10000 // 10 seconds for the request to complete
+        connectionTimeout: 10000, // 10 seconds to connect
+        requestTimeout: 20000 // 20 seconds for the request to complete
     })
 });
 

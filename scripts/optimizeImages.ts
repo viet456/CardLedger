@@ -15,7 +15,7 @@ const IMAGE_SIZES = [16, 32, 48, 64, 96];
 const CARD_SIZES = [192, 384];
 const ALL_SIZES = [...IMAGE_SIZES, ...CARD_SIZES, ...DEVICE_SIZES];
 const QUALITY = 75;
-const limit = pLimit(5);
+const limit = pLimit(4);
 const COMPLETED_IMAGES_FILE = path.join(__dirname, '_completed_images.txt');
 
 interface ImageToOptimize {
