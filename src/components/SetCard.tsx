@@ -7,9 +7,10 @@ import { SetObject } from '@/src/shared-types/card-index';
 const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
 interface SetCardProps {
     set: SetObject;
+    isPriority?: boolean;
 }
 
-export function SetCard({ set }: SetCardProps) {
+export function SetCard({ set, isPriority = false }: SetCardProps) {
     return (
         <Link
             href={`/sets/${set.id}?sortBy=num&sortOrder=asc`}
@@ -46,7 +47,8 @@ export function SetCard({ set }: SetCardProps) {
                             alt={set.name}
                             fill
                             className='object-contain transition-transform group-hover:scale-110'
-                            fetchPriority='high'
+                            fetchPriority={isPriority ? 'high' : undefined}
+                            loading={isPriority ? 'eager' : 'lazy'}
                         />
                     ) : (
                         <div className='bg-muted/50 flex h-full w-full items-center justify-center rounded-sm text-xs text-muted-foreground'>
