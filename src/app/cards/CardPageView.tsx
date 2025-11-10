@@ -1,77 +1,64 @@
 'use client';
 import { SortableKey } from '@/src/services/pokemonCardValidator';
-import { useCardStore } from '@/src/lib/store/cardStore';
-import { useMarketStore } from '@/src/lib/store/marketStore';
-import { useMemo } from 'react';
-import { DenormalizedCard } from '@/src/shared-types/card-index';
+import { useCardStore, CardStoreState } from '@/src/lib/store/cardStore';
 import { CardFilterControls } from '@/src/components/search/CardFilterControls';
 import { useCardFilters } from '@/hooks/useCardFilters';
 import { CardGrid } from '@/src/components/cards/CardGrid';
 import { useHasHydrated } from '@/hooks/useHasHydrated';
 import { PokemonCardSkeleton } from '@/src/components/cards/PokemonCardSkeleton';
+import { useDenormalizedCards } from '@/hooks/useDenormalizedCards';
+import { useShallow } from 'zustand/react/shallow';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useSearchStore, FilterState } from '@/src/lib/store/searchStore';
+import { useEffect, useRef } from 'react';
 
 export default function CardPageView() {
     const isHydrated = useHasHydrated();
-    const {
-        cards,
-        artists,
-        rarities,
-        sets,
-        types,
-        subtypes,
-        supertypes,
-        abilities,
-        attacks,
-        rules,
-        status
-    } = useCardStore();
-    const { prices } = useMarketStore();
 
-    const denormalizedCards: DenormalizedCard[] = useMemo(() => {
-        if (!cards || cards.length === 0) return [];
-        return cards.map((card) => ({
-            id: card.id,
-            n: card.n,
-            hp: card.hp,
-            num: card.num,
-            img: card.img,
-            pS: card.pS,
-            cRC: card.cRC,
-            artist: card.a !== null ? artists[card.a] : null,
-            rarity: card.r !== null ? rarities[card.r] : null,
-            set: sets[card.s],
-            supertype: supertypes[card.st],
-            subtypes: card.sb.map((id) => subtypes[id]),
-            types: card.t.map((id) => types[id]),
-            weaknesses: (card.w || []).map((w) => ({ type: types[w.t], value: w.v })),
-            resistances: (card.rs || []).map((r) => ({ type: types[r.t], value: r.v })),
-            abilities: (card.ab || []).map((id) => abilities[id]),
-            pokedexNumbers: card.pdx,
-            ancientTrait: card.aT ? { name: card.aT.n, text: card.aT.t } : null,
-            rules: (card.ru || []).map((id) => rules[id]),
-            attacks: (card.ak || []).map((id) => attacks[id]),
-            evolvesFrom: card.eF,
-            evolvesTo: card.eT || [],
-            legalities: {
-                standard: card.leg?.s,
-                expanded: card.leg?.e,
-                unlimited: card.leg?.u
-            },
-            price: prices[card.id] ?? null
-        }));
-    }, [
-        cards,
-        artists,
-        rarities,
-        sets,
-        types,
-        subtypes,
-        supertypes,
-        abilities,
-        attacks,
-        rules,
-        prices
-    ]);
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const { filters, replaceFilters } = useSearchStore(
+        useShallow((state) => ({
+            filters: state.filters,
+            replaceFilters: state.replaceFilters
+        }))
+    );
+    const isInitialMount = useRef(true);
+
+    useEffect(() => {
+        const params = new URLSearchParams(searchParams.toString());
+        const urlFilters: { [key: string]: string } = {};
+        for (const [key, value] of params.entries()) {
+            urlFilters[key] = value;
+        }
+        replaceFilters(urlFilters as Partial<FilterState>);
+    }, [replaceFilters, searchParams]);
+
+    useEffect(() => {
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+        const params = new URLSearchParams();
+        Object.entries(filters).forEach(([key, value]) => {
+            if (value !== undefined && value !== null && value !== '') {
+                params.set(key, String(value));
+            }
+        });
+        router.replace(`${pathname}?${params.toString()}`);
+    }, [filters, pathname, router]);
+
+    const { status, artists, rarities, sets, types, subtypes } = useCardStore(
+        useShallow((state: CardStoreState) => ({
+            status: state.status,
+            artists: state.artists,
+            rarities: state.rarities,
+            sets: state.sets,
+            types: state.types,
+            subtypes: state.subtypes
+        }))
+    );
     const filterOptions = { rarities, types, subtypes, artists, sets };
     const allCardsSortOptions: { label: string; value: SortableKey }[] = [
         { label: 'Release Date', value: 'rD' },
@@ -83,7 +70,8 @@ export default function CardPageView() {
     const defaultSort = { sortBy: 'rD' as SortableKey, sortOrder: 'desc' as const };
     const isLoading = !isHydrated || !status.startsWith('ready');
 
-    const { filteredCards } = useCardFilters({ initialCards: denormalizedCards, defaultSort });
+    const { filteredCards: normalizedFilteredCards } = useCardFilters({ defaultSort });
+    const { denormalizedAndSortedCards } = useDenormalizedCards(normalizedFilteredCards);
 
     return (
         <div className='flex w-full flex-grow flex-col'>
@@ -97,7 +85,10 @@ export default function CardPageView() {
                         ))}
                     </div>
                 ) : (
-                    <CardGrid cards={filteredCards} totalCount={filteredCards.length} />
+                    <CardGrid
+                        cards={denormalizedAndSortedCards}
+                        totalCount={denormalizedAndSortedCards.length}
+                    />
                 )}
             </div>
         </div>

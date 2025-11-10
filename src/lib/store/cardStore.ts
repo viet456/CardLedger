@@ -1,9 +1,8 @@
-import { create } from 'zustand';
+import { create } from 'zustand/react';
 import { persist, PersistStorage, StorageValue } from 'zustand/middleware';
 import { get, set, del } from 'idb-keyval';
 import {
     NormalizedCard,
-    DenormalizedCard,
     PointerFile,
     LookupTables,
     FullCardData
@@ -25,12 +24,79 @@ type PersistedState = LookupTables & {
     version: string | null;
 };
 
-type CardStoreState = LookupTables & {
+// Index maps for searching and filtering over
+type IndexMap = Map<string, Set<string>>;
+
+export type CardStoreState = LookupTables & {
     cards: NormalizedCard[];
     version: string | null;
     status: 'idle' | 'loading' | 'ready_from_cache' | 'ready_from_network' | 'error';
     initialize: () => Promise<void>;
+
+    cardMap: Map<string, NormalizedCard>;
+    rarityIndex: IndexMap;
+    setIndex: IndexMap;
+    typeIndex: IndexMap;
+    subtypeIndex: IndexMap;
+    artistIndex: IndexMap;
+    weaknessIndex: IndexMap;
+    resistanceIndex: IndexMap;
 };
+
+// Helper function to build search indexes
+function buildIndexes(fullData: FullCardData) {
+    const cardMap = new Map<string, NormalizedCard>();
+    const rarityIndex: IndexMap = new Map();
+    const setIndex: IndexMap = new Map();
+    const typeIndex: IndexMap = new Map();
+    const subtypeIndex: IndexMap = new Map();
+    const artistIndex: IndexMap = new Map();
+    const weaknessIndex: IndexMap = new Map();
+    const resistanceIndex: IndexMap = new Map();
+
+    const { rarities, sets, types, subtypes, artists } = fullData;
+
+    const addToIndex = (index: IndexMap, key: string, cardId: string) => {
+        if (!index.has(key)) {
+            index.set(key, new Set());
+        }
+        index.get(key)!.add(cardId);
+    };
+    for (const card of fullData.cards) {
+        cardMap.set(card.id, card);
+        if (card.r !== null) {
+            addToIndex(rarityIndex, rarities[card.r], card.id);
+        }
+        if (card.s !== null) {
+            addToIndex(setIndex, sets[card.s].id, card.id);
+        }
+        for (const typeId of card.t) {
+            addToIndex(typeIndex, types[typeId], card.id);
+        }
+        for (const subtypeId of card.sb) {
+            addToIndex(subtypeIndex, subtypes[subtypeId], card.id);
+        }
+        if (card.a !== null) {
+            addToIndex(artistIndex, artists[card.a], card.id);
+        }
+        for (const weakness of card.w || []) {
+            addToIndex(weaknessIndex, types[weakness.t], card.id);
+        }
+        for (const resistance of card.rs || []) {
+            addToIndex(resistanceIndex, types[resistance.t], card.id);
+        }
+    }
+    return {
+        cardMap,
+        rarityIndex,
+        setIndex,
+        typeIndex,
+        subtypeIndex,
+        artistIndex,
+        weaknessIndex,
+        resistanceIndex
+    };
+}
 
 const indexedDbStorage: PersistStorage<PersistedState> = {
     getItem: async (name: string): Promise<{ state: PersistedState; version: number } | null> => {
@@ -67,6 +133,14 @@ export const useCardStore = create<CardStoreState>()(
             resistances: [],
             version: null,
             status: 'idle',
+            cardMap: new Map(),
+            rarityIndex: new Map(),
+            setIndex: new Map(),
+            typeIndex: new Map(),
+            subtypeIndex: new Map(),
+            artistIndex: new Map(),
+            weaknessIndex: new Map(),
+            resistanceIndex: new Map(),
 
             // Checks for local cards in Indexeddb and compares to fetched version
             initialize: async () => {
@@ -89,7 +163,7 @@ export const useCardStore = create<CardStoreState>()(
 
                     // Check if our stored version is the same as the last created JSON
                     if (get().version === pointer.version) {
-                        console.log(' ✅ Local data is up-to-date. Using IndexedDB cache.');
+                        console.log('✅ Local data is up-to-date. Using cache.');
                         set({ status: 'ready_from_cache' });
                         return;
                     }
@@ -114,10 +188,15 @@ export const useCardStore = create<CardStoreState>()(
                     console.log('[CardStore]: ✅ Checksum validation successful.');
 
                     const fullData: FullCardData = JSON.parse(cardsDataString);
+
+                    // Build card filter indexes
+                    console.log('[CardStore]: Building indexes from network data...');
+                    const indexes = buildIndexes(fullData);
+
                     console.log(
                         `[CardStore]: ✅ Loaded ${fullData.cards.length} cards from network. Updating state.`
                     );
-                    set({ ...fullData, status: 'ready_from_network' });
+                    set({ ...fullData, ...indexes, status: 'ready_from_network' });
                 } catch (error) {
                     const errorMessage =
                         error instanceof Error ? error.message : 'An unknown error occurred';
@@ -143,7 +222,23 @@ export const useCardStore = create<CardStoreState>()(
                 weaknesses: state.weaknesses,
                 resistances: state.resistances,
                 version: state.version
-            })
+            }),
+            // Build indexes after rehydration from storage
+            onRehydrateStorage: () => (state) => {
+                if (state && state.cards.length > 0) {
+                    console.log('[CardStore]: Building indexes after rehydration...');
+                    const indexes = buildIndexes(state as FullCardData);
+                    state.cardMap = indexes.cardMap;
+                    state.rarityIndex = indexes.rarityIndex;
+                    state.setIndex = indexes.setIndex;
+                    state.typeIndex = indexes.typeIndex;
+                    state.subtypeIndex = indexes.subtypeIndex;
+                    state.artistIndex = indexes.artistIndex;
+                    state.weaknessIndex = indexes.weaknessIndex;
+                    state.resistanceIndex = indexes.resistanceIndex;
+                    console.log('[CardStore]: ✅ Indexes built from rehydrated data.');
+                }
+            }
         }
     )
 );
