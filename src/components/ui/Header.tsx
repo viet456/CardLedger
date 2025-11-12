@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { MobileNav } from './MobileNav';
 import { HeaderSearchBar } from '../search/HeaderSearchBar';
+import { ThemeToggle } from './ThemeToggle';
 
 export const navItems = [
     { href: '/', label: 'Home' },
@@ -58,10 +59,14 @@ export function Header() {
                         ))}
                     </nav>
                 </div>
-                <div className='hidden max-w-sm flex-grow justify-end md:block'>
-                    {showHeaderSearch && (
-                        <HeaderSearchBar onSuggestionClick={() => setIsMenuOpen(false)} />
-                    )}
+                {/* Desktop actions group */}
+                <div className='hidden items-center gap-2 md:flex'>
+                    <div className='max-w-md flex-grow'>
+                        {showHeaderSearch && (
+                            <HeaderSearchBar onSuggestionClick={() => setIsMenuOpen(false)} />
+                        )}
+                    </div>
+                    <ThemeToggle />
                 </div>
                 {/* Mobile navigation*/}
                 <div className='md:hidden'>
