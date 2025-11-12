@@ -24,76 +24,76 @@
     }
     :root {
         /* Page background and default text color */
-        --background: 0 0% 100%; /* white */
-        --foreground: 240 10% 3.9%; /* zinc-950 */
+        --background: 1 0 0; /* white */
+        --foreground: 0 0 0; /* PURE BLACK (OLED) */
 
         /* Background for components (headers, cards, etc.) */
-        --card: 0 0% 100%; /* white */
-        --card-foreground: 240 10% 3.9%; /* zinc-950 */
+        --card: 1 0 0; /* white */
+        --card-foreground: 0 0 0; /* PURE BLACK (OLED) */
 
         /* Popovers */
-        --popover: 0 0% 100%; /* white */
-        --popover-foreground: 240 10% 3.9%; /* zinc-950 */
+        --popover: 1 0 0; /* white */
+        --popover-foreground: 0 0 0; /* PURE BLACK (OLED) */
 
         /* Primary brand color (buttons) */
-        --primary: 217 91% 60%; /* blue-600 */
-        --primary-foreground: 0 0% 100%; /* white */
-        --primary-hover: 217 91% 55%; /* blue-600-hover */
+        --primary: 0 0 0; /* PURE BLACK (OLED) */
+        --primary-foreground: 1 0 0; /* white */
+        --primary-hover: 0.2711 0.0204 263.89; /* zinc-900 */
 
         /* Secondary buttons */
-        --secondary: 240 4.8% 95.9%; /* zinc-100 */
-        --secondary-foreground: 240 5.9% 10%; /* zinc-900 */
+        --secondary: 0.9537 0.0063 264.38; /* zinc-100 */
+        --secondary-foreground: 0.2711 0.0204 263.89; /* zinc-900 */
 
         /* Muted color for subtle text */
-        --muted: 240 4.8% 95.9%; /* zinc-100 */
-        --muted-foreground: 240 3.8% 46.1%; /* zinc-500 */
+        --muted: 0.9537 0.0063 264.38; /* zinc-100 */
+        --muted-foreground: 0.5129 0.0099 264.1; /* zinc-500 (approximated from HSL) */
 
         /* Accent for hover states */
-        --accent: 240 4.8% 95.9%; /* zinc-100 */
-        --accent-foreground: 240 5.9% 10%; /* zinc-900 */
+        --accent: 0.9537 0.0063 264.38; /* zinc-100 */
+        --accent-foreground: 0.2711 0.0204 263.89; /* zinc-900 */
 
         /* Color for borders and dividers */
-        --border: 240 5.9% 90%; /* zinc-200 */
+        --border: 0.8524 0.0084 264.2; /* zinc-300 */
 
         /* Color for focus rings */
-        --ring: 217 91% 60%; /* blue-600 */
+        --ring: 0.6273 0.1703 259.51; /* blue-600 */
         --radius: 0.5rem;
     }
 
     .dark {
         /* Dark mode page background and text */
-        --background: 240 10% 3.9%; /* zinc-950 */
-        --foreground: 240 5% 96.1%; /* zinc-50 */
+        --background: 0 0 0; /* PURE BLACK (OLED) */
+        --foreground: 0.9784 0.0051 264.44; /* zinc-50 */
 
-        /* Dark mode cards */
-        --card: 240 5.9% 10%; /* zinc-900 */
-        --card-foreground: 240 5% 96.1%; /* zinc-50 */
+        /* Dark mode cards (floating panels) */
+        --card: 0.2711 0.0204 263.89; /* zinc-900 */
+        --card-foreground: 0.9784 0.0051 264.44; /* zinc-50 */
 
-        /* Dark mode popovers */
-        --popover: 240 5.9% 10%; /* zinc-900 */
-        --popover-foreground: 240 5% 96.1%; /* zinc-50 */
+        /* Dark mode popovers (floating panels) */
+        --popover: 0.2711 0.0204 263.89; /* zinc-900 */
+        --popover-foreground: 0.9784 0.0051 264.44; /* zinc-50 */
 
         /* Dark mode primary button */
-        --primary: 217 91% 60%; /* blue-600 */
-        --primary-foreground: 0 0% 100%; /* white */
-        --primary-hover: 217 91% 55%; /* blue-600-hover */
+        --primary: 0.9784 0.0051 264.44; /* zinc-50 */
+        --primary-foreground: 0 0 0; /* PURE BLACK (OLED) */
+        --primary-hover: 0.8524 0.0084 264.2; /* zinc-300 */
 
         /* Dark mode secondary */
-        --secondary: 240 3.7% 15.9%; /* zinc-800 */
-        --secondary-foreground: 240 5% 96.1%; /* zinc-50 */
+        --secondary: 0.3591 0.018 263.93; /* zinc-800 */
+        --secondary-foreground: 0.9784 0.0051 264.44; /* zinc-50 */
 
         /* Dark mode muted */
-        --muted: 240 3.7% 15.9%; /* zinc-800 */
-        --muted-foreground: 240 5% 64.9%; /* zinc-400 */
+        --muted: 0.3591 0.018 263.93; /* zinc-800 */
+        --muted-foreground: 0.6806 0.009 264.12; /* zinc-400 */
 
         /* Dark mode accent/hover */
-        --accent: 240 3.7% 15.9%; /* zinc-800 */
-        --accent-foreground: 240 5% 96.1%; /* zinc-50 */
+        --accent: 0.3591 0.018 263.93; /* zinc-800 */
+        --accent-foreground: 0.9784 0.0051 264.44; /* zinc-50 */
 
         /* Dark mode borders */
-        --border: 240 3.7% 15.9%; /* zinc-800 */
+        --border: 0.3591 0.018 263.93; /* zinc-800 */
 
         /* Dark mode focus rings */
-        --ring: 217 91% 60%; /* blue-600 */
+        --ring: 0.6273 0.1703 259.51; /* blue-600 */
     }
 }

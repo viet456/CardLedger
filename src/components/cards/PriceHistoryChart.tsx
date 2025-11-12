@@ -1,5 +1,5 @@
 'use client';
-import Chart from 'chart.js/auto';
+import { Chart, type ChartOptions, type TooltipItem } from 'chart.js/auto';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { PriceHistoryDataPoint } from '@/src/shared-types/price-api';
 import 'chartjs-adapter-date-fns';
@@ -56,14 +56,17 @@ export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
             }
             const hasData = filteredData.some((d) => d.tcgNearMint !== null);
             if (!hasData) {
+                if (chartInstanceRef.current) {
+                    chartInstanceRef.current.destroy();
+                    chartInstanceRef.current = null;
+                }
                 return;
             }
 
             // Get the computed style from the document body
             const style = getComputedStyle(document.documentElement);
-            const primaryColor = `hsl(${style.getPropertyValue('--primary')})`;
-            const foregroundColor = `hsl(${style.getPropertyValue('--foreground').trim()})`;
-            const borderColor = `hsl(${style.getPropertyValue('--border').trim()})`;
+            const foregroundColor = `oklch(${style.getPropertyValue('--foreground').trim()})`;
+            const borderColor = `oklch(${style.getPropertyValue('--border').trim()})`;
 
             const labels = filteredData.map((d) => d.timestamp);
             const datasets = [
@@ -111,87 +114,103 @@ export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
                 timeUnit = 'week';
             }
 
-            chartInstanceRef.current = new Chart(chartRef.current, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: datasets
-                },
-                options: {
-                    responsive: true,
-                    color: foregroundColor,
-                    scales: {
-                        x: {
-                            type: 'timeseries',
-                            time: {
-                                unit: timeUnit,
-                                tooltipFormat: 'MMM d, yyyy'
-                            },
-                            title: {
-                                display: true,
-                                text: 'Date',
-                                color: foregroundColor
-                            },
-                            ticks: {
-                                maxTicksLimit: 7,
-                                color: foregroundColor
-                            },
-                            grid: {
-                                color: foregroundColor
-                            }
+            const chartOptions: ChartOptions = {
+                responsive: true,
+                color: foregroundColor,
+                scales: {
+                    x: {
+                        type: 'timeseries',
+                        time: {
+                            unit: timeUnit,
+                            tooltipFormat: 'MMM d, yyyy'
                         },
-                        y: {
-                            title: {
-                                display: true,
-                                text: 'Price ($)',
-                                color: foregroundColor
-                            },
-                            ticks: {
-                                callback: (value) => `$${value}`,
-                                color: foregroundColor
-                            },
-                            grid: {
-                                color: foregroundColor
-                            }
+                        title: {
+                            display: true,
+                            text: 'Date',
+                            color: foregroundColor
+                        },
+                        ticks: {
+                            maxTicksLimit: 7,
+                            color: foregroundColor
+                        },
+                        grid: {
+                            color: borderColor
                         }
                     },
-                    plugins: {
-                        legend: {
-                            labels: {
-                                color: foregroundColor
-                            }
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Price ($)',
+                            color: foregroundColor
                         },
-                        // pop-up on hover
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                            callbacks: {
-                                label: (context) => {
-                                    let label = context.dataset.label || '';
-                                    if (label) label += ': ';
-                                    if (context.parsed.y !== null) {
-                                        label += new Intl.NumberFormat('en-US', {
-                                            style: 'currency',
-                                            currency: 'USD'
-                                        }).format(context.parsed.y);
-                                    }
-                                    return label;
+                        ticks: {
+                            callback: (value: string | number) => `$${value}`,
+                            color: foregroundColor
+                        },
+                        grid: {
+                            color: borderColor
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: foregroundColor
+                        }
+                    },
+                    // pop-up on hover
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: (context) => {
+                                let label = context.dataset.label || '';
+                                if (label) label += ': ';
+                                if (context.parsed.y !== null) {
+                                    label += new Intl.NumberFormat('en-US', {
+                                        style: 'currency',
+                                        currency: 'USD'
+                                    }).format(context.parsed.y);
                                 }
+                                return label;
                             }
                         }
                     }
                 }
-            });
+            };
+
+            if (chartInstanceRef.current) {
+                // Chart exists, just update it
+                const chart = chartInstanceRef.current;
+                chart.data.labels = labels;
+                chart.data.datasets = datasets;
+                chart.options = chartOptions;
+                chart.update('none');
+            } else {
+                chartInstanceRef.current = new Chart(chartRef.current, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: datasets
+                    },
+                    options: chartOptions
+                });
+            }
         }, 0);
 
         return () => {
             clearTimeout(timerId);
+        };
+    }, [filteredData, activeRange, resolvedTheme]);
+
+    useEffect(() => {
+        return () => {
             if (chartInstanceRef.current) {
                 chartInstanceRef.current.destroy();
                 chartInstanceRef.current = null;
             }
         };
-    }, [filteredData, activeRange, resolvedTheme]);
+    }, []);
 
     const hasData = filteredData.some((d) => d.tcgNearMint !== null);
     const earliestDate = useMemo(() => {
@@ -218,7 +237,7 @@ export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
                         <Button
                             key={range}
                             onClick={() => setActiveRange(range)}
-                            variant={activeRange === range ? 'default' : 'secondary'}
+                            variant={activeRange === range ? 'default' : 'outline'}
                             size='sm'
                             disabled={isDisabled}
                         >
@@ -228,7 +247,10 @@ export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
                 })}
             </div>
             {!hasData ? (
-                <div className='flex h-48 items-center justify-center rounded-md bg-muted text-sm text-muted-foreground'>
+                <div
+                    style={{ minHeight: '300px' }}
+                    className='h-100 flex items-center justify-center rounded-md bg-muted text-sm text-muted-foreground'
+                >
                     No price history available for this period.
                 </div>
             ) : (
