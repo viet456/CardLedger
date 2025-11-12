@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     title: 'All Sets | CardLedger',
     description: 'Browse a complete list of all Pokémon TCG sets, grouped by series.'
 };
-export const revalidate = 86400; // require regeneration daily
+export const revalidate = 86400; // requires regeneration daily
 
 async function getGroupedSets() {
     const allSets = await prisma.set.findMany({
