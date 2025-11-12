@@ -17,6 +17,7 @@ import {
     SheetFooter
 } from '@/src/components/ui/sheet';
 import { navItems } from './Header';
+import { ThemeToggle } from './ThemeToggle';
 
 const NavLink = ({
     href,
@@ -52,7 +53,7 @@ export function MobileNav() {
                 <SheetTrigger aria-label='Open navigation menu'>
                     <Menu className='h-8 w-8' />
                 </SheetTrigger>
-                <SheetContent className='w-[70%] border-border bg-card text-card-foreground'>
+                <SheetContent className='flex w-[70%] flex-col border-border bg-card text-card-foreground'>
                     <SheetHeader className='flex flex-row items-center justify-between p-4'>
                         <SheetTitle className='text-2xl text-primary'>
                             <Link href='/' className='text-3xl'>
@@ -79,7 +80,7 @@ export function MobileNav() {
                         <HeaderSearchBar onSuggestionClick={() => setIsMenuOpen(false)} />
                     </div>
 
-                    <div className='mt-4 flex flex-col gap-6 p-8'>
+                    <div className='mt-4 flex flex-grow flex-col gap-6 overflow-y-auto p-8'>
                         {navItems.map((item) => (
                             <NavLink
                                 key={item.href}
@@ -89,7 +90,8 @@ export function MobileNav() {
                             />
                         ))}
                     </div>
-                    <SheetFooter className='p-4'>
+                    <SheetFooter className='bottom-4 left-0 right-0 mt-auto flex w-full flex-row items-center justify-between p-4'>
+                        <ThemeToggle />
                         <a
                             href='https://vietle.me'
                             target='_blank'
