@@ -78,7 +78,7 @@ export function HeaderSearchBar({ onSuggestionClick }: HeaderSearchBarProps) {
                 onKeyDown={handleKeyDown}
                 onFocus={() => setIsFocused(true)}
                 autoComplete='off'
-                className='h-10 w-full rounded border bg-primary p-2 text-primary-foreground'
+                className='h-10 w-full rounded border-2 border-border bg-white p-2 text-primary-foreground'
             />
             {inputValue && (
                 <Button
