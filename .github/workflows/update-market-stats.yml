@@ -2,8 +2,8 @@ name: Update Market Stats
 
 on:
     schedule:
-        # Run every day at 3 AM UTC (Api keys reset midnight)
-        - cron: '0 3 * * *'
+        # Run every day at 9 AM UTC (1AM PST/4AM EST)
+        - cron: '0 9 * * *'
     workflow_dispatch:
 
 jobs:
@@ -39,3 +39,5 @@ jobs:
               env:
                   DATABASE_URL: ${{ secrets.DATABASE_URL }}
                   POKEPRICETRACKER_KEY: ${{ secrets.POKEPRICETRACKER_KEY }}
+                  REVALIDATION_TOKEN: ${{ secrets.REVALIDATION_TOKEN }}
+                  NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}

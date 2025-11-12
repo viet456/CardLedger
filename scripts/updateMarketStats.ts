@@ -22,6 +22,30 @@ function normalizePokemonName(name: string): string {
     );
 }
 
+async function revalidateNextCache() {
+    const token = process.env.REVALIDATION_TOKEN;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+
+    if (!token || !appUrl) {
+        console.warn(
+            '⚠️ REVALIDATION_TOKEN or NEXT_PUBLIC_APP_URL not set. Skipping cache revalidation.'
+        );
+        return;
+    }
+
+    try {
+        console.log(`Attempting to revalidate Next.js cache...`);
+        const response = await axios.post(`${appUrl}/api/revalidate-cards?token=${token}`);
+        if (response.status === 200) {
+            console.log(`✅ Successfully revalidated Next.js cache.`);
+        } else {
+            console.error(`❌ Failed to revalidate cache. Status: ${response.status}`);
+        }
+    } catch (error) {
+        console.error('❌ Error calling revalidation API:', error.message);
+    }
+}
+
 async function getCardPage(setId: string, limit: number, offset: number) {
     try {
         const response = await axios.get(`${API_BASE_URL}`, {
@@ -252,6 +276,7 @@ async function main() {
         console.log(` -> Finished processing set: ${set.name}.`);
     }
     console.log('✅ Daily MarketStats update complete.');
+    await revalidateNextCache();
 }
 
 main()
