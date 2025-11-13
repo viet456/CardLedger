@@ -30,6 +30,10 @@ export function CardFilterControls({ filterOptions, sortOptions }: CardFilterCon
         setFilters({ [key]: finalValue });
     };
 
+    const dynamicSortOptions = [...sortOptions];
+    if (filters.search) {
+        dynamicSortOptions.unshift({ label: 'Relevance', value: 'relevance' as SortableKey });
+    }
     const filterConfig = [
         { label: 'Types', key: 'type', options: filterOptions.types || [] },
         { label: 'Subtypes', key: 'subtype', options: filterOptions.subtypes || [] },
@@ -110,37 +114,37 @@ export function CardFilterControls({ filterOptions, sortOptions }: CardFilterCon
                 </Sheet>
             </section>
 
-            {!filters.search && (
-                <div className='grid flex-grow grid-cols-2 gap-4' aria-label='Sort options'>
-                    <div className=''>
-                        <label htmlFor='sortBySelect'>Sort By:</label>
-                        <select
-                            id='sortBySelect'
-                            value={filters.sortBy || ''}
-                            onChange={(e) => handleFilterChange('sortBy', e.target.value)}
-                            className='w-full rounded bg-primary text-primary-foreground'
-                        >
-                            {sortOptions.map((option) => (
-                                <option key={option.value} value={option.value}>
-                                    {option.label}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                    <div className=''>
-                        <label htmlFor='sortOrderSelect'>Order:</label>
-                        <select
-                            id='sortOrderSelect'
-                            value={filters.sortOrder || 'desc'}
-                            onChange={(e) => handleFilterChange('sortOrder', e.target.value)}
-                            className='w-full rounded bg-primary text-primary-foreground'
-                        >
-                            <option value='asc'>Ascending</option>
-                            <option value='desc'>Descending</option>
-                        </select>
-                    </div>
+            <div className='grid flex-grow grid-cols-2 gap-4' aria-label='Sort options'>
+                <div className=''>
+                    <label htmlFor='sortBySelect'>Sort By:</label>
+                    <select
+                        id='sortBySelect'
+                        value={
+                            filters.search ? filters.sortBy || 'relevance' : filters.sortBy || ''
+                        }
+                        onChange={(e) => handleFilterChange('sortBy', e.target.value)}
+                        className='w-full rounded bg-primary text-primary-foreground'
+                    >
+                        {dynamicSortOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </select>
                 </div>
-            )}
+                <div className=''>
+                    <label htmlFor='sortOrderSelect'>Order:</label>
+                    <select
+                        id='sortOrderSelect'
+                        value={filters.sortOrder || 'desc'}
+                        onChange={(e) => handleFilterChange('sortOrder', e.target.value)}
+                        className='w-full rounded bg-primary text-primary-foreground'
+                    >
+                        <option value='asc'>Ascending</option>
+                        <option value='desc'>Descending</option>
+                    </select>
+                </div>
+            </div>
         </div>
     );
 }
