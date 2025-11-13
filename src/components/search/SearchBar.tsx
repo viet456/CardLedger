@@ -1,12 +1,52 @@
 'use client';
 
 import { useSearchStore } from '@/src/lib/store/searchStore';
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { Button } from '../ui/button';
 
 export function SearchBar() {
     const { filters, setFilters } = useSearchStore();
     const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            // Check for '/' key
+            if (event.key === '/') {
+                // Prevent the '/' from being typed if the user is not
+                // already in an input field (like a textarea)
+                const target = event.target as HTMLElement;
+                if (
+                    target.tagName !== 'INPUT' &&
+                    target.tagName !== 'TEXTAREA' &&
+                    !target.isContentEditable
+                ) {
+                    event.preventDefault();
+                    inputRef.current?.focus();
+                }
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, []);
+
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape' && document.activeElement === inputRef.current) {
+                inputRef.current?.blur(); // Blur the input
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+
+        // Cleanup the event listener on component unmount
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [setFilters]);
 
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFilters({ search: e.target.value });

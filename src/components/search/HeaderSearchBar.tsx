@@ -23,7 +23,23 @@ export function HeaderSearchBar({ onSuggestionClick }: HeaderSearchBarProps) {
     const [isFocused, setIsFocused] = useState(false);
 
     const searchContainerRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
     useClickOutside(searchContainerRef, () => setIsFocused(false));
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                setIsFocused(false); // Close suggestions
+                inputRef.current?.blur(); // <-- THIS IS THE FIX
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+
+        // Cleanup
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, []);
 
     const { data: suggestions, isLoading } = trpc.pokemonCard.getSuggestions.useQuery(
         { search: debouncedSearchTerm || '' },
@@ -68,6 +84,7 @@ export function HeaderSearchBar({ onSuggestionClick }: HeaderSearchBarProps) {
             </label>
             <input
                 id='header-search'
+                ref={inputRef}
                 type='text'
                 placeholder='Search for cards...'
                 value={inputValue || ''}

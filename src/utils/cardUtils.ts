@@ -86,14 +86,18 @@ export function denormalizeAndSortCards(
                 return setReleaseDateMap.get(a.set.id)! - setReleaseDateMap.get(b.set.id)!;
             case 'rD':
             default:
-                const dateDiff =
-                    setReleaseDateMap.get(a.set.id)! - setReleaseDateMap.get(b.set.id)!;
-                if (dateDiff !== 0) return dateDiff;
+                const dateA = setReleaseDateMap.get(a.set.id)!;
+                const dateB = setReleaseDateMap.get(b.set.id)!;
+                // Primary sort: Date
+                if (dateA !== dateB) {
+                    return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+                }
+                // Secondary sort (tie-breaker): Card Number (always ascending)
                 return a.num.localeCompare(b.num, undefined, { numeric: true });
         }
     });
 
-    if (sortOrder === 'desc' && sortBy !== 'price') {
+    if (sortOrder === 'desc' && sortBy !== 'price' && sortBy !== 'rD') {
         finalCards.reverse();
     }
 
