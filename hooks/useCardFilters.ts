@@ -50,7 +50,8 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
         artistIndex,
         weaknessIndex,
         resistanceIndex,
-        sets // We need this for sorting
+        sets, // We need this for sorting
+        fuseInstance
     } = useCardStore(
         useShallow((state) => ({
             cardMap: state.cardMap,
@@ -61,7 +62,8 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
             artistIndex: state.artistIndex,
             weaknessIndex: state.weaknessIndex,
             resistanceIndex: state.resistanceIndex,
-            sets: state.sets
+            sets: state.sets,
+            fuseInstance: state.fuseInstance
         }))
     );
 
@@ -76,64 +78,95 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
         // filtering
         let baseSet = new Set<string>(cardMap.keys());
 
-        if (filters.rarity) {
-            baseSet = intersectSets(baseSet, rarityIndex.get(filters.rarity) || new Set());
-        }
-        if (filters.setId) {
-            baseSet = intersectSets(baseSet, setIndex.get(filters.setId) || new Set());
-        }
-        if (filters.type) {
-            baseSet = intersectSets(baseSet, typeIndex.get(filters.type) || new Set());
-        }
-        if (filters.subtype) {
-            baseSet = intersectSets(baseSet, subtypeIndex.get(filters.subtype) || new Set());
-        }
-        if (filters.artist) {
-            baseSet = intersectSets(baseSet, artistIndex.get(filters.artist) || new Set());
-        }
-        if (filters.weaknessType) {
-            baseSet = intersectSets(baseSet, weaknessIndex.get(filters.weaknessType) || new Set());
-        }
-        if (filters.resistanceType) {
-            baseSet = intersectSets(
-                baseSet,
-                resistanceIndex.get(filters.resistanceType) || new Set()
-            );
-        }
-
-        const searchFilter = filters.search?.toLowerCase();
-        if (searchFilter) {
-            const searchResults = new Set<string>();
-            for (const cardId of baseSet) {
-                const card = cardMap.get(cardId)!;
-                if (card.n.toLowerCase().includes(searchFilter)) {
-                    searchResults.add(cardId);
-                }
+        // If search-term, sort by relevance
+        if (filters.search && fuseInstance) {
+            // id searching on cards/sets
+            let searchTerm = filters.search;
+            const idRegex = /^[a-z0-9]+(-[a-zA-Z0-9]+)$/i;
+            if (idRegex.test(searchTerm)) {
+                searchTerm = `=${searchTerm}`;
             }
-            baseSet = searchResults;
-        }
+            const searchResults = fuseInstance.search(searchTerm);
+            const relevantAndFiltered: NormalizedCard[] = [];
 
-        const results: NormalizedCard[] = [];
-        for (const id of baseSet) {
-            results.push(cardMap.get(id)!);
-        }
+            const raritySet = filters.rarity ? rarityIndex.get(filters.rarity) : null;
+            const setSet = filters.setId ? setIndex.get(filters.setId) : null;
+            const typeSet = filters.type ? typeIndex.get(filters.type) : null;
+            const subtypeSet = filters.subtype ? typeIndex.get(filters.subtype) : null;
+            const artistSet = filters.artist ? typeIndex.get(filters.artist) : null;
+            const weaknessSet = filters.weaknessType
+                ? weaknessIndex.get(filters.weaknessType)
+                : null;
+            const resistanceSet = filters.resistanceType
+                ? resistanceIndex.get(filters.resistanceType)
+                : null;
 
-        // Default sorting
-        const sortBy = (filters.sortBy || 'rD') as SortableKey;
-        const sortOrder = filters.sortOrder || 'desc';
+            for (const result of searchResults) {
+                const card = result.item;
+                if (raritySet && !raritySet.has(card.id)) continue;
+                if (setSet && !setSet.has(card.id)) continue;
+                if (typeSet && !typeSet.has(card.id)) continue;
+                if (subtypeSet && !subtypeSet.has(card.id)) continue;
+                if (artistSet && !artistSet.has(card.id)) continue;
+                if (weaknessSet && !weaknessSet.has(card.id)) continue;
+                if (resistanceSet && !resistanceSet.has(card.id)) continue;
 
-        if (sortBy === 'rD' && sortOrder === 'desc') {
-            const setReleaseDateMap = new Map<number, number>(
-                sets.map((set, i) => [i, new Date(set.releaseDate).getTime()])
-            );
-            results.sort((a, b) => {
-                const dateA = setReleaseDateMap.get(a.s)!;
-                const dateB = setReleaseDateMap.get(b.s)!;
-                if (dateA !== dateB) return dateB - dateA;
-                return a.num.localeCompare(b.num, undefined, { numeric: true });
-            });
+                relevantAndFiltered.push(card);
+            }
+            return relevantAndFiltered;
+        } else {
+            baseSet = new Set<string>(cardMap.keys());
+
+            if (filters.rarity) {
+                baseSet = intersectSets(baseSet, rarityIndex.get(filters.rarity) || new Set());
+            }
+            if (filters.setId) {
+                baseSet = intersectSets(baseSet, setIndex.get(filters.setId) || new Set());
+            }
+            if (filters.type) {
+                baseSet = intersectSets(baseSet, typeIndex.get(filters.type) || new Set());
+            }
+            if (filters.subtype) {
+                baseSet = intersectSets(baseSet, subtypeIndex.get(filters.subtype) || new Set());
+            }
+            if (filters.artist) {
+                baseSet = intersectSets(baseSet, artistIndex.get(filters.artist) || new Set());
+            }
+            if (filters.weaknessType) {
+                baseSet = intersectSets(
+                    baseSet,
+                    weaknessIndex.get(filters.weaknessType) || new Set()
+                );
+            }
+            if (filters.resistanceType) {
+                baseSet = intersectSets(
+                    baseSet,
+                    resistanceIndex.get(filters.resistanceType) || new Set()
+                );
+            }
+
+            const results: NormalizedCard[] = [];
+            for (const id of baseSet) {
+                results.push(cardMap.get(id)!);
+            }
+
+            // Default sorting
+            const sortBy = (filters.sortBy || 'rD') as SortableKey;
+            const sortOrder = filters.sortOrder || 'desc';
+
+            if (sortBy === 'rD' && sortOrder === 'desc') {
+                const setReleaseDateMap = new Map<number, number>(
+                    sets.map((set, i) => [i, new Date(set.releaseDate).getTime()])
+                );
+                results.sort((a, b) => {
+                    const dateA = setReleaseDateMap.get(a.s)!;
+                    const dateB = setReleaseDateMap.get(b.s)!;
+                    if (dateA !== dateB) return dateB - dateA;
+                    return a.num.localeCompare(b.num, undefined, { numeric: true });
+                });
+            }
+            return results;
         }
-        return results;
     }, [
         filters,
         cardMap,
@@ -144,7 +177,8 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
         artistIndex,
         weaknessIndex,
         resistanceIndex,
-        sets
+        sets,
+        fuseInstance
     ]);
 
     return { filteredCards };

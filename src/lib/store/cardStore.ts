@@ -7,6 +7,7 @@ import {
     LookupTables,
     FullCardData
 } from '@/src/shared-types/card-index';
+import Fuse from 'fuse.js';
 
 const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
 
@@ -41,6 +42,20 @@ export type CardStoreState = LookupTables & {
     artistIndex: IndexMap;
     weaknessIndex: IndexMap;
     resistanceIndex: IndexMap;
+
+    fuseInstance: Fuse<NormalizedCard> | null;
+};
+
+const fuseOptions = {
+    // Search by card name ('n') and card ID ('id')
+    keys: [
+        { name: 'n', weight: 0.7 }, // Give name a higher weight
+        { name: 'id', weight: 0.3 }
+    ],
+    useExtendedSearch: true,
+    minMatchCharLength: 2,
+    threshold: 0.3,
+    distance: 10
 };
 
 // Helper function to build search indexes
@@ -86,6 +101,11 @@ function buildIndexes(fullData: FullCardData) {
             addToIndex(resistanceIndex, types[resistance.t], card.id);
         }
     }
+
+    console.log('[CardStore]: Building Fuse.js index...');
+    const fuseInstance = new Fuse(fullData.cards, fuseOptions);
+    console.log('[CardStore]: ✅ Fuse.js index built.');
+
     return {
         cardMap,
         rarityIndex,
@@ -94,7 +114,8 @@ function buildIndexes(fullData: FullCardData) {
         subtypeIndex,
         artistIndex,
         weaknessIndex,
-        resistanceIndex
+        resistanceIndex,
+        fuseInstance
     };
 }
 
@@ -131,6 +152,7 @@ export const useCardStore = create<CardStoreState>()(
             rules: [],
             weaknesses: [],
             resistances: [],
+            fuseInstance: null,
             version: null,
             status: 'idle',
             cardMap: new Map(),
@@ -236,6 +258,7 @@ export const useCardStore = create<CardStoreState>()(
                     state.artistIndex = indexes.artistIndex;
                     state.weaknessIndex = indexes.weaknessIndex;
                     state.resistanceIndex = indexes.resistanceIndex;
+                    state.fuseInstance = indexes.fuseInstance;
                     console.log('[CardStore]: ✅ Indexes built from rehydrated data.');
                 }
             }
