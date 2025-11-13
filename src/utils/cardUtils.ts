@@ -5,6 +5,8 @@ import { SortableKey } from '@/src/services/pokemonCardValidator';
 
 type LookupsForDenorm = Omit<LookupTables, 'weaknesses' | 'resistances'>;
 
+// Combines normalized cards with prices into DenormalizedCard type
+// Applies sorting to this type
 export function denormalizeAndSortCards(
     normalizedCards: NormalizedCard[],
     lookups: LookupsForDenorm,
@@ -47,10 +49,12 @@ export function denormalizeAndSortCards(
         price: prices[card.id] ?? null
     }));
 
-    const sortBy = (filters.sortBy || 'rD') as SortableKey;
+    const sortBy = (filters.sortBy || (filters.search ? 'relevance' : 'rD')) as
+        | SortableKey
+        | 'relevance';
     const sortOrder = filters.sortOrder || 'desc';
 
-    if (sortBy === 'rD' && sortOrder === 'desc') {
+    if (sortBy === 'relevance') {
         return finalCards;
     }
 

@@ -53,7 +53,7 @@ const fuseOptions = {
         { name: 'id', weight: 0.3 }
     ],
     useExtendedSearch: true,
-    minMatchCharLength: 2,
+    minMatchCharLength: 1,
     threshold: 0.3,
     distance: 10
 };

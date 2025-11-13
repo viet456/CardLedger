@@ -25,8 +25,11 @@ export default function CardPageView() {
         }))
     );
     const isInitialMount = useRef(true);
+    const hasLoadedFromUrl = useRef(false);
 
     useEffect(() => {
+        if (hasLoadedFromUrl.current) return;
+        hasLoadedFromUrl.current = true;
         const params = new URLSearchParams(searchParams.toString());
         const urlFilters: { [key: string]: string } = {};
         for (const [key, value] of params.entries()) {

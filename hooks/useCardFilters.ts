@@ -149,22 +149,6 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
             for (const id of baseSet) {
                 results.push(cardMap.get(id)!);
             }
-
-            // Default sorting
-            const sortBy = (filters.sortBy || 'rD') as SortableKey;
-            const sortOrder = filters.sortOrder || 'desc';
-
-            if (sortBy === 'rD' && sortOrder === 'desc') {
-                const setReleaseDateMap = new Map<number, number>(
-                    sets.map((set, i) => [i, new Date(set.releaseDate).getTime()])
-                );
-                results.sort((a, b) => {
-                    const dateA = setReleaseDateMap.get(a.s)!;
-                    const dateB = setReleaseDateMap.get(b.s)!;
-                    if (dateA !== dateB) return dateB - dateA;
-                    return a.num.localeCompare(b.num, undefined, { numeric: true });
-                });
-            }
             return results;
         }
     }, [
