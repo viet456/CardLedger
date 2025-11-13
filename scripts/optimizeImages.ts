@@ -2,8 +2,6 @@ import sharp from 'sharp';
 import { PrismaClient } from '@prisma/client';
 import { PutObjectCommand, HeadObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { r2 } from '../src/lib/r2';
-import fs from 'fs';
-import path from 'path';
 import { performance } from 'perf_hooks';
 import pLimit from 'p-limit';
 
@@ -16,24 +14,12 @@ const CARD_SIZES = [192, 384];
 const ALL_SIZES = [...IMAGE_SIZES, ...CARD_SIZES, ...DEVICE_SIZES];
 const QUALITY = 75;
 const limit = pLimit(4);
-const COMPLETED_IMAGES_FILE = path.join(__dirname, '_completed_images.txt');
 
 interface ImageToOptimize {
     id: string;
     r2Key: string; // eg 'cards/me1-1.png'
+    type: 'card' | 'setLogo' | 'setSymbol';
 }
-
-// async function checkIfExists(key: string): Promise<boolean> {
-//     try {
-//         await r2.send(new HeadObjectCommand({
-//             Bucket: R2_BUCKET_NAME,
-//             Key: key
-//         }));
-//         return true;
-//     } catch (error) {
-//         return false;
-//     }
-// }
 
 async function downloadFromR2(key: string): Promise<Buffer> {
     const command = new GetObjectCommand({
@@ -63,7 +49,6 @@ async function uploadImageToR2(key: string, buffer: Buffer, contentType: string)
 async function optimizeImage(image: ImageToOptimize): Promise<void> {
     try {
         const originalBuffer = await downloadFromR2(image.r2Key);
-        //console.log(` ⏳ [${image.r2Key}] Resizing ${ALL_SIZES.length} variants...`);
 
         // Run resizes in parallel
         const variantPromises = ALL_SIZES.map(async (width) => {
@@ -82,13 +67,9 @@ async function optimizeImage(image: ImageToOptimize): Promise<void> {
             return { optimizedKey, optimizedBuffer, width };
         });
         const variants = await Promise.all(variantPromises);
-        //console.log(` ✅ [${image.r2Key}] Resizing complete.`);
-
-        //console.log(` ☁️ [${image.r2Key}] Uploading ${variants.length} variants...`);
         for (const variant of variants) {
             await uploadImageToR2(variant.optimizedKey, variant.optimizedBuffer, 'image/avif');
         }
-        //console.log(` ✅ Completed ${image.r2Key} (${variants.length} new variants)...`);
     } catch (error) {
         console.error(`❌ Error processing ${image.r2Key}:`, error);
         throw error;
@@ -97,74 +78,72 @@ async function optimizeImage(image: ImageToOptimize): Promise<void> {
 
 async function main() {
     const mainStartTime = performance.now();
-    const lastCompletionTime = performance.now();
     console.log(' 🚀 Starting image optimization...\n');
     console.log(`Sizes: ${ALL_SIZES.join(', ')}`);
     console.log(`Quality: ${QUALITY}`);
     console.log(`Format: AVIF\n`);
 
-    let completedImageIds = new Set<string>();
-    try {
-        if (fs.existsSync(COMPLETED_IMAGES_FILE)) {
-            const fileContent = fs.readFileSync(COMPLETED_IMAGES_FILE, 'utf-8');
-            completedImageIds = new Set(fileContent.split('\n').filter((id) => id.trim() !== ''));
-            console.log(`Loaded ${completedImageIds.size} completed image IDs from file.`);
-        } else {
-            console.log(`'${COMPLETED_IMAGES_FILE}' not found, creating it.`);
-            fs.writeFileSync(COMPLETED_IMAGES_FILE, '');
-        }
-    } catch (error) {
-        console.error(`Error reading or creating completed images file: `, error);
-        process.exit(1);
-    }
     const cardImages = await prisma.card.findMany({
         where: {
             imageKey: {
                 not: null
-            }
+            },
+            imagesOptimized: false
         },
         select: {
             id: true,
             imageKey: true
         }
     });
-    const setImages = await prisma.set.findMany({
+    const setLogos = await prisma.set.findMany({
         where: {
-            OR: [
-                {
-                    logoImageKey: { not: null }
-                },
-                {
-                    symbolImageKey: { not: null }
-                }
-            ]
+            logoImageKey: { not: null },
+            logoOptimized: false
         },
         select: {
             id: true,
-            logoImageKey: true,
+            logoImageKey: true
+        }
+    });
+    const setSymbols = await prisma.set.findMany({
+        where: {
+            symbolImageKey: { not: null },
+            symbolOptimized: false
+        },
+        select: {
+            id: true,
             symbolImageKey: true
         }
     });
     console.log(`Found ${cardImages.length} card images to process.`);
-    console.log(`Found ${setImages.length} sets with images to process.\n`);
+    console.log(`Found ${setLogos.length} set logos to process.`);
+    console.log(`Found ${setSymbols.length} set symbols to process.\n`);
 
     const cardImagesToOptimize: ImageToOptimize[] = cardImages.map((img) => ({
         id: img.id,
-        r2Key: img.imageKey!
+        r2Key: img.imageKey!,
+        type: 'card'
     }));
-    const setImagesToOptimize: ImageToOptimize[] = setImages.flatMap((set) => {
-        const images: ImageToOptimize[] = [];
-        if (set.logoImageKey) {
-            images.push({ id: `${set.id}-logo`, r2Key: set.logoImageKey });
-        }
-        if (set.symbolImageKey) {
-            images.push({ id: `${set.id}-symbol`, r2Key: set.symbolImageKey });
-        }
-        return images;
-    });
+    const setImagesToOptimize: ImageToOptimize[] = [
+        ...setLogos.map((set) => ({
+            id: set.id,
+            r2Key: set.logoImageKey!,
+            type: 'setLogo' as const
+        })),
+        ...setSymbols.map((set) => ({
+            id: set.id,
+            r2Key: set.symbolImageKey!,
+            type: 'setSymbol' as const
+        }))
+    ];
 
-    const allImagesToOptimize = [...cardImagesToOptimize, ...setImagesToOptimize];
-    const imagesToProcess = allImagesToOptimize.filter((img) => !completedImageIds.has(img.r2Key));
+    const imagesToProcess = [...cardImagesToOptimize, ...setImagesToOptimize];
+    if (imagesToProcess.length === 0) {
+        console.log('🎉  No images to process. Everything is up to date!');
+        await prisma.$disconnect();
+        return;
+    }
+    console.log(`Total images to process: ${imagesToProcess.length}`);
     let processed = 0;
 
     const tasks = imagesToProcess.map((image) => {
@@ -173,10 +152,30 @@ async function main() {
             const startTime = performance.now();
             try {
                 await optimizeImage(image);
+                switch (image.type) {
+                    case 'card':
+                        await prisma.card.update({
+                            where: { id: image.id },
+                            data: { imagesOptimized: true }
+                        });
+                        break;
+                    case 'setLogo':
+                        await prisma.set.update({
+                            where: { id: image.id },
+                            data: { logoOptimized: true }
+                        });
+                        break;
+                    case 'setSymbol':
+                        await prisma.set.update({
+                            where: { id: image.id },
+                            data: { symbolOptimized: true }
+                        });
+                        break;
+                }
                 const now = performance.now();
                 const timeTaken = ((now - startTime) / 1000).toFixed(2);
-                fs.appendFileSync(COMPLETED_IMAGES_FILE, `${image.r2Key}\n`);
                 processed++;
+
                 console.log(` ✅ Completed ${image.r2Key} in ${timeTaken}s`);
                 console.log(
                     ` 📊 Progress: ${processed}/${imagesToProcess.length} images to complete`

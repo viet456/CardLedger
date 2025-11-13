@@ -35,6 +35,9 @@ model Set {
     symbolImageKey String?
     logoImageKey   String?
 
+    symbolOptimized Boolean @default(false)
+    logoOptimized   Boolean @default(false)
+
     // Indexes for faster queries
     @@index([name])
     @@index([series])
@@ -85,6 +88,7 @@ model Card {
     unlimited LegalityStatus?
 
     imageKey String?
+    imagesOptimized Boolean @default(false)
 
     marketStats  MarketStats? // Curret price
     priceHistory PriceHistory[]
