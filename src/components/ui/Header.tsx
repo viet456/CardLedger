@@ -17,8 +17,10 @@ export const navItems = [
 export function Header() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const pathname = usePathname();
-    // don't show headersearchbar on Cards page
-    const showHeaderSearch = pathname !== '/cards';
+    // don't show headersearchbar on Cards page or setId pages
+    const isCardsPage = pathname === '/cards';
+    const isSetPage = pathname.startsWith('/sets/');
+    const showHeaderSearch = !isCardsPage && !isSetPage;
 
     const NavLink = ({
         href,

@@ -64,7 +64,7 @@ export function SearchBar() {
                 placeholder='Search for cards...'
                 value={filters.search || ''}
                 onChange={handleSearchChange}
-                className='h-10 w-full rounded border bg-primary p-2 text-primary-foreground'
+                className='h-10 w-full rounded border bg-card p-2 text-card-foreground'
             />
             {filters.search && (
                 <Button

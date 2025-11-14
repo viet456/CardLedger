@@ -29,7 +29,7 @@ export function HeaderSearchBar({ onSuggestionClick }: HeaderSearchBarProps) {
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
                 setIsFocused(false); // Close suggestions
-                inputRef.current?.blur(); // <-- THIS IS THE FIX
+                inputRef.current?.blur();
             }
         };
 
@@ -59,7 +59,7 @@ export function HeaderSearchBar({ onSuggestionClick }: HeaderSearchBarProps) {
             if (searchTerm) {
                 params.set('search', searchTerm);
             }
-            router.push(`/cards?${params.toString()}`);
+            router.push(`/cards?${params.toString()}&sortBy=relevance&sortOrder=desc`);
         }
     };
     const handleClear = () => {
@@ -95,12 +95,12 @@ export function HeaderSearchBar({ onSuggestionClick }: HeaderSearchBarProps) {
                 onKeyDown={handleKeyDown}
                 onFocus={() => setIsFocused(true)}
                 autoComplete='off'
-                className='h-10 w-full rounded border-2 border-border bg-white p-2 text-primary-foreground'
+                className='h-10 w-full rounded border-2 border-border bg-card p-2 text-card-foreground'
             />
             {inputValue && (
                 <Button
                     onClick={handleClear}
-                    className='absolute right-2 top-1/2 -translate-y-1/2 text-xl text-gray-400 hover:text-primary-foreground md:text-base'
+                    className='absolute right-2 top-1/2 -translate-y-1/2 bg-card text-xl text-gray-400 hover:text-card-foreground md:text-base'
                     aria-label='Clear search'
                 >
                     ✕
@@ -110,7 +110,7 @@ export function HeaderSearchBar({ onSuggestionClick }: HeaderSearchBarProps) {
             {isFocused && suggestions && suggestions.length > 0 && (
                 <ul
                     role='listbox'
-                    className='absolute z-10 m-0 mt-1 w-full list-none rounded border bg-primary p-0 text-primary-foreground shadow-lg'
+                    className='absolute z-10 m-0 mt-1 w-full list-none rounded border bg-card p-0 text-card-foreground shadow-lg'
                 >
                     {suggestions.map((card) => (
                         <li

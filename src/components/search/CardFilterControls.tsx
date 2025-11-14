@@ -55,7 +55,7 @@ export function CardFilterControls({ filterOptions, sortOptions }: CardFilterCon
                 <Sheet>
                     <SheetTrigger
                         aria-label='Open search filters menu'
-                        className='mt-0 flex-shrink-0 items-center justify-between rounded bg-accent p-2 px-10 text-accent-foreground transition-colors hover:bg-muted hover:text-muted-foreground md:px-16'
+                        className='mt-0 flex-shrink-0 items-center justify-between rounded bg-accent p-2 px-10 text-accent-foreground transition-colors hover:bg-border md:px-16'
                     >
                         Filters
                     </SheetTrigger>
@@ -73,7 +73,7 @@ export function CardFilterControls({ filterOptions, sortOptions }: CardFilterCon
                                         value={(
                                             filters[filter.key as keyof typeof filters] || ''
                                         ).toString()}
-                                        className='w-full rounded bg-primary text-primary-foreground'
+                                        className='w-full rounded bg-card text-card-foreground'
                                         autoFocus={false}
                                         onChange={(e) =>
                                             handleFilterChange(
@@ -123,7 +123,7 @@ export function CardFilterControls({ filterOptions, sortOptions }: CardFilterCon
                             filters.search ? filters.sortBy || 'relevance' : filters.sortBy || ''
                         }
                         onChange={(e) => handleFilterChange('sortBy', e.target.value)}
-                        className='w-full rounded bg-primary text-primary-foreground'
+                        className='w-full rounded bg-card text-card-foreground'
                     >
                         {dynamicSortOptions.map((option) => (
                             <option key={option.value} value={option.value}>
@@ -138,7 +138,7 @@ export function CardFilterControls({ filterOptions, sortOptions }: CardFilterCon
                         id='sortOrderSelect'
                         value={filters.sortOrder || 'desc'}
                         onChange={(e) => handleFilterChange('sortOrder', e.target.value)}
-                        className='w-full rounded bg-primary text-primary-foreground'
+                        className='w-full rounded bg-card text-card-foreground'
                     >
                         <option value='asc'>Ascending</option>
                         <option value='desc'>Descending</option>
