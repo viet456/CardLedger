@@ -24,16 +24,16 @@
     }
     :root {
         /* Page background and default text color */
-        --background: 1 0 0; /* white */
-        --foreground: 0 0 0; /* PURE BLACK (OLED) */
+        --background: 0.9537 0.0063 264.38; /* zinc-100 */
+        --foreground: 0.2711 0.0204 263.89; /* zinc-900 */
 
         /* Background for components (headers, cards, etc.) */
         --card: 1 0 0; /* white */
-        --card-foreground: 0 0 0; /* PURE BLACK (OLED) */
+        --card-foreground: 0.2711 0.0204 263.89; /* zinc-900 */
 
         /* Popovers */
         --popover: 1 0 0; /* white */
-        --popover-foreground: 0 0 0; /* PURE BLACK (OLED) */
+        --popover-foreground: 0.2711 0.0204 263.89; /* zinc-900 */
 
         /* Primary brand color (buttons) */
         --primary: 0 0 0; /* PURE BLACK (OLED) */
@@ -49,7 +49,7 @@
         --muted-foreground: 0.5129 0.0099 264.1; /* zinc-500 (approximated from HSL) */
 
         /* Accent for hover states */
-        --accent: 0.9537 0.0063 264.38; /* zinc-100 */
+        --accent: .92 .004 286.32; /* zinc-200 */
         --accent-foreground: 0.2711 0.0204 263.89; /* zinc-900 */
 
         /* Color for borders and dividers */
