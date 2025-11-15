@@ -1,8 +1,7 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/src/lib/prisma';
 import { DenormalizedCard } from '@/src/shared-types/card-index';
 import { PriceHistoryDataPoint } from '@/src/shared-types/price-api';
-
-const prisma = new PrismaClient();
+import { unstable_cache } from 'next/cache';
 
 export async function getPriceHistory(cardId: string): Promise<PriceHistoryDataPoint[]> {
     const history = await prisma.priceHistory.findMany({
@@ -105,3 +104,19 @@ export async function getCardData(cardId: string): Promise<DenormalizedCard | nu
     };
     return denormalizedCard;
 }
+
+export const getCachedCardData = unstable_cache(
+    async (cardId: string) => getCardData(cardId),
+    ['card-data'],
+    {
+        tags: ['card-data', 'card-details']
+    }
+);
+
+export const getCachedPriceHistory = unstable_cache(
+    async (cardId: string) => getPriceHistory(cardId),
+    ['price-history'],
+    {
+        tags: ['card-data', 'price-history']
+    }
+);

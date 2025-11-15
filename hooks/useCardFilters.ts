@@ -1,7 +1,7 @@
 'use client';
-import { useSearchStore, FilterState } from '@/src/lib/store/searchStore';
+import { useSearchStore } from '@/src/lib/store/searchStore';
 import { NormalizedCard } from '@/src/shared-types/card-index';
-import { useMemo, useEffect, useRef } from 'react';
+import { useMemo, useEffect } from 'react';
 import { SortableKey } from '../src/services/pokemonCardValidator';
 import { useCardStore } from '@/src/lib/store/cardStore';
 import { useShallow } from 'zustand/react/shallow';

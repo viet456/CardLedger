@@ -1,9 +1,7 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/src/lib/prisma';
 import { SetObject } from '@/src/shared-types/card-index';
 import { SetCard } from '@/src/components/SetCard';
 import { Metadata } from 'next';
-
-const prisma = new PrismaClient();
 
 export const metadata: Metadata = {
     title: 'All Sets | CardLedger',

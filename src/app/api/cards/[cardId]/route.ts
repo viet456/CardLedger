@@ -1,11 +1,12 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { getCardData, getPriceHistory } from '@/src/app/cards/[cardId]/data';
-
-export const dynamic = 'force-dynamic';
+import { getCachedCardData, getCachedPriceHistory } from '@/src/app/cards/[cardId]/data';
 
 export async function GET(request: NextRequest, context: { params: Promise<{ cardId: string }> }) {
     const { cardId } = await context.params;
-    const [card, priceHistory] = await Promise.all([getCardData(cardId), getPriceHistory(cardId)]);
+    const [card, priceHistory] = await Promise.all([
+        getCachedCardData(cardId),
+        getCachedPriceHistory(cardId)
+    ]);
 
     if (!card) {
         return new NextResponse(JSON.stringify({ message: 'Card not found' }), {
