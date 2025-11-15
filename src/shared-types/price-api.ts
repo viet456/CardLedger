@@ -1,5 +1,5 @@
 export type PriceHistoryDataPoint = {
-    timestamp: Date;
+    timestamp: Date | string;
     tcgNearMint: number | null;
     tcgLightlyPlayed: number | null;
     tcgModeratelyPlayed: number | null;

@@ -1,4 +1,4 @@
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
@@ -11,9 +11,8 @@ export async function POST(request: NextRequest) {
         });
     }
     try {
-        // invalidates cached pages under /card
-        // do ISR on next visit
-        revalidatePath('/cards', 'layout');
+        // Revalidate all pages with fetches tagged with 'card-data'
+        revalidateTag('card-data');
 
         return new NextResponse(JSON.stringify({ revalidated: true, now: Date.now() }), {
             headers: { 'Content-Type': '' }
