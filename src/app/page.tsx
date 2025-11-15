@@ -20,14 +20,19 @@ export default function Home() {
                     Browse every card ever made and get ready for powerful collection management and
                     financial tools, coming soon.
                 </p>
-                <Button asChild size='lg' className='mt-4 text-lg'>
-                    <Link
-                        href='/cards'
-                        className='hover:bg-primary-hover hover:ring-1 hover:ring-ring focus:ring-1 focus:ring-ring'
-                    >
-                        Explore the Card Catalog
-                    </Link>
-                </Button>
+                <div className='mt-4 flex flex-col gap-4'>
+                    <Button asChild size='lg' className='mt-4 text-lg'>
+                        <Link
+                            href='/cards'
+                            className='hover:bg-primary-hover hover:ring-1 hover:ring-ring focus:ring-1 focus:ring-ring'
+                        >
+                            Explore the Card Catalog
+                        </Link>
+                    </Button>
+                    <Button asChild size='lg' variant='outline' className='text-lg'>
+                        <Link href='/sign-up'>Create Your Account</Link>
+                    </Button>
+                </div>
             </section>
 
             {/* Features Section */}
