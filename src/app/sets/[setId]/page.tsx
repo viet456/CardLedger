@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/src/lib/prisma';
 import { notFound } from 'next/navigation';
 import { SetPageView } from './SetPageView';
 import { DenormalizedCard, FilterOptions, SetObject } from '@/src/shared-types/card-index';
@@ -10,7 +10,6 @@ interface SetPageData {
     filterOptions: FilterOptions;
 }
 
-const prisma = new PrismaClient();
 export const revalidate = 86400;
 
 export async function generateMetadata({

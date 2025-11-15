@@ -2,9 +2,8 @@ import { publicProcedure, router } from '../trpc';
 import { findCardsInputSchema } from '@/src/services/pokemonCardValidator';
 import { findPokemonCards, getFuzzyMatchedCardIds } from '@/src/services/pokemonCardService';
 import { z } from 'zod';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/src/lib/prisma';
 
-const prisma = new PrismaClient();
 const cardForSuggestionSchema = z.object({
     id: z.string(),
     name: z.string(),

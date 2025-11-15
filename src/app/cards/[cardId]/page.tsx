@@ -1,10 +1,9 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/src/lib/prisma';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { SingleCardView } from './SingleCardView';
 import { PriceHistoryChart } from '@/src/components/cards/PriceHistoryChart';
-
-const prisma = new PrismaClient();
+import { getCachedCardData, getCachedPriceHistory } from './data';
 
 export const revalidate = 86400; // Daily
 
@@ -45,25 +44,14 @@ export async function generateStaticParams() {
     }));
 }
 
-async function getPageData(cardId: string) {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/cards/${cardId}`, {
-        cache: 'no-store',
-        next: {
-            tags: ['card-data', `card-${cardId}`]
-        }
-    });
-    if (!response.ok) {
-        return null;
-    }
-    return response.json();
-}
-
 export default async function SingleCardPage({ params }: { params: { cardId: string } }) {
-    const data = await getPageData(params.cardId);
-    if (!data) {
+    const [card, priceHistory] = await Promise.all([
+        getCachedCardData(params.cardId),
+        getCachedPriceHistory(params.cardId)
+    ]);
+    if (!card) {
         notFound();
     }
-    const { card, priceHistory } = data;
     return (
         <SingleCardView card={card}>
             <PriceHistoryChart initialData={priceHistory} />

@@ -3,7 +3,6 @@
 import { VirtuosoGrid, VirtuosoGridProps } from 'react-virtuoso';
 import { forwardRef, Ref, HTMLAttributes } from 'react';
 import { PokemonCard } from './PokemonCard';
-import { PokemonCardSkeleton } from './PokemonCardSkeleton';
 import { ClientPokemonCardType } from '@/src/types/data';
 import { DenormalizedCard } from '@/src/shared-types/card-index';
 
