@@ -90,6 +90,12 @@ export function MobileNav() {
                             />
                         ))}
                     </div>
+                    <Button variant='ghost' asChild>
+                        <Link href='/sign-in'>Sign In</Link>
+                    </Button>
+                    <Button asChild>
+                        <Link href='/sign-up'>Sign Up</Link>
+                    </Button>
                     <SheetFooter className='bottom-4 left-0 right-0 mt-auto flex w-full flex-row items-center justify-between p-4'>
                         <ThemeToggle />
                         <a

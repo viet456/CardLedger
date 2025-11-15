@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { MobileNav } from './MobileNav';
 import { HeaderSearchBar } from '../search/HeaderSearchBar';
 import { ThemeToggle } from './ThemeToggle';
+import { Button } from './button';
 
 export const navItems = [
     { href: '/', label: 'Home' },
@@ -68,6 +69,12 @@ export function Header() {
                             <HeaderSearchBar onSuggestionClick={() => setIsMenuOpen(false)} />
                         )}
                     </div>
+                    <Button variant='ghost' asChild>
+                        <Link href='/sign-in'>Sign In</Link>
+                    </Button>
+                    <Button asChild>
+                        <Link href='/sign-up'>Sign Up</Link>
+                    </Button>
                     <ThemeToggle />
                 </div>
                 {/* Mobile navigation*/}
