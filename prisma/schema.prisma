@@ -295,7 +295,7 @@ model Artist {
 
 model User {
     id            String    @id
-    name          String
+    name          String?
     email         String
     emailVerified Boolean   @default(false)
     image         String?
@@ -304,7 +304,11 @@ model User {
     sessions      Session[]
     accounts      Account[]
 
+    username        String?
+    displayUsername String?
+
     @@unique([email])
+    @@unique([username])
     @@map("user")
 }
 

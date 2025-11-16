@@ -13,8 +13,8 @@ export default function DashboardPage() {
         }
     }, [isPending, session, router]);
 
-    if (isPending) return <p className='mt-8 text-center text-white'>Loading...</p>;
-    if (!session?.user) return <p className='mt-8 text-center text-white'>Redirecting...</p>;
+    if (isPending) return <p className='mt-8 text-center text-foreground'>Loading...</p>;
+    if (!session?.user) return <p className='mt-8 text-center text-foreground'>Redirecting...</p>;
 
     const { user } = session;
 

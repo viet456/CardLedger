@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "public"."user" ALTER COLUMN "name" DROP NOT NULL;
