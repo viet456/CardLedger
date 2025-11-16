@@ -7,6 +7,7 @@ import { MobileNav } from './MobileNav';
 import { HeaderSearchBar } from '../search/HeaderSearchBar';
 import { ThemeToggle } from './ThemeToggle';
 import { Button } from './button';
+import { useSession, signOut } from '@/src/lib/auth-client';
 
 export const navItems = [
     { href: '/', label: 'Home' },
@@ -16,6 +17,7 @@ export const navItems = [
 ];
 
 export function Header() {
+    const { data: session, isPending } = useSession();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const pathname = usePathname();
     // don't show headersearchbar on Cards page or setId pages
@@ -69,12 +71,39 @@ export function Header() {
                             <HeaderSearchBar onSuggestionClick={() => setIsMenuOpen(false)} />
                         )}
                     </div>
-                    <Button variant='ghost' asChild>
-                        <Link href='/sign-in'>Sign In</Link>
-                    </Button>
-                    <Button asChild>
-                        <Link href='/sign-up'>Sign Up</Link>
-                    </Button>
+                    {/* Loading, button skeletons */}
+                    {isPending && (
+                        <div className='flex gap-2'>
+                            <div className='h-9 w-20 animate-pulse rounded-md bg-muted'></div>
+                            <div className='h-9 w-20 animate-pulse rounded-md bg-muted'></div>
+                        </div>
+                    )}
+                    {/* Logged out */}
+                    {!session?.user && !isPending && (
+                        <div className='flex gap-2'>
+                            <Button variant='ghost' asChild>
+                                <Link href='/sign-in'>Sign In</Link>
+                            </Button>
+
+                            <Button asChild>
+                                <Link href='/sign-up'>Sign Up</Link>
+                            </Button>
+                        </div>
+                    )}
+                    {/* Logged in */}
+                    {!isPending && session?.user && (
+                        <div className='gap-2'>
+                            <div>
+                                <Button variant='ghost' asChild>
+                                    <Link href='/dashboard'>Dashboard</Link>
+                                </Button>
+                            </div>
+
+                            <Button variant='outline' onClick={() => signOut()}>
+                                Sign Out
+                            </Button>
+                        </div>
+                    )}
                     <ThemeToggle />
                 </div>
                 {/* Mobile navigation*/}

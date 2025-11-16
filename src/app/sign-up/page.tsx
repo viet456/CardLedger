@@ -1,22 +1,64 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { signUp } from '@/src/lib/auth-client';
+import { signUp, authClient } from '@/src/lib/auth-client';
 
 export default function SignUpPage() {
     const router = useRouter();
     const [error, setError] = useState<string | null>(null);
+    const [username, setUsername] = useState('');
+    const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+    const [checkingUsername, setCheckingUsername] = useState(false);
+
+    useEffect(() => {
+        if (username.length < 3) {
+            setUsernameAvailable(null);
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            setCheckingUsername(true);
+            try {
+                const { data } = await authClient.isUsernameAvailable({
+                    username
+                });
+                setUsernameAvailable(data?.available ?? null);
+            } catch (err) {
+                console.error('Error checking username:', err);
+            } finally {
+                setCheckingUsername(false);
+            }
+        }, 200); // Wait 200ms after user stops typing
+
+        return () => clearTimeout(timer);
+    }, [username]);
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
         setError(null);
 
         const formData = new FormData(e.currentTarget);
+        const name = formData.get('name') as string;
+        const email = formData.get('email') as string;
+        const password = formData.get('password') as string;
 
+        if (username.length < 3 || username.length > 20) {
+            setError('Username must be between 3 and 20 characters');
+            return;
+        }
+        if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+            setError('Username can only contain letters, numbers, underscores, and hyphens');
+            return;
+        }
+        if (usernameAvailable === false) {
+            setError('Username is already taken');
+            return;
+        }
         const res = await signUp.email({
-            name: formData.get('name') as string,
-            email: formData.get('email') as string,
-            password: formData.get('password') as string
+            email,
+            password,
+            username,
+            name
         });
 
         if (res.error) {
@@ -27,35 +69,71 @@ export default function SignUpPage() {
     }
 
     return (
-        <main className='mx-auto max-w-md space-y-4 p-6 text-white'>
+        <main className='mx-auto flex h-screen max-w-md flex-col items-center justify-center space-y-4 p-6 text-foreground'>
             <h1 className='text-2xl font-bold'>Sign Up</h1>
             {error && <p className='text-red-500'>{error}</p>}
 
-            <form onSubmit={handleSubmit} className='space-y-4'>
-                <input
-                    name='name'
-                    placeholder='Full Name'
-                    required
-                    className='w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2'
-                />
-                <input
-                    name='email'
-                    type='email'
-                    placeholder='Email'
-                    required
-                    className='w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2'
-                />
-                <input
-                    name='password'
-                    type='password'
-                    placeholder='Password'
-                    required
-                    minLength={8}
-                    className='w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2'
-                />
+            <form onSubmit={handleSubmit} className='w-full space-y-4'>
+                <div>
+                    <label htmlFor='name' className='mb-1 block text-sm font-medium'>
+                        Name (optional)
+                    </label>
+                    <input
+                        id='name'
+                        name='name'
+                        placeholder='John Doe'
+                        className='w-full rounded-md border border-border bg-card px-3 py-2 text-card-foreground'
+                    />
+                </div>
+                <div>
+                    <label htmlFor='username' className='mb-1 block text-sm font-medium'>
+                        Username <span aria-hidden='true'>*</span>
+                        <span className='sr-only'>required</span>
+                    </label>
+                    <input
+                        id='username'
+                        name='username'
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder='johndoe'
+                        required
+                        minLength={3}
+                        maxLength={20}
+                        pattern='[a-zA-Z0-9_-]+'
+                        className='w-full rounded-md border border-border bg-card px-3 py-2 text-card-foreground'
+                    />
+                </div>
+                <div>
+                    <label htmlFor='email' className='mb-1 block text-sm font-medium'>
+                        Email <span aria-hidden='true'>*</span>
+                        <span className='sr-only'>required</span>
+                    </label>
+                    <input
+                        id='email'
+                        name='email'
+                        type='email'
+                        placeholder='john@example.com'
+                        required
+                        className='w-full rounded-md border border-border bg-card px-3 py-2 text-card-foreground'
+                    />
+                </div>
+                <div>
+                    <label htmlFor='password' className='mb-1 block text-sm font-medium'>
+                        Password <span aria-hidden='true'>*</span>
+                        <span className='sr-only'>required</span>
+                    </label>
+                    <input
+                        id='password'
+                        name='password'
+                        type='password'
+                        placeholder='At least 8 characters'
+                        required
+                        minLength={8}
+                        className='w-full rounded-md border border-border bg-card px-3 py-2 text-card-foreground'
+                    />
+                </div>
                 <button
                     type='submit'
-                    className='w-full rounded-md bg-white px-4 py-2 font-medium text-black hover:bg-gray-200'
+                    className='w-full rounded-md border border-border bg-primary px-4 py-2 font-medium text-primary-foreground hover:bg-primary-hover'
                 >
                     Create Account
                 </button>

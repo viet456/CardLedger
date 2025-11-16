@@ -38,7 +38,7 @@
         /* Primary brand color (buttons) */
         --primary: 0 0 0; /* PURE BLACK (OLED) */
         --primary-foreground: 1 0 0; /* white */
-        --primary-hover: 0.2711 0.0204 263.89; /* zinc-900 */
+        --primary-hover: 0.3591 0.018 263.93; /* zinc-800 */
 
         /* Secondary buttons */
         --secondary: 0.9537 0.0063 264.38; /* zinc-100 */

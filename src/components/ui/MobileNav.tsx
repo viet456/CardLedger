@@ -18,6 +18,7 @@ import {
 } from '@/src/components/ui/sheet';
 import { navItems } from './Header';
 import { ThemeToggle } from './ThemeToggle';
+import { useSession, signOut } from '@/src/lib/auth-client';
 
 const NavLink = ({
     href,
@@ -46,6 +47,7 @@ const NavLink = ({
 
 export function MobileNav() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const { data: session, isPending } = useSession();
 
     return (
         <div className='md:hidden'>
@@ -90,12 +92,50 @@ export function MobileNav() {
                             />
                         ))}
                     </div>
-                    <Button variant='ghost' asChild>
-                        <Link href='/sign-in'>Sign In</Link>
-                    </Button>
-                    <Button asChild>
-                        <Link href='/sign-up'>Sign Up</Link>
-                    </Button>
+                    {/* Loading, button skeletons */}
+                    {isPending && (
+                        <div className='mx-2 flex flex-col gap-2'>
+                            <div className='h-9 w-20 animate-pulse rounded-md bg-muted'></div>
+                            <div className='h-9 w-20 animate-pulse rounded-md bg-muted'></div>
+                        </div>
+                    )}
+                    {/* Logged out */}
+                    {!session?.user && !isPending && (
+                        <div className='mx-2 flex flex-col gap-2'>
+                            <Button variant='ghost' asChild>
+                                <Link href='/sign-in' onClick={() => setIsMenuOpen(false)}>
+                                    Sign In
+                                </Link>
+                            </Button>
+
+                            <Button asChild>
+                                <Link href='/sign-up' onClick={() => setIsMenuOpen(false)}>
+                                    Sign Up
+                                </Link>
+                            </Button>
+                        </div>
+                    )}
+                    {/* Logged in */}
+                    {!isPending && session?.user && (
+                        <div className='gap-2'>
+                            <div>
+                                <Button variant='ghost' asChild>
+                                    <Link href='/dashboard' onClick={() => setIsMenuOpen(false)}>
+                                        Dashboard
+                                    </Link>
+                                </Button>
+                            </div>
+
+                            <Button
+                                variant='outline'
+                                onClick={() => {
+                                    (signOut(), setIsMenuOpen(false));
+                                }}
+                            >
+                                Sign Out
+                            </Button>
+                        </div>
+                    )}
                     <SheetFooter className='bottom-4 left-0 right-0 mt-auto flex w-full flex-row items-center justify-between p-4'>
                         <ThemeToggle />
                         <a
