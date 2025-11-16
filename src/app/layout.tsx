@@ -8,6 +8,7 @@ import { ThemeProvider } from '@/src/components/ui/theme-provider';
 import { TrpcProvider } from '../providers/TRPCProvider';
 import { ScrollToTopButton } from '../components/ScrollToTopButton';
 import { CardDataInitializer } from '../components/CardDataInitializer';
+import Script from 'next/script';
 
 const inter = Inter({
     subsets: ['latin'],
@@ -30,6 +31,15 @@ export default function RootLayout({
 }>) {
     return (
         <html lang='en' className={`${inter.variable}`} suppressHydrationWarning>
+            <head>
+                <Script
+                    src='https://challenges.cloudflare.com/turnstile/v0/api.js'
+                    strategy='afterInteractive'
+                    async
+                    defer
+                />
+                <link rel='preconnect' href='https://challenges.cloudflare.com' />
+            </head>
             <body
                 className={`flex min-h-screen flex-col bg-background font-sans text-foreground antialiased`}
             >
