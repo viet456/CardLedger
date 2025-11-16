@@ -2,68 +2,102 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from '@/src/lib/auth-client';
+import { Button } from '@/src/components/ui/button';
+import Link from 'next/link';
+import { Widget } from '@/src/components/Turnstile';
 
 export default function SignInPage() {
     const router = useRouter();
     const [error, setError] = useState<string | null>(null);
+    const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
         setError(null);
 
+        // Check for Cloudflare token before submitting form
+        if (!turnstileToken) {
+            setError('Please complete the security check.');
+            return;
+        }
+
         const formData = new FormData(e.currentTarget);
         const identifier = formData.get('identifier') as string;
         const password = formData.get('password') as string;
         const isEmail = identifier.includes('@');
-        const res = isEmail
-            ? await signIn.email({ email: identifier, password })
-            : await signIn.username({ username: identifier, password });
+        try {
+            const response = await fetch('/api/auth/signin', {
+                // Changed from /signup
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    identifier,
+                    password,
+                    turnstileToken
+                })
+            });
 
-        if (res.error) {
-            setError(res.error.message || 'Something went wrong.');
-        } else {
-            router.push('/dashboard');
+            const result = await response.json();
+
+            if (!response.ok || result.error) {
+                setError(result.error || 'Something went wrong.');
+            } else {
+                router.push('/dashboard');
+            }
+        } catch (err) {
+            setError('Network error. Please try again.');
         }
     }
 
     return (
         <main className='mx-auto flex h-screen w-full max-w-md flex-col items-center justify-center space-y-4 p-6 text-foreground'>
-            <h1 className='text-2xl font-bold'>Sign In</h1>
-            {error && <p className='text-red-500'>{error}</p>}
+            <div className='rounded-md border border-border px-12 py-20 shadow-md'>
+                <h1 className='text-2xl font-bold'>Sign In</h1>
+                {error && <p className='text-red-500'>{error}</p>}
 
-            <form onSubmit={handleSubmit} className='w-full space-y-4'>
-                <div>
-                    <label htmlFor='identifier' className='mb-1 block text-sm font-medium'>
-                        Email or Username <span aria-hidden='true'>*</span>
-                    </label>
-                    <input
-                        id='identifier'
-                        name='identifier'
-                        placeholder='email@example.com or username'
-                        required
-                        className='w-full rounded-md border border-border bg-card px-3 py-2 text-card-foreground'
-                    />
-                </div>
-                <div>
-                    <label htmlFor='password' className='mb-1 block text-sm font-medium'>
-                        Password <span aria-hidden='true'>*</span>
-                    </label>
-                    <input
-                        id='password'
-                        name='password'
-                        type='password'
-                        placeholder='Password'
-                        required
-                        className='w-full rounded-md border border-border bg-card px-3 py-2 text-card-foreground'
-                    />
-                </div>
-                <button
-                    type='submit'
-                    className='w-full rounded-md border border-border bg-primary px-4 py-2 font-medium text-primary-foreground hover:bg-primary-hover'
-                >
-                    Sign In
-                </button>
-            </form>
+                <form onSubmit={handleSubmit} className='w-full space-y-4'>
+                    <div>
+                        <label htmlFor='identifier' className='mb-1 block text-sm font-medium'>
+                            Email or Username <span aria-hidden='true'>*</span>
+                            <span className='sr-only'>required</span>
+                        </label>
+                        <input
+                            id='identifier'
+                            name='identifier'
+                            placeholder='email@example.com or username'
+                            required
+                            className='w-full rounded-md border border-border bg-card px-3 py-2 text-card-foreground'
+                        />
+                    </div>
+                    <div>
+                        <label htmlFor='password' className='mb-1 block text-sm font-medium'>
+                            Password <span aria-hidden='true'>*</span>
+                            <span className='sr-only'>required</span>
+                        </label>
+                        <input
+                            id='password'
+                            name='password'
+                            type='password'
+                            placeholder='Password'
+                            required
+                            minLength={8}
+                            className='w-full rounded-md border border-border bg-card px-3 py-2 text-card-foreground'
+                        />
+                    </div>
+                    <Widget onTokenChange={setTurnstileToken} />
+
+                    <Button
+                        type='submit'
+                        disabled={!turnstileToken}
+                        className='w-full rounded-md border border-border bg-primary px-4 py-2 font-medium text-primary-foreground hover:bg-primary-hover'
+                    >
+                        Sign In
+                    </Button>
+                    <Link href='/forgot-password' className='text-sm text-blue-500 hover:underline'>
+                        Forgot password
+                    </Link>
+                </form>
+            </div>
         </main>
     );
 }
