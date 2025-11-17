@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/src/lib/auth';
 import { verifyTurnstile } from '@/src/lib/verifyTurnstile';
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextResponse) {
     try {
         const body = await req.json();
-        const { email, password, username, name, turnstileToken } = body;
+        const { email, redirectTo, turnstileToken } = body;
 
         // Verify Turnstile FIRST
         if (!turnstileToken) {
@@ -19,26 +19,21 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Security verification failed' }, { status: 400 });
         }
 
-        // Create the user using Better Auth's internal API
-        const result = await auth.api.signUpEmail({
+        // If valid, call the better-auth server api
+        const result = await auth.api.forgetPassword({
             body: {
                 email,
-                password,
-                name,
-                username
+                redirectTo
             },
             headers: req.headers
         });
 
         return NextResponse.json(result);
     } catch (error: unknown) {
-        console.error('Sign in error:', error);
-
         let errorMessage = 'Something went wrong';
         if (error instanceof Error) {
             errorMessage = error.message;
         }
-
         return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }

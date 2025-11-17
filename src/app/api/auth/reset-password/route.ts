@@ -5,9 +5,9 @@ import { verifyTurnstile } from '@/src/lib/verifyTurnstile';
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { email, password, username, name, turnstileToken } = body;
+        const { newPassword, resetToken, turnstileToken } = body;
 
-        // Verify Turnstile FIRST
+        // Verify Turnstile first
         if (!turnstileToken) {
             return NextResponse.json({ error: 'Security check required' }, { status: 400 });
         }
@@ -19,26 +19,20 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Security verification failed' }, { status: 400 });
         }
 
-        // Create the user using Better Auth's internal API
-        const result = await auth.api.signUpEmail({
+        const result = await auth.api.resetPassword({
             body: {
-                email,
-                password,
-                name,
-                username
+                token: resetToken,
+                newPassword
             },
             headers: req.headers
         });
 
         return NextResponse.json(result);
     } catch (error: unknown) {
-        console.error('Sign in error:', error);
-
         let errorMessage = 'Something went wrong';
         if (error instanceof Error) {
             errorMessage = error.message;
         }
-
         return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }
