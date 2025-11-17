@@ -13,6 +13,10 @@ export default function SignUpPage() {
     const [checkingUsername, setCheckingUsername] = useState(false);
     const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+
     useEffect(() => {
         if (username.length < 3) {
             setUsernameAvailable(null);
@@ -44,11 +48,6 @@ export default function SignUpPage() {
             setError('Please wait for the security check to complete.');
             return;
         }
-
-        const formData = new FormData(e.currentTarget);
-        const name = formData.get('name') as string;
-        const email = formData.get('email') as string;
-        const password = formData.get('password') as string;
 
         if (username.length < 3 || username.length > 20) {
             setError('Username must be between 3 and 20 characters');
@@ -105,6 +104,8 @@ export default function SignUpPage() {
                             name='name'
                             placeholder='John Doe'
                             className='w-full rounded-md border border-border bg-card px-3 py-2 text-card-foreground'
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
                         />
                     </div>
                     <div>
@@ -115,13 +116,14 @@ export default function SignUpPage() {
                         <input
                             id='username'
                             name='username'
-                            onChange={(e) => setUsername(e.target.value)}
                             placeholder='johndoe'
                             required
                             minLength={3}
                             maxLength={20}
                             pattern='[a-zA-Z0-9_-]+'
                             className='w-full rounded-md border border-border bg-card px-3 py-2 text-card-foreground'
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
                         />
                     </div>
                     <div>
@@ -136,6 +138,8 @@ export default function SignUpPage() {
                             placeholder='john@example.com'
                             required
                             className='w-full rounded-md border border-border bg-card px-3 py-2 text-card-foreground'
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
                         />
                     </div>
                     <div>
@@ -151,12 +155,21 @@ export default function SignUpPage() {
                             required
                             minLength={8}
                             className='w-full rounded-md border border-border bg-card px-3 py-2 text-card-foreground'
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
                         />
                     </div>
                     <Widget onTokenChange={setTurnstileToken} />
                     <Button
                         type='submit'
-                        disabled={!turnstileToken}
+                        disabled={
+                            !turnstileToken ||
+                            !email ||
+                            password.length < 8 ||
+                            username.length < 3 ||
+                            usernameAvailable === false ||
+                            checkingUsername
+                        }
                         className='w-full rounded-md border border-border bg-primary px-4 py-2 font-medium text-primary-foreground hover:bg-primary-hover'
                     >
                         Create Account

@@ -11,6 +11,9 @@ export default function SignInPage() {
     const [error, setError] = useState<string | null>(null);
     const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
+    const [identifier, setIdentifier] = useState('');
+    const [password, setPassword] = useState('');
+
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
         setError(null);
@@ -21,9 +24,6 @@ export default function SignInPage() {
             return;
         }
 
-        const formData = new FormData(e.currentTarget);
-        const identifier = formData.get('identifier') as string;
-        const password = formData.get('password') as string;
         const isEmail = identifier.includes('@');
         try {
             const response = await fetch('/api/auth/signin', {
@@ -52,7 +52,7 @@ export default function SignInPage() {
     return (
         <main className='mx-auto flex h-screen w-full max-w-md flex-col items-center justify-center space-y-4 p-6 text-foreground'>
             <div className='rounded-md border border-border px-12 py-20 shadow-md'>
-                <h1 className='text-2xl font-bold'>Sign In</h1>
+                <h1 className='mb-2 text-2xl font-bold'>Sign In</h1>
                 {error && <p className='text-red-500'>{error}</p>}
 
                 <form onSubmit={handleSubmit} className='w-full space-y-4'>
@@ -67,6 +67,8 @@ export default function SignInPage() {
                             placeholder='email@example.com or username'
                             required
                             className='w-full rounded-md border border-border bg-card px-3 py-2 text-card-foreground'
+                            value={identifier}
+                            onChange={(e) => setIdentifier(e.target.value)}
                         />
                     </div>
                     <div>
@@ -82,13 +84,15 @@ export default function SignInPage() {
                             required
                             minLength={8}
                             className='w-full rounded-md border border-border bg-card px-3 py-2 text-card-foreground'
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
                         />
                     </div>
                     <Widget onTokenChange={setTurnstileToken} />
 
                     <Button
                         type='submit'
-                        disabled={!turnstileToken}
+                        disabled={!turnstileToken || !identifier || password.length < 8}
                         className='w-full rounded-md border border-border bg-primary px-4 py-2 font-medium text-primary-foreground hover:bg-primary-hover'
                     >
                         Sign In
