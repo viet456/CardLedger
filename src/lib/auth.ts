@@ -11,10 +11,7 @@ export const auth = betterAuth({
     database: prismaAdapter(prisma, {
         provider: 'postgresql'
     }),
-    emailAndPassword: {
-        enabled: true,
-        requireEmailVerification: true,
-        minPasswordLength: 8,
+    email: {
         sendResetPassword: async ({ user, url }: { user: { email: string }; url: string }) => {
             await resend.emails.send({
                 from: 'CardLedger <noreply@updates.cardledger.io>',
@@ -22,7 +19,10 @@ export const auth = betterAuth({
                 subject: 'Reset your password',
                 html: `<p>Click <a href="${url}">here</a> to reset your password.</p>`
             });
-        },
+        }
+    },
+    emailVerification: {
+        sendOnSignUp: true,
         sendVerificationEmail: async ({ user, url }: { user: { email: string }; url: string }) => {
             await resend.emails.send({
                 from: 'CardLedger <noreply@updates.cardledger.io>',
@@ -31,6 +31,12 @@ export const auth = betterAuth({
                 html: `<p>Click <a href="${url}">here</a> to verify your email.</p>`
             });
         }
+    },
+    emailAndPassword: {
+        enabled: true,
+        autoSignIn: true,
+        requireEmailVerification: true,
+        minPasswordLength: 8
     },
     socialProviders: {},
     plugins: [username(), nextCookies()]

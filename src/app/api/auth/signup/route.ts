@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/src/lib/auth';
 import { verifyTurnstile } from '@/src/lib/verifyTurnstile';
+import { Prisma } from '@prisma/client';
+import { APIError } from 'better-auth';
 
 export async function POST(req: NextRequest) {
     try {
@@ -32,7 +34,21 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json(result);
     } catch (error: unknown) {
-        console.error('Sign in error:', error);
+        console.error('Sign up error:', error);
+
+        if (error instanceof Prisma.PrismaClientKnownRequestError) {
+            // P2002 is the code for 'Unique constraint failed'
+            if (error.code === 'P2002') {
+                return NextResponse.json(
+                    { error: 'This email or username is already taken.' },
+                    { status: 409 }
+                );
+            }
+        }
+
+        if (error instanceof APIError) {
+            return NextResponse.json({ error: error.message }, { status: 401 });
+        }
 
         let errorMessage = 'Something went wrong';
         if (error instanceof Error) {

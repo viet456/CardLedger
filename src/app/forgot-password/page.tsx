@@ -8,6 +8,7 @@ export default function ForgotPasswordPage() {
     const [message, setMessage] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+    const [submitAttempts, setSubmitAttempts] = useState(0);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -34,11 +35,15 @@ export default function ForgotPasswordPage() {
 
             if (!response.ok || result.error) {
                 setError(result.error || 'Something went wrong.');
+                setSubmitAttempts((attempts) => attempts + 1);
+                setTurnstileToken(null);
             } else {
                 setMessage('Check your email for a password reset link.');
             }
         } catch (error) {
             setError('An unexpected error occurred.');
+            setSubmitAttempts((attempts) => attempts + 1);
+            setTurnstileToken(null);
         }
     }
 
@@ -65,10 +70,10 @@ export default function ForgotPasswordPage() {
                             className='w-full rounded-md border border-border bg-card px-3 py-2'
                         />
                     </div>
-                    <Widget onTokenChange={setTurnstileToken} />
+                    <Widget onTokenChange={setTurnstileToken} resetTrigger={submitAttempts} />
                     <Button
                         type='submit'
-                        disabled={!turnstileToken}
+                        disabled={!turnstileToken || !email}
                         className='w-full rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground hover:bg-primary-hover'
                     >
                         Send Reset Link

@@ -13,6 +13,7 @@ export default function SignInPage() {
 
     const [identifier, setIdentifier] = useState('');
     const [password, setPassword] = useState('');
+    const [loginAttempts, setLoginAttempts] = useState(0);
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
@@ -41,6 +42,8 @@ export default function SignInPage() {
 
             if (!response.ok || result.error) {
                 setError(result.error || 'Something went wrong.');
+                setLoginAttempts((attempts) => attempts + 1);
+                setTurnstileToken(null);
             } else {
                 router.push('/dashboard');
             }
@@ -88,7 +91,7 @@ export default function SignInPage() {
                             onChange={(e) => setPassword(e.target.value)}
                         />
                     </div>
-                    <Widget onTokenChange={setTurnstileToken} />
+                    <Widget onTokenChange={setTurnstileToken} resetTrigger={loginAttempts} />
 
                     <Button
                         type='submit'
