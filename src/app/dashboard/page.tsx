@@ -19,16 +19,9 @@ export default function DashboardPage() {
     const { user } = session;
 
     return (
-        <main className='mx-auto flex h-screen max-w-md flex-col items-center justify-center space-y-4 p-6 text-white'>
+        <main className='mx-auto flex h-screen max-w-md flex-col items-center justify-center space-y-4 p-6 text-foreground'>
             <h1 className='text-2xl font-bold'>Dashboard</h1>
-            <p>Welcome, {user.name || 'User'}!</p>
-            <p>Email: {user.email}</p>
-            <button
-                onClick={() => signOut()}
-                className='w-full rounded-md bg-white px-4 py-2 font-medium text-black hover:bg-gray-200'
-            >
-                Sign Out
-            </button>
+            <p>Welcome, {user.username || 'User'}!</p>
         </main>
     );
 }

@@ -92,16 +92,12 @@ export function Header() {
                     )}
                     {/* Logged in */}
                     {!isPending && session?.user && (
-                        <div className='gap-2'>
-                            <div>
-                                <Button variant='ghost' asChild>
-                                    <Link href='/dashboard'>Dashboard</Link>
-                                </Button>
-                            </div>
-
-                            <Button variant='outline' onClick={() => signOut()}>
-                                Sign Out
+                        <div className='flex gap-2'>
+                            <Button variant='ghost' asChild>
+                                <Link href='/dashboard'>Dashboard</Link>
                             </Button>
+
+                            <Button onClick={() => signOut()}>Sign Out</Button>
                         </div>
                     )}
                     <ThemeToggle />
