@@ -12,6 +12,7 @@ export default function SignUpPage() {
     const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
     const [checkingUsername, setCheckingUsername] = useState(false);
     const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+    const [submitAttempts, setSubmitAttempts] = useState(0);
 
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -77,14 +78,36 @@ export default function SignUpPage() {
             });
 
             const result = await response.json();
+            console.log('API RESPONSE:', JSON.stringify(result, null, 2));
 
             if (!response.ok || result.error) {
                 setError(result.error || 'Something went wrong.');
+                setSubmitAttempts((attempts) => attempts + 1);
+                setTurnstileToken(null);
+            } else if (result.token === null && result.user) {
+                // Sign-up worked, but verification is required
+
+                // Clear the form
+                setName('');
+                setUsername('');
+                setEmail('');
+                setPassword('');
+
+                setError(
+                    'Success! Please check your email (' +
+                        result.user.email +
+                        ') to verify your account before logging in.'
+                );
+
+                setSubmitAttempts((attempts) => attempts + 1);
+                setTurnstileToken(null);
             } else {
                 router.push('/dashboard');
             }
-        } catch (err) {
+        } catch (error) {
             setError('Network error. Please try again.');
+            setSubmitAttempts((attempts) => attempts + 1);
+            setTurnstileToken(null);
         }
     }
 
@@ -120,7 +143,7 @@ export default function SignUpPage() {
                             required
                             minLength={3}
                             maxLength={20}
-                            pattern='[a-zA-Z0-9_-]+'
+                            pattern='[a-zA-Z0-9_\\-]+'
                             className='w-full rounded-md border border-border bg-card px-3 py-2 text-card-foreground'
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
@@ -159,7 +182,7 @@ export default function SignUpPage() {
                             onChange={(e) => setPassword(e.target.value)}
                         />
                     </div>
-                    <Widget onTokenChange={setTurnstileToken} />
+                    <Widget onTokenChange={setTurnstileToken} resetTrigger={submitAttempts} />
                     <Button
                         type='submit'
                         disabled={

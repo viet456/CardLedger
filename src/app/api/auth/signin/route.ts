@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/src/lib/auth';
 import { verifyTurnstile } from '@/src/lib/verifyTurnstile';
+import { APIError } from 'better-auth';
+import { nextCookies } from 'better-auth/next-js';
 
 export async function POST(req: NextRequest) {
     try {
@@ -32,10 +34,34 @@ export async function POST(req: NextRequest) {
                   body: { username: identifier, password },
                   headers: req.headers
               });
+        if (!result) {
+            throw new APIError('UNAUTHORIZED');
+        }
+
+        if (result.token && result.user) {
+            const response = NextResponse.json({ user: result.user });
+            response.cookies.set('auth_session', result.token, {
+                httpOnly: true,
+                sameSite: 'lax',
+                secure: process.env.NODE_ENV === 'production',
+                path: '/'
+            });
+            return response;
+        }
 
         return NextResponse.json(result);
     } catch (error: unknown) {
         console.error('Sign in error:', error);
+
+        if (error instanceof APIError) {
+            if (error.message === 'EMAIL_NOT_VERIFIED') {
+                return NextResponse.json(
+                    { error: 'Your email is not verified. Please check your inbox.' },
+                    { status: 401 }
+                );
+            }
+            return NextResponse.json({ error: error.message }, { status: 401 });
+        }
 
         let errorMessage = 'Something went wrong';
         if (error instanceof Error) {

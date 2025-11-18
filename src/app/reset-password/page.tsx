@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { resetPassword } from '@/src/lib/auth-client';
 import { Button } from '@/src/components/ui/button';
 import { Widget } from '@/src/components/Turnstile';
 
@@ -13,6 +12,7 @@ export default function ResetPasswordPage() {
     const [error, setError] = useState<string | null>(null);
     const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
     const [resetToken, setResetToken] = useState<string | null>(null);
+    const [submitAttempts, setSubmitAttempts] = useState(0);
 
     useEffect(() => {
         const token = searchParams.get('token');
@@ -50,11 +50,15 @@ export default function ResetPasswordPage() {
 
             if (!response.ok || result.error) {
                 setError(result.error || 'Something went wrong.');
+                setSubmitAttempts((attempts) => attempts + 1);
+                setTurnstileToken(null);
             } else {
                 router.push('/sign-in');
             }
         } catch (error) {
             setError('An unexpected error occurred.');
+            setSubmitAttempts((attempts) => attempts + 1);
+            setTurnstileToken(null);
         }
     }
 
@@ -81,7 +85,7 @@ export default function ResetPasswordPage() {
                             className='w-full rounded-md border border-border bg-card px-3 py-2'
                         />
                     </div>
-                    <Widget onTokenChange={setTurnstileToken} />
+                    <Widget onTokenChange={setTurnstileToken} resetTrigger={submitAttempts} />
                     <Button
                         type='submit'
                         disabled={!turnstileToken || !resetToken || password.length < 8}
