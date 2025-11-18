@@ -4,6 +4,7 @@ import { prisma } from '@/src/lib/prisma';
 import { nextCookies } from 'better-auth/next-js';
 import { username } from 'better-auth/plugins';
 import { Resend } from 'resend';
+import { captcha } from 'better-auth/plugins';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -39,5 +40,12 @@ export const auth = betterAuth({
         minPasswordLength: 8
     },
     socialProviders: {},
-    plugins: [username(), nextCookies()]
+    plugins: [
+        username(),
+        captcha({
+            provider: 'cloudflare-turnstile',
+            secretKey: process.env.TURNSTILE_SECRET_KEY!
+        }),
+        nextCookies()
+    ]
 });
