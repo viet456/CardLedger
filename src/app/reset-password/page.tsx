@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/src/components/ui/button';
 import { Widget } from '@/src/components/Turnstile';
+import { resetPassword } from '@/src/lib/auth-client';
 
 export default function ResetPasswordPage() {
     const router = useRouter();
@@ -37,19 +38,18 @@ export default function ResetPasswordPage() {
         }
 
         try {
-            const response = await fetch('/api/auth/reset-password', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    newPassword: password,
-                    resetToken,
-                    turnstileToken
-                })
+            const response = await resetPassword({
+                token: resetToken!,
+                newPassword: password,
+                fetchOptions: {
+                    headers: {
+                        'x-captcha-response': turnstileToken
+                    }
+                }
             });
-            const result = await response.json();
 
-            if (!response.ok || result.error) {
-                setError(result.error || 'Something went wrong.');
+            if (response.error) {
+                setError(response.error.message || 'Something went wrong.');
                 setSubmitAttempts((attempts) => attempts + 1);
                 setTurnstileToken(null);
             } else {

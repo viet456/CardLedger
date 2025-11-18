@@ -64,27 +64,23 @@ export default function SignUpPage() {
         }
 
         try {
-            const response = await fetch('/api/auth/signup', {
-                // Changed from /signin
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email, // These were correct
-                    password,
-                    username,
-                    name,
-                    turnstileToken
-                })
+            const response = await signUp.email({
+                email,
+                password,
+                username,
+                name,
+                fetchOptions: {
+                    headers: {
+                        'x-captcha-response': turnstileToken
+                    }
+                }
             });
 
-            const result = await response.json();
-            console.log('API RESPONSE:', JSON.stringify(result, null, 2));
-
-            if (!response.ok || result.error) {
-                setError(result.error || 'Something went wrong.');
+            if (response.error) {
+                setError(response.error.message || 'Something went wrong.');
                 setSubmitAttempts((attempts) => attempts + 1);
                 setTurnstileToken(null);
-            } else if (result.token === null && result.user) {
+            } else if (response.data.token === null && response.data.user) {
                 // Sign-up worked, but verification is required
 
                 // Clear the form
@@ -95,7 +91,7 @@ export default function SignUpPage() {
 
                 setError(
                     'Success! Please check your email (' +
-                        result.user.email +
+                        response.data.user.email +
                         ') to verify your account before logging in.'
                 );
 
@@ -148,6 +144,15 @@ export default function SignUpPage() {
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                         />
+                        {checkingUsername && (
+                            <span className='text-sm text-gray-500'>Checking...</span>
+                        )}
+                        {!checkingUsername && usernameAvailable === true && (
+                            <span className='text-sm text-green-500'>Available!</span>
+                        )}
+                        {!checkingUsername && usernameAvailable === false && (
+                            <span className='text-sm text-red-500'>Taken</span>
+                        )}
                     </div>
                     <div>
                         <label htmlFor='email' className='mb-1 block text-sm font-medium'>

@@ -27,21 +27,28 @@ export default function SignInPage() {
 
         const isEmail = identifier.includes('@');
         try {
-            const response = await fetch('/api/auth/signin', {
-                // Changed from /signup
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    identifier,
-                    password,
-                    turnstileToken
-                })
-            });
+            const response = isEmail
+                ? await signIn.email({
+                      email: identifier,
+                      password: password,
+                      fetchOptions: {
+                          headers: {
+                              'x-captcha-response': turnstileToken
+                          }
+                      }
+                  })
+                : await signIn.username({
+                      username: identifier,
+                      password: password,
+                      fetchOptions: {
+                          headers: {
+                              'x-captcha-response': turnstileToken
+                          }
+                      }
+                  });
 
-            const result = await response.json();
-
-            if (!response.ok || result.error) {
-                setError(result.error || 'Something went wrong.');
+            if (response.error) {
+                setError(response.error.message || 'Something went wrong.');
                 setLoginAttempts((attempts) => attempts + 1);
                 setTurnstileToken(null);
             } else {

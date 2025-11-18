@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Button } from '@/src/components/ui/button';
 import { Widget } from '@/src/components/Turnstile';
+import { forgetPassword } from '@/src/lib/auth-client';
 
 export default function ForgotPasswordPage() {
     const [email, setEmail] = useState('');
@@ -22,19 +23,17 @@ export default function ForgotPasswordPage() {
         }
 
         try {
-            const response = await fetch(`/api/auth/forgot-password`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email,
-                    redirectTo: '/reset-password',
-                    turnstileToken
-                })
+            const response = await forgetPassword({
+                email,
+                redirectTo: '/reset-password',
+                fetchOptions: {
+                    headers: {
+                        'x-captcha-response': turnstileToken
+                    }
+                }
             });
-            const result = await response.json();
-
-            if (!response.ok || result.error) {
-                setError(result.error || 'Something went wrong.');
+            if (response.error) {
+                setError(response.error.message || 'Something went wrong.');
                 setSubmitAttempts((attempts) => attempts + 1);
                 setTurnstileToken(null);
             } else {
