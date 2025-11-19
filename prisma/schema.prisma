@@ -16,14 +16,14 @@ enum LegalityStatus {
 }
 
 enum CardCondition {
-  tcgNearMint
-  tcgLightlyPlayed
-  tcgModeratelyPlayed
-  tcgHeavilyPlayed
-  tcgDamaged
-  psa10
-  psa9
-  psa8
+    tcgNearMint
+    tcgLightlyPlayed
+    tcgModeratelyPlayed
+    tcgHeavilyPlayed
+    tcgDamaged
+    psa10
+    psa9
+    psa8
 }
 
 model Set {
@@ -102,8 +102,8 @@ model Card {
     imageKey        String?
     imagesOptimized Boolean @default(false)
 
-    marketStats  MarketStats? // Curret price
-    priceHistory PriceHistory[]
+    marketStats   MarketStats? // Curret price
+    priceHistory  PriceHistory[]
     inCollections CollectionEntry[]
 
     // -- Indexes for faster queries -- 
@@ -306,16 +306,16 @@ model Artist {
 }
 
 model User {
-    id            String    @id
+    id            String            @id
     name          String?
     email         String
-    emailVerified Boolean   @default(false)
+    emailVerified Boolean           @default(false)
     image         String?
-    createdAt     DateTime  @default(now())
-    updatedAt     DateTime  @default(now()) @updatedAt
+    createdAt     DateTime          @default(now())
+    updatedAt     DateTime          @default(now()) @updatedAt
     sessions      Session[]
     accounts      Account[]
-    collection CollectionEntry[]
+    collection    CollectionEntry[]
 
     username        String?
     displayUsername String?
@@ -371,19 +371,19 @@ model Verification {
 }
 
 model CollectionEntry {
-    id String @id @default(cuid())
+    id        String   @id @default(cuid())
     createdAt DateTime @default(now())
 
     userId String
-    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
     cardId String
-    card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+    card   Card   @relation(fields: [cardId], references: [id], onDelete: Cascade)
 
-    purchasePrice Decimal @db.Decimal(10,2)
-    condition CardCondition @default(tcgNearMint)
+    purchasePrice Decimal       @db.Decimal(10, 2)
+    condition     CardCondition @default(tcgNearMint)
 
     // future card variant support, eg Holo, Foil
-    variantName   String?
+    variantName String?
 
     @@index([userId])
     @@index([cardId])
