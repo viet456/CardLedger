@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { HeaderSearchBar } from '../search/HeaderSearchBar';
 import { Menu, X } from 'lucide-react';
-import { Button } from './button';
+import { Button } from '../ui/button';
 import {
     Sheet,
     SheetContent,

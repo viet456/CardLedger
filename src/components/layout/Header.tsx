@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { MobileNav } from './MobileNav';
 import { HeaderSearchBar } from '../search/HeaderSearchBar';
 import { ThemeToggle } from './ThemeToggle';
-import { Button } from './button';
+import { Button } from '../ui/button';
 import { useSession, signOut } from '@/src/lib/auth-client';
 
 export const navItems = [
