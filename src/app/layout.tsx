@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 import type { Viewport } from 'next';
 import './globals.css';
-import { Header } from '../components/ui/Header';
-import { Footer } from '../components/ui/Footer';
+import { Header } from '../components/layout/Header';
+import { Footer } from '../components/layout/Footer';
 import { Inter } from 'next/font/google';
-import { ThemeProvider } from '@/src/components/ui/theme-provider';
+import { ThemeProvider } from '@/src/components/layout/theme-provider';
 import { TrpcProvider } from '../providers/TRPCProvider';
 import { ScrollToTopButton } from '../components/ScrollToTopButton';
 import { CardDataInitializer } from '../components/CardDataInitializer';
