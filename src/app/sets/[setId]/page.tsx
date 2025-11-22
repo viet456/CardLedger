@@ -88,6 +88,8 @@ async function getSetData(setId: string): Promise<SetPageData | null> {
     const setRarities = new Map<string, string>();
     const setTypes = new Map<string, string>();
     const setSubtypes = new Map<string, string>();
+    const setWeaknesses = new Set<string>();
+    const setResistances = new Set<string>();
 
     for (const card of setWithCards.cards) {
         // Build filter options
@@ -95,6 +97,8 @@ async function getSetData(setId: string): Promise<SetPageData | null> {
         if (card.rarity) setRarities.set(card.rarity.name, card.rarity.name);
         card.types.forEach((t) => setTypes.set(t.type.name, t.type.name));
         card.subtypes.forEach((s) => setSubtypes.set(s.subtype.name, s.subtype.name));
+        card.weaknesses.forEach((w) => setWeaknesses.add(w.type.name));
+        card.resistances.forEach((r) => setResistances.add(r.type.name));
 
         // Build denormalized card object
         const denormalizedCard: DenormalizedCard = {
@@ -142,7 +146,9 @@ async function getSetData(setId: string): Promise<SetPageData | null> {
         artists: Array.from(setArtists.keys()).sort(),
         rarities: Array.from(setRarities.keys()).sort(),
         types: Array.from(setTypes.keys()).sort(),
-        subtypes: Array.from(setSubtypes.keys()).sort()
+        subtypes: Array.from(setSubtypes.keys()).sort(),
+        weaknesses: Array.from(setWeaknesses).sort(),
+        resistances: Array.from(setResistances).sort()
     };
 
     return {

@@ -21,6 +21,8 @@ export type FilterOptions = {
     types: FilterOptionObject[] | string[];
     subtypes: FilterOptionObject[] | string[];
     artists: FilterOptionObject[] | string[];
+    weaknesses: FilterOptionObject[] | string[];
+    resistances: FilterOptionObject[] | string[];
 };
 
 export type SetPageProps = {

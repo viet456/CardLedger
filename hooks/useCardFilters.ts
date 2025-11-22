@@ -6,6 +6,8 @@ import { SortableKey } from '../src/services/pokemonCardValidator';
 import { useCardStore } from '@/src/lib/store/cardStore';
 import { useShallow } from 'zustand/react/shallow';
 
+// For filtering /cards page with Zustand/IDB stores
+
 interface UseCardFiltersProps {
     defaultSort?: {
         sortBy: SortableKey;
@@ -94,11 +96,9 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
             const typeSet = filters.type ? typeIndex.get(filters.type) : null;
             const subtypeSet = filters.subtype ? typeIndex.get(filters.subtype) : null;
             const artistSet = filters.artist ? typeIndex.get(filters.artist) : null;
-            const weaknessSet = filters.weaknessType
-                ? weaknessIndex.get(filters.weaknessType)
-                : null;
-            const resistanceSet = filters.resistanceType
-                ? resistanceIndex.get(filters.resistanceType)
+            const weaknessSet = filters.weakness ? weaknessIndex.get(filters.weakness) : null;
+            const resistanceSet = filters.resistance
+                ? resistanceIndex.get(filters.resistance)
                 : null;
 
             for (const result of searchResults) {
@@ -132,16 +132,13 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
             if (filters.artist) {
                 baseSet = intersectSets(baseSet, artistIndex.get(filters.artist) || new Set());
             }
-            if (filters.weaknessType) {
-                baseSet = intersectSets(
-                    baseSet,
-                    weaknessIndex.get(filters.weaknessType) || new Set()
-                );
+            if (filters.weakness) {
+                baseSet = intersectSets(baseSet, weaknessIndex.get(filters.weakness) || new Set());
             }
-            if (filters.resistanceType) {
+            if (filters.resistance) {
                 baseSet = intersectSets(
                     baseSet,
-                    resistanceIndex.get(filters.resistanceType) || new Set()
+                    resistanceIndex.get(filters.resistance) || new Set()
                 );
             }
 

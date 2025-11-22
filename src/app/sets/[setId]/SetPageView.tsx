@@ -46,6 +46,15 @@ function useSetFilters(initialCards: DenormalizedCard[]) {
             if (filters.artist && card.artist !== filters.artist) {
                 return false;
             }
+            if (filters.weakness && !card.weaknesses.some((w) => w.type === filters.weakness)) {
+                return false;
+            }
+            if (
+                filters.resistance &&
+                !card.resistances.some((r) => r.type === filters.resistance)
+            ) {
+                return false;
+            }
             return true;
         });
 

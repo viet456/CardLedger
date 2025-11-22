@@ -40,8 +40,8 @@ export function CardFilterControls({ filterOptions, sortOptions }: CardFilterCon
         { label: 'Rarities', key: 'rarity', options: filterOptions.rarities || [] },
         { label: 'Artists', key: 'artist', options: filterOptions.artists || [] },
         { label: 'Sets', key: 'setId', options: filterOptions.sets || [] },
-        { label: 'Weaknesses', key: 'weaknessType', options: filterOptions.types || [] },
-        { label: 'Resistances', key: 'resistanceType', options: filterOptions.types || [] }
+        { label: 'Weaknesses', key: 'weakness', options: filterOptions.weaknesses || [] },
+        { label: 'Resistances', key: 'resistance', options: filterOptions.resistances || [] }
     ].filter((filter) => filter.options && filter.options.length > 0);
 
     return (
