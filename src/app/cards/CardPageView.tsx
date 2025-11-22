@@ -62,7 +62,15 @@ export default function CardPageView() {
             subtypes: state.subtypes
         }))
     );
-    const filterOptions = { rarities, types, subtypes, artists, sets };
+    const filterOptions = {
+        rarities,
+        types,
+        subtypes,
+        artists,
+        sets,
+        weaknesses: types,
+        resistances: types
+    };
     const allCardsSortOptions: { label: string; value: SortableKey }[] = [
         { label: 'Release Date', value: 'rD' },
         { label: 'Name', value: 'n' },

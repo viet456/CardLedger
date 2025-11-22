@@ -25,13 +25,13 @@ export const findCardsInputSchema = z.object({
     artist: z.string().optional(),
     setId: z.string().optional(),
     rules: z.string().optional(),
+    weakness: z.string().optional(),
+    resistance: z.string().optional(),
 
     // Relational Filters
     supertype: z.nativeEnum(Supertype).optional(),
     type: z.string().optional(),
     subtype: z.string().optional(),
-    weaknessType: z.string().optional(),
-    resistanceType: z.string().optional(),
     ability: z.string().optional(),
     standard: z.nativeEnum(LegalityStatus).optional(),
     expanded: z.nativeEnum(LegalityStatus).optional(),
