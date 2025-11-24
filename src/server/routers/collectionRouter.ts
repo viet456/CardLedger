@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { prisma } from '@/src/lib/prisma';
 import { CardCondition } from '@prisma/client';
 
+const CardConditionValues = Object.values(CardCondition) as [string, ...string[]];
+
 export const collectionRouter = router({
     /**
      * Gets all collection entries for a specific user.
@@ -13,7 +15,20 @@ export const collectionRouter = router({
         .query(async ({ input }) => {
             return prisma.collectionEntry.findMany({
                 where: { userId: input.userId },
-                include: { card: true },
+                include: {
+                    card: {
+                        include: {
+                            set: true,
+                            rarity: true,
+                            marketStats: true,
+                            artist: true,
+                            types: { include: { type: true } },
+                            subtypes: { include: { subtype: true } },
+                            weaknesses: { include: { type: true } },
+                            resistances: { include: { type: true } }
+                        }
+                    }
+                },
                 orderBy: { createdAt: 'desc' }
             });
         }),
@@ -26,7 +41,7 @@ export const collectionRouter = router({
             z.object({
                 cardId: z.string(),
                 purchasePrice: z.number(),
-                condition: z.enum(CardCondition)
+                condition: z.enum(CardConditionValues)
             })
         )
         .mutation(async ({ input, ctx }) => {
@@ -37,7 +52,7 @@ export const collectionRouter = router({
                     userId,
                     cardId,
                     purchasePrice,
-                    condition
+                    condition: condition as CardCondition
                     //variantName
                 }
             });
@@ -52,7 +67,7 @@ export const collectionRouter = router({
             z.object({
                 entryId: z.string(), // The ID of the CollectionEntry
                 purchasePrice: z.number().optional(),
-                condition: z.enum(CardCondition).optional()
+                condition: z.enum(CardConditionValues).optional()
             })
         )
         .mutation(async ({ input, ctx }) => {
@@ -63,7 +78,12 @@ export const collectionRouter = router({
             });
             const updatedEntry = await prisma.collectionEntry.update({
                 where: { id: entry.id },
-                data: dataToUpdate
+                data: {
+                    ...dataToUpdate,
+                    condition: dataToUpdate.condition
+                        ? (dataToUpdate.condition as CardCondition)
+                        : undefined
+                }
             });
             return updatedEntry;
         }),
