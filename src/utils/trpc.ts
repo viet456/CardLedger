@@ -2,6 +2,7 @@ import { createTRPCReact } from '@trpc/react-query';
 import { httpBatchLink } from '@trpc/client';
 import { loggerLink } from '@trpc/client';
 import type { AppRouter } from '@/src/server';
+import superjson from 'superjson';
 
 export const trpc = createTRPCReact<AppRouter>();
 
@@ -13,7 +14,8 @@ export const trpcClient = trpc.createClient({
                 (op.direction === 'down' && op.result instanceof Error)
         }),
         httpBatchLink({
-            url: '/api/trpc'
+            url: '/api/trpc',
+            transformer: superjson
         })
     ]
 });
