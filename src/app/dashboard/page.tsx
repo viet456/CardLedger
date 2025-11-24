@@ -5,75 +5,32 @@ import { useEffect } from 'react';
 import { trpc } from '@/src/utils/trpc';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/src/components/ui/tabs';
 import { CollectionPageView } from './components/CollectionPageView';
+import { mapPrismaCardToDenormalized } from '@/src/utils/cardMapper';
 
 export default function DashboardPage() {
     const router = useRouter();
     const { data: session, isPending } = useSession();
+    // Fetch data
     const { data: collectionEntries, isLoading: isCollectionLoading } =
         trpc.collection.getCollection.useQuery(
             { userId: session?.user?.id || '' },
             { enabled: !!session?.user?.id }
         );
-
+    // Auth redirect
     useEffect(() => {
         if (!isPending && !session?.user) {
             router.push('/sign-in');
         }
     }, [isPending, session, router]);
-
+    // Loading state
     if (isPending || isCollectionLoading)
         return <p className='mt-8 text-center text-foreground'>Loading...</p>;
     if (!session?.user) return <p className='mt-8 text-center text-foreground'>Redirecting...</p>;
 
     const { user } = session;
 
-    // Fetch the collection
-
     const gridCards =
-        collectionEntries?.map((entry) => ({
-            id: entry.card.id,
-            n: entry.card.name,
-            img: entry.card.imageKey || '',
-            set: {
-                name: entry.card.set.name,
-                printedTotal: entry.card.set.printedTotal,
-                id: entry.card.set.id,
-                series: entry.card.set.series,
-                releaseDate: entry.card.set.releaseDate,
-                ptcgoCode: entry.card.set.ptcgoCode
-            },
-            rarity: entry.card.rarity?.name || 'Unknown',
-            artist: entry.card.artist?.name || 'Unknown',
-            num: entry.card.number,
-            price: Number(entry.card.marketStats?.tcgNearMintLatest) || 0,
-
-            hp: entry.card.hp,
-            supertype: entry.card.supertype,
-            pS: entry.card.pokedexNumberSort,
-            cRC: entry.card.convertedRetreatCost,
-            types: entry.card.types.map((t) => t.type.name),
-            subtypes: entry.card.subtypes.map((s) => s.subtype.name),
-            weaknesses: entry.card.weaknesses.map((w) => ({
-                type: w.type.name,
-                value: w.value
-            })),
-            resistances: entry.card.resistances.map((r) => ({
-                type: r.type.name,
-                value: r.value
-            })),
-            attacks: [],
-            abilities: [],
-            rules: [],
-            evolvesFrom: null,
-            evolvesTo: [],
-            legalities: {
-                standard: entry.card.standard,
-                expanded: entry.card.expanded,
-                unlimited: entry.card.unlimited
-            },
-            pokedexNumbers: entry.card.nationalPokedexNumbers,
-            ancientTrait: null
-        })) || [];
+        collectionEntries?.map((entry) => mapPrismaCardToDenormalized(entry.card)) || [];
 
     return (
         <main className='mx-auto flex h-screen max-w-md flex-col items-center space-y-4 p-6 text-foreground'>
