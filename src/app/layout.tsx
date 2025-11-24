@@ -8,6 +8,7 @@ import { ThemeProvider } from '@/src/components/layout/theme-provider';
 import { TrpcProvider } from '../providers/TRPCProvider';
 import { ScrollToTopButton } from '../components/ScrollToTopButton';
 import { CardDataInitializer } from '../components/CardDataInitializer';
+import { Toaster } from '../components/ui/sonner';
 import Script from 'next/script';
 
 const inter = Inter({
@@ -53,6 +54,7 @@ export default function RootLayout({
                         <CardDataInitializer />
                         <Header />
                         <main className='flex-grow'>{children}</main>
+                        <Toaster />
                         <Footer />
                         <ScrollToTopButton />
                     </ThemeProvider>

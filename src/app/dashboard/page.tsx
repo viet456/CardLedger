@@ -11,9 +11,11 @@ export default function DashboardPage() {
     const router = useRouter();
     const { data: session, isPending } = useSession();
     // Fetch data
+    // automatically uses 'ctx.user.id' if no userId is provided
     const { data: collectionEntries, isLoading: isCollectionLoading } =
         trpc.collection.getCollection.useQuery(
-            { userId: session?.user?.id || '' },
+            //{ userId: session?.user?.id || '' },
+            undefined,
             { enabled: !!session?.user?.id }
         );
     // Auth redirect
@@ -30,12 +32,14 @@ export default function DashboardPage() {
     const { user } = session;
 
     const gridCards =
-        collectionEntries?.map((entry) => mapPrismaCardToDenormalized(entry.card)) || [];
-
+        collectionEntries?.map((entry) => ({
+            ...mapPrismaCardToDenormalized(entry.card),
+            uniqueId: entry.id
+        })) || [];
     return (
-        <main className='mx-auto flex h-screen max-w-md flex-col items-center space-y-4 p-6 text-foreground'>
+        <main className='mx-auto flex h-screen max-w-7xl flex-col items-center space-y-4 p-6 text-foreground'>
             <h1 className='text-2xl font-bold'>Dashboard</h1>
-            <p>Welcome, {user.username || 'User'}!</p>
+            <p>Welcome back, {user.name || user.username || 'Collector'}</p>
             <Tabs defaultValue='gallery' className='w-full'>
                 <div className='flex items-center justify-between'>
                     <TabsList>

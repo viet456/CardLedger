@@ -2,6 +2,7 @@ import { publicProcedure, router, protectedProcedure } from '../trpc';
 import { z } from 'zod';
 import { prisma } from '@/src/lib/prisma';
 import { CardCondition } from '@prisma/client';
+import { TRPCError } from '@trpc/server';
 
 const CardConditionValues = Object.values(CardCondition) as [string, ...string[]];
 
@@ -11,10 +12,14 @@ export const collectionRouter = router({
      * This is public, so anyone can view a collection (eg for public profiles).
      */
     getCollection: publicProcedure
-        .input(z.object({ userId: z.string() }))
-        .query(async ({ input }) => {
+        .input(z.object({ userId: z.string().optional() }).optional())
+        .query(async ({ input, ctx }) => {
+            const targetUserId = input?.userId ?? ctx.user?.id;
+            if (!targetUserId) {
+                return [];
+            }
             return prisma.collectionEntry.findMany({
-                where: { userId: input.userId },
+                where: { userId: targetUserId },
                 include: {
                     card: {
                         include: {
