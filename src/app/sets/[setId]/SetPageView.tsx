@@ -20,17 +20,10 @@ interface SetPageViewProps {
 // Local card filtering hook for ~200 cards
 function useSetFilters(initialCards: DenormalizedCard[]) {
     const { filters } = useSearchStore(useShallow((state) => ({ filters: state.filters })));
-    const { prices } = useMarketStore(useShallow((state) => ({ prices: state.prices })));
 
     const filteredAndSortedCards = useMemo(() => {
-        // Add prices
-        const cardsWithPrices = initialCards.map((card) => ({
-            ...card,
-            price: prices[card.id] ?? null
-        }));
-
         // Apply Filters (on ~200 cards, instant)
-        const filtered = cardsWithPrices.filter((card) => {
+        const filtered = initialCards.filter((card) => {
             if (filters.search && !card.n.toLowerCase().includes(filters.search.toLowerCase())) {
                 return false;
             }
@@ -91,7 +84,7 @@ function useSetFilters(initialCards: DenormalizedCard[]) {
         }
 
         return filtered;
-    }, [initialCards, filters, prices]);
+    }, [initialCards, filters]);
 
     return { filteredAndSortedCards };
 }

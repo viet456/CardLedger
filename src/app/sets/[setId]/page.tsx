@@ -3,14 +3,15 @@ import { notFound } from 'next/navigation';
 import { SetPageView } from './SetPageView';
 import { DenormalizedCard, FilterOptions, SetObject } from '@/src/shared-types/card-index';
 import { Metadata } from 'next';
-import { AbilityObject } from '@/src/shared-types/card-index';
+import { mapPrismaCardToDenormalized } from '@/src/utils/cardMapper';
+
 interface SetPageData {
     setInfo: SetObject;
     cards: DenormalizedCard[];
     filterOptions: FilterOptions;
 }
 
-export const revalidate = 86400;
+export const revalidate = 86400; // 24 hrs
 
 export async function generateMetadata({
     params
@@ -66,7 +67,8 @@ async function getSetData(setId: string): Promise<SetPageData | null> {
                                 }
                             }
                         }
-                    }
+                    },
+                    marketStats: true
                 }
             }
         }
@@ -83,63 +85,24 @@ async function getSetData(setId: string): Promise<SetPageData | null> {
         ptcgoCode: setWithCards.ptcgoCode
     };
 
-    const denormalizedCards: DenormalizedCard[] = [];
-    const setArtists = new Map<string, string>();
-    const setRarities = new Map<string, string>();
-    const setTypes = new Map<string, string>();
-    const setSubtypes = new Map<string, string>();
+    const denormalizedCards = setWithCards.cards.map((card) =>
+        mapPrismaCardToDenormalized(card, setInfo)
+    );
+
+    const setArtists = new Set<string>();
+    const setRarities = new Set<string>();
+    const setTypes = new Set<string>();
+    const setSubtypes = new Set<string>();
     const setWeaknesses = new Set<string>();
     const setResistances = new Set<string>();
 
-    for (const card of setWithCards.cards) {
-        // Build filter options
-        if (card.artist) setArtists.set(card.artist.name, card.artist.name);
-        if (card.rarity) setRarities.set(card.rarity.name, card.rarity.name);
-        card.types.forEach((t) => setTypes.set(t.type.name, t.type.name));
-        card.subtypes.forEach((s) => setSubtypes.set(s.subtype.name, s.subtype.name));
-        card.weaknesses.forEach((w) => setWeaknesses.add(w.type.name));
-        card.resistances.forEach((r) => setResistances.add(r.type.name));
-
-        // Build denormalized card object
-        const denormalizedCard: DenormalizedCard = {
-            id: card.id,
-            n: card.name,
-            hp: card.hp,
-            num: card.number,
-            img: card.imageKey,
-            pS: card.pokedexNumberSort,
-            cRC: card.convertedRetreatCost,
-            artist: card.artist?.name || null,
-            rarity: card.rarity?.name || null,
-            set: setInfo,
-            supertype: card.supertype,
-            subtypes: card.subtypes.map((s) => s.subtype.name),
-            types: card.types.map((t) => t.type.name),
-            weaknesses: card.weaknesses.map((w) => ({ type: w.type.name, value: w.value })),
-            resistances: card.resistances.map((r) => ({ type: r.type.name, value: r.value })),
-            abilities: card.abilities as AbilityObject[],
-            // Re-map attacks to include cost as string[]
-            attacks: card.attacks.map((attack) => ({
-                name: attack.name,
-                cost: attack.cost.map((c) => c.type.name),
-                damage: attack.damage,
-                text: attack.text
-            })),
-            rules: card.rules,
-            evolvesFrom: card.evolvesFrom,
-            evolvesTo: card.evolvesTo,
-            legalities: {
-                standard: card.standard,
-                expanded: card.expanded,
-                unlimited: card.unlimited
-            },
-            pokedexNumbers: card.nationalPokedexNumbers,
-            ancientTrait: card.ancientTraitName
-                ? { name: card.ancientTraitName, text: card.ancientTraitText || '' }
-                : null,
-            price: null // Server doesn't know price; client will add this
-        };
-        denormalizedCards.push(denormalizedCard);
+    for (const card of denormalizedCards) {
+        if (card.artist) setArtists.add(card.artist);
+        if (card.rarity) setRarities.add(card.rarity);
+        card.types.forEach((t) => setTypes.add(t));
+        card.subtypes.forEach((s) => setSubtypes.add(s));
+        card.weaknesses.forEach((w) => setWeaknesses.add(w.type));
+        card.resistances.forEach((r) => setResistances.add(r.type));
     }
 
     const filterOptions: FilterOptions = {
