@@ -12,39 +12,45 @@ import {
 } from '@prisma/client';
 
 export type PrismaCardWithRelations = Card & {
-    set?: PrismaSet;
-    marketStats?: MarketStats | null;
+    set: PrismaSet;
+
+    marketStats?:
+        | {
+              [Key in keyof MarketStats]: MarketStats[Key] | string | number;
+          }
+        | null;
     rarity?: Rarity | null;
     artist?: Artist | null;
+
     types: { type: Type }[];
     subtypes: { subtype: Subtype }[];
     weaknesses: { type: Type; value: string | null }[];
     resistances: { type: Type; value: string | null }[];
-    abilities: Ability[];
-    attacks: (Attack & { cost: { type: Type }[] })[];
+
+    abilities?: Ability[];
+    attacks?: (Attack & { cost: { type: Type }[] })[];
 };
 
 export function mapPrismaCardToDenormalized(
     card: PrismaCardWithRelations,
     setOverride?: SetObject
 ): DenormalizedCard {
-    const sourceSet = setOverride || card.set;
-    if (!sourceSet) {
-        console.error(`Card ${card.name} (${card.id}) is missing Set data!`);
+    let set: SetObject;
+    if (setOverride) {
+        set = setOverride;
+    } else {
+        set = {
+            id: card.set.id,
+            name: card.set.name,
+            printedTotal: card.set.printedTotal,
+            series: card.set.series,
+            // SuperJSON guarantees this is a real Date object now
+            releaseDate: card.set.releaseDate.toISOString(),
+            ptcgoCode: card.set.ptcgoCode,
+            logoImageKey: card.set.logoImageKey,
+            symbolImageKey: card.set.symbolImageKey
+        };
     }
-    const set: SetObject = {
-        id: sourceSet!.id,
-        name: sourceSet!.name,
-        printedTotal: sourceSet!.printedTotal,
-        series: sourceSet!.series,
-        releaseDate:
-            sourceSet!.releaseDate instanceof Date
-                ? sourceSet!.releaseDate.toISOString()
-                : new Date(sourceSet!.releaseDate).toISOString(),
-        ptcgoCode: sourceSet!.ptcgoCode,
-        logoImageKey: sourceSet!.logoImageKey,
-        symbolImageKey: sourceSet!.symbolImageKey
-    };
 
     const price = card.marketStats?.tcgNearMintLatest
         ? Number(card.marketStats.tcgNearMintLatest)
