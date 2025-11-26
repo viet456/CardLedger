@@ -67,30 +67,28 @@ export const collectionRouter = router({
      * Updates an existing entry in the logged-in user's collection.
      * Protected to ensure only the owner can update it.
      */
-    updateCollectionEntry: protectedProcedure
+    updateEntry: protectedProcedure
         .input(
             z.object({
                 entryId: z.string(), // The ID of the CollectionEntry
                 purchasePrice: z.number().optional(),
-                condition: z.enum(CardConditionValues).optional()
+                condition: z.enum(CardConditionValues).optional(),
+                createdAt: z.date().optional()
             })
         )
         .mutation(async ({ input, ctx }) => {
             const { entryId, ...dataToUpdate } = input;
-            // Ensure user owns this entry
-            const entry = await prisma.collectionEntry.findFirstOrThrow({
-                where: { id: entryId, userId: ctx.user.id }
-            });
-            const updatedEntry = await prisma.collectionEntry.update({
-                where: { id: entry.id },
+            await prisma.collectionEntry.updateMany({
+                where: { id: entryId, userId: ctx.user.id },
                 data: {
                     ...dataToUpdate,
                     condition: dataToUpdate.condition
                         ? (dataToUpdate.condition as CardCondition)
-                        : undefined
+                        : undefined,
+                    createdAt: input.createdAt
                 }
             });
-            return updatedEntry;
+            return { success: true };
         }),
     /**
      * Removes an entry from the logged-in user's collection.
@@ -100,15 +98,8 @@ export const collectionRouter = router({
         .input(z.object({ entryId: z.string() }))
         .mutation(async ({ input, ctx }) => {
             const { entryId } = input;
-            // Ensure user owns this entry
-            await prisma.collectionEntry.findFirstOrThrow({
-                where: {
-                    id: entryId,
-                    userId: ctx.user.id
-                }
-            });
-            await prisma.collectionEntry.delete({
-                where: { id: entryId }
+            await prisma.collectionEntry.deleteMany({
+                where: { id: entryId, userId: ctx.user.id }
             });
             return { success: true };
         })
