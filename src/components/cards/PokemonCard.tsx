@@ -15,7 +15,7 @@ export function PokemonCard({ card, priority = false, entryId }: PokemonCardProp
     const imageUrl = `${R2_PUBLIC_URL}/${card.img}`;
     return (
         <div className='group relative flex w-full flex-col rounded-xl bg-card text-card-foreground transition-transform will-change-transform hover:scale-[1.02]'>
-            <div className='absolute right-2 top-2 z-10 opacity-0 transition-opacity duration-200 group-hover:opacity-100'>
+            <div className='absolute right-2 top-2 z-10 opacity-100 transition-opacity duration-200 lg:opacity-0 lg:group-hover:opacity-100'>
                 <CollectionControl cardId={card.id} currentPrice={card.price} entryId={entryId} />
             </div>
 
@@ -42,7 +42,6 @@ export function PokemonCard({ card, priority = false, entryId }: PokemonCardProp
                 {/* --- INFO AREA (Always visible) --- */}
                 <div className='p-2'>
                     <p className='truncate text-base font-bold'>{card.n}</p>
-                    {/* Use text-sm and muted-foreground for better hierarchy */}
                     <p className='text-sm text-muted-foreground'>{card.set.name}</p>
                     <p className='text-sm text-muted-foreground'>{card.rarity}</p>
                     <p className='text-sm text-muted-foreground'>
