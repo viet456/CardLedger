@@ -1,11 +1,11 @@
 'use client';
-import { useState } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { trpc } from '@/src/utils/trpc';
 import { Button } from '@/src/components/ui/button';
-import { Plus, Minus, Check, Loader2, Trash2 } from 'lucide-react';
+import { Plus, Minus, Check, Loader2, Trash2, Pencil } from 'lucide-react';
+import { CollectionManagerModal } from './CollectionManagerModal';
 import { CardCondition } from '@prisma/client';
 import { toast } from 'sonner';
-import { useMemo } from 'react';
 import { useSession } from '@/src/lib/auth-client';
 import { useRouter } from 'next/navigation';
 
@@ -13,15 +13,23 @@ interface CollectionControlProps {
     cardId: string;
     currentPrice: number | null;
     entryId?: string;
+    cardName?: string;
 }
 
-export function CollectionControl({ cardId, currentPrice, entryId }: CollectionControlProps) {
+export function CollectionControl({
+    cardId,
+    currentPrice,
+    entryId,
+    cardName = 'Card'
+}: CollectionControlProps) {
     const { data: session } = useSession();
     const router = useRouter();
     const utils = trpc.useUtils();
-    const [isSuccess, setIsSuccess] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const pendingDeletesRef = useRef<Set<string>>(new Set());
 
     const { data: collectionEntries, isLoading } = trpc.collection.getCollection.useQuery();
+    type CollectionEntryData = NonNullable<typeof collectionEntries>[number];
 
     const myEntries = useMemo(() => {
         if (!collectionEntries) return [];
@@ -36,24 +44,74 @@ export function CollectionControl({ cardId, currentPrice, entryId }: CollectionC
 
     // CRUD mutations
     const addMutation = trpc.collection.addToCollection.useMutation({
-        onSuccess: () => {
-            setIsSuccess(true);
-            toast.success('Added to collection');
-            utils.collection.getCollection.invalidate();
-            setTimeout(() => setIsSuccess(false), 2000);
+        onMutate: async (newEntryVars) => {
+            await utils.collection.getCollection.cancel();
+            const previousCollection = utils.collection.getCollection.getData();
+            const optimisticId = `optimistic-${Date.now()}-${Math.random()}`;
+            // Create a temporary "Optimistic" entry
+            const optimisticEntry = {
+                id: optimisticId,
+                userId: session?.user?.id || 'temp',
+                cardId: newEntryVars.cardId,
+                purchasePrice: newEntryVars.purchasePrice,
+                condition: newEntryVars.condition,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                card: { id: newEntryVars.cardId }
+            } as unknown as CollectionEntryData;
+
+            utils.collection.getCollection.setData(undefined, (old) => {
+                return old ? [optimisticEntry, ...old] : [optimisticEntry];
+            });
+
+            return { previousCollection, optimisticId };
         },
-        onError: (error) => {
+        onSuccess: (realEntry, vars, context) => {
+            utils.collection.getCollection.setData(undefined, (old) => {
+                if (!old) return [];
+                return old.map((entry) =>
+                    entry.id === context.optimisticId
+                        ? (realEntry as unknown as CollectionEntryData)
+                        : entry
+                );
+            });
+            toast.success('Added to collection');
+        },
+        onError: (error, vars, context) => {
+            if (context?.previousCollection) {
+                utils.collection.getCollection.setData(undefined, context.previousCollection);
+            }
             toast.error(`Failed to add: ${error.message}`);
         }
     });
 
     const removeMutation = trpc.collection.removeFromCollection.useMutation({
-        onSuccess: () => {
+        onMutate: async ({ entryId }) => {
+            pendingDeletesRef.current.add(entryId);
+            await utils.collection.getCollection.cancel();
+            const previousCollection = utils.collection.getCollection.getData();
+
+            utils.collection.getCollection.setData(undefined, (old) => {
+                if (!old) return [];
+                return old.filter((entry) => entry.id !== entryId);
+            });
+
+            return { previousCollection };
+        },
+        onSuccess: (data, variables) => {
+            pendingDeletesRef.current.delete(variables.entryId);
             toast.success('Removed from collection');
             utils.collection.getCollection.invalidate();
         },
-        onError: (error) => {
+        onError: (error, variables, context) => {
+            if (context?.previousCollection) {
+                utils.collection.getCollection.setData(undefined, context.previousCollection);
+            }
+            pendingDeletesRef.current.delete(variables.entryId);
             toast.error(`Error: ${error.message}`);
+        },
+        onSettled: () => {
+            utils.collection.getCollection.invalidate();
         }
     });
 
@@ -77,20 +135,29 @@ export function CollectionControl({ cardId, currentPrice, entryId }: CollectionC
     const handleRemove = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
+        if (count <= 0) return;
 
         if (entryId) {
             removeMutation.mutate({ entryId });
         } else {
             if (count === 0) return;
             // LIFO: remove the most recent entry
-            const entryToRemove = myEntries[0];
+            const entryToRemove = myEntries.find(
+                (entry) => !pendingDeletesRef.current.has(entry.id)
+            );
             if (entryToRemove) {
-                removeMutation.mutate({ entryId: entryToRemove.id });
+                if (entryToRemove.id.startsWith('optimistic-')) {
+                    utils.collection.getCollection.setData(undefined, (old) => {
+                        return old?.filter((e) => e.id !== entryToRemove.id) || [];
+                    });
+                } else {
+                    removeMutation.mutate({ entryId: entryToRemove.id });
+                }
             }
         }
     };
 
-    const isPending = isLoading || addMutation.isPending || removeMutation.isPending;
+    const isInteracting = addMutation.isPending || removeMutation.isPending;
 
     // Guest states
     if (!session) {
@@ -107,83 +174,90 @@ export function CollectionControl({ cardId, currentPrice, entryId }: CollectionC
     }
 
     // Loading state
-    if (!collectionEntries || isLoading) {
+    if (!collectionEntries && isLoading) {
         return <div className='h-8 w-8 rounded-full bg-white/50 shadow-md backdrop-blur-sm' />;
     }
 
+    // Dashboard mode
     if (entryId) {
         return (
-            <Button
-                variant='destructive'
-                size='icon'
-                className='h-8 w-8 rounded-full opacity-80 shadow-md transition-all hover:opacity-100'
-                onClick={handleRemove}
-                disabled={isPending}
-                aria-label='Remove specific entry'
-            >
-                {removeMutation.isPending ? (
-                    <Loader2 className='h-4 w-4 animate-spin' />
-                ) : (
-                    <Trash2 className='h-4 w-4' />
-                )}
-            </Button>
+            <>
+                <div className='flex items-center gap-1'>
+                    <Button
+                        variant='secondary'
+                        size='icon'
+                        className='h-8 w-8 rounded-full bg-background text-primary opacity-80 shadow-md transition-all hover:scale-110 hover:opacity-100'
+                        onClick={() => setIsEditModalOpen(true)}
+                    >
+                        <Pencil className='h-4 w-4' />
+                    </Button>
+                    <Button
+                        variant='destructive'
+                        size='icon'
+                        className='h-8 w-8 rounded-full bg-background text-primary opacity-80 shadow-md transition-all hover:scale-110 hover:opacity-100'
+                        onClick={handleRemove} // Keep existing quick delete? Or force delete via modal?
+                        aria-label='Remove specific entry'
+                    >
+                        {removeMutation.isPending ? (
+                            <Loader2 className='h-4 w-4 animate-spin' />
+                        ) : (
+                            <Trash2 className='h-4 w-4' />
+                        )}
+                    </Button>
+                </div>
+                <CollectionManagerModal
+                    isOpen={isEditModalOpen}
+                    onClose={() => setIsEditModalOpen(false)}
+                    cardId={cardId}
+                    cardName={cardName}
+                    entryId={entryId} // Pass entryId so modal only shows THIS card
+                />
+            </>
         );
     }
 
-    // Global counters
+    // Browse mode
     // User owns 0 of this card -> show 'Add' button
     if (count === 0) {
         return (
             <Button
                 variant='secondary'
                 size={'icon'}
-                className={`h-8 w-8 rounded-full shadow-md transition-all duration-300 hover:scale-110 ${
-                    isSuccess
-                        ? 'bg-green-500 text-white hover:bg-green-600'
-                        : 'bg-white/90 text-black hover:bg-white'
-                }`}
+                className='h-8 w-8 rounded-full bg-white/90 text-black shadow-md transition-all duration-300 hover:scale-110 hover:bg-white'
                 onClick={handleAdd}
-                disabled={isPending}
-                aria-label='Add to Collection'
             >
-                {isPending ? (
-                    <Loader2 className='h-4 w-4 animate-spin' />
-                ) : isSuccess ? (
-                    <Check className='h-4 w-4' />
-                ) : (
-                    <Plus className='h-4 w-4' />
-                )}
+                <Plus className='h-4 w-4' />
             </Button>
         );
     }
 
     // User owns 1+ -> show counter controls [- 1 +]
     return (
-        <div
-            className='flex items-center gap-1 rounded-full bg-black/80 p-1 shadow-md backdrop-blur-sm'
-            onClick={(e) => e.preventDefault()}
-        >
-            <Button
-                variant='ghost'
-                size='icon'
-                className='h-6 w-6 rounded-full text-white hover:bg-white/20 hover:text-white'
-                onClick={handleRemove}
-                disabled={isPending}
+        <>
+            <div
+                className='flex items-center gap-1 rounded-full bg-black/80 p-1 shadow-md backdrop-blur-sm'
+                onClick={(e) => e.preventDefault()}
             >
-                <Minus className='h-3 w-3' />
-            </Button>
-            <span className='min-w-[20px] text-center text-xs font-bold tabular-nums text-white'>
-                {isPending ? <Loader2 className='h-3 w-3 animate-spin' /> : count}
-            </span>
-            <Button
-                variant='ghost'
-                size='icon'
-                className='h-6 w-6 rounded-full text-white hover:bg-white/20 hover:text-white'
-                onClick={handleAdd}
-                disabled={isPending}
-            >
-                <Plus className='h-3 w-3' />
-            </Button>
-        </div>
+                <Button
+                    variant='ghost'
+                    size='icon'
+                    className='h-6 w-6 rounded-full text-white hover:bg-white/20 hover:text-white'
+                    onClick={handleRemove}
+                >
+                    <Minus className='h-3 w-3' />
+                </Button>
+                <span className='min-w-[20px] text-center text-xs font-bold tabular-nums text-white'>
+                    {count}
+                </span>
+                <Button
+                    variant='ghost'
+                    size='icon'
+                    className='h-6 w-6 rounded-full text-white hover:bg-white/20 hover:text-white'
+                    onClick={handleAdd}
+                >
+                    <Plus className='h-3 w-3' />
+                </Button>
+            </div>
+        </>
     );
 }

@@ -1,6 +1,6 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import { useSession, signOut } from '@/src/lib/auth-client';
+import { useSession } from '@/src/lib/auth-client';
 import { useEffect } from 'react';
 import { trpc } from '@/src/utils/trpc';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/src/components/ui/tabs';
@@ -37,7 +37,7 @@ export default function DashboardPage() {
             uniqueId: entry.id
         })) || [];
     return (
-        <main className='mx-auto flex h-screen max-w-7xl flex-col items-center space-y-4 p-6 text-foreground'>
+        <main className='mx-auto flex min-h-screen w-full flex-col space-y-4 p-6 text-foreground'>
             <h1 className='text-2xl font-bold'>Dashboard</h1>
             <p>Welcome back, {user.name || user.username || 'Collector'}</p>
             <Tabs defaultValue='gallery' className='w-full'>
@@ -49,7 +49,7 @@ export default function DashboardPage() {
                         </TabsTrigger>
                     </TabsList>
                 </div>
-                <TabsContent value='gallery' className='mt-6'>
+                <TabsContent value='gallery' className='mt-6 flex-grow'>
                     {gridCards.length === 0 ? (
                         <div className='flex h-64 flex-col items-center justify-center rounded-md border border-dashed border-border'>
                             <p>Your collection is empty.</p>
