@@ -241,7 +241,7 @@ export function CollectionControl({
                 <Button
                     variant='ghost'
                     size='icon'
-                    className='h-6 w-6 rounded-full text-white hover:bg-white/20 hover:text-white'
+                    className='hover:bg-primary-foreground/20 h-6 w-6 rounded-full text-primary-foreground'
                     onClick={handleRemove}
                 >
                     <Minus className='h-3 w-3' />
@@ -252,7 +252,7 @@ export function CollectionControl({
                 <Button
                     variant='ghost'
                     size='icon'
-                    className='h-6 w-6 rounded-full text-white hover:bg-white/20 hover:text-white'
+                    className='hover:bg-primary-foreground/20 h-6 w-6 rounded-full text-primary-foreground'
                     onClick={handleAdd}
                 >
                     <Plus className='h-3 w-3' />

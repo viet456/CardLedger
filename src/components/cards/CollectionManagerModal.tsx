@@ -14,24 +14,13 @@ import {
     TableHeader,
     TableRow
 } from '@/src/components/ui/table';
-import { Input } from '@/src/components/ui/input';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue
-} from '@/src/components/ui/select';
 import { Button } from '@/src/components/ui/button';
-import { CardCondition } from '@prisma/client';
 import { trpc } from '@/src/utils/trpc';
-import { format } from 'date-fns';
 import { Loader2, Trash2, Save } from 'lucide-react';
-import { useState } from 'react';
-import { toast } from 'sonner';
 import { EditableConditionSelect } from '../ledger/EditableConditionSelect';
 import { EditablePriceInput } from '../ledger/EditablePriceInput';
 import { EditableDate } from '../ledger/EditableDate';
+import { SafeDeleteButton } from '../ledger/SafeDeleteButton';
 
 interface CollectionManagerModalProps {
     isOpen: boolean;
@@ -89,7 +78,7 @@ export function CollectionManagerModal({
                                     <TableHead className='w-[30%]'>Acquired</TableHead>
                                     <TableHead className='w-[30%]'>Condition</TableHead>
                                     <TableHead className='w-[20%]'>Price Paid</TableHead>
-                                    <TableHead className='w-[20%] text-right'>Actions</TableHead>
+                                    <TableHead className='w-[20%]'>Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -119,12 +108,11 @@ export function CollectionManagerModal({
                                                 initialPrice={Number(entry.purchasePrice)}
                                             />
                                         </TableCell>
-                                        <TableCell className='flex items-center justify-between border-none px-0 py-3 md:table-cell md:px-4 md:py-4 md:text-right'>
-                                            {' '}
-                                            <span className='mr-2 text-sm font-bold text-muted-foreground md:hidden'>
+                                        <TableCell className='flex items-center justify-between border-none px-0 py-3 md:table-cell md:py-4 md:pl-2 md:pr-4'>
+                                            <span className='text-sm font-bold text-muted-foreground md:hidden'>
                                                 Actions:
                                             </span>
-                                            <Button>Delete</Button>
+                                            <SafeDeleteButton id={entry.id} />
                                         </TableCell>
                                     </TableRow>
                                 ))}
