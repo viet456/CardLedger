@@ -8,6 +8,7 @@ import { CardCondition } from '@prisma/client';
 import { toast } from 'sonner';
 import { useSession } from '@/src/lib/auth-client';
 import { useRouter } from 'next/navigation';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/src/components/ui/tooltip';
 
 interface CollectionControlProps {
     cardId: string;
@@ -162,14 +163,21 @@ export function CollectionControl({
     // Guest states
     if (!session) {
         return (
-            <Button
-                variant='secondary'
-                size='icon'
-                className='h-8 w-8 rounded-full bg-white/90 text-black shadow-md transition-all hover:scale-110 hover:bg-white'
-                onClick={handleAdd}
-            >
-                <Plus className='h-4 w-4' />
-            </Button>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button
+                        variant='secondary'
+                        size='icon'
+                        className='h-8 w-8 rounded-full bg-white/90 text-black shadow-md transition-all hover:scale-110 hover:bg-white'
+                        onClick={handleAdd}
+                    >
+                        <Plus className='h-4 w-4' />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent className='px-2 py-1'>
+                    <p className='text-xs'>Sign in to collect</p>
+                </TooltipContent>
+            </Tooltip>
         );
     }
 
@@ -183,27 +191,44 @@ export function CollectionControl({
         return (
             <>
                 <div className='flex items-center gap-1'>
-                    <Button
-                        variant='secondary'
-                        size='icon'
-                        className='h-8 w-8 rounded-full bg-background text-primary opacity-80 shadow-md transition-all hover:scale-110 hover:opacity-100'
-                        onClick={() => setIsEditModalOpen(true)}
-                    >
-                        <Pencil className='h-4 w-4' />
-                    </Button>
-                    <Button
-                        variant='destructive'
-                        size='icon'
-                        className='h-8 w-8 rounded-full bg-background text-primary opacity-80 shadow-md transition-all hover:scale-110 hover:opacity-100'
-                        onClick={handleRemove} // Keep existing quick delete? Or force delete via modal?
-                        aria-label='Remove specific entry'
-                    >
-                        {removeMutation.isPending ? (
-                            <Loader2 className='h-4 w-4 animate-spin' />
-                        ) : (
-                            <Trash2 className='h-4 w-4' />
-                        )}
-                    </Button>
+                    {/* Edit Tooltip */}
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant='secondary'
+                                size='icon'
+                                className='h-8 w-8 rounded-full bg-background text-primary opacity-80 shadow-md transition-all hover:scale-110 hover:opacity-100'
+                                onClick={() => setIsEditModalOpen(true)}
+                            >
+                                <Pencil className='h-4 w-4' />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent className='px-2 py-1'>
+                            <p className='text-xs'>Edit details</p>
+                        </TooltipContent>
+                    </Tooltip>
+
+                    {/* Delete Tooltip */}
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant='destructive'
+                                size='icon'
+                                className='h-8 w-8 rounded-full bg-background text-primary opacity-80 shadow-md transition-all hover:scale-110 hover:opacity-100'
+                                onClick={handleRemove}
+                                disabled={removeMutation.isPending}
+                            >
+                                {removeMutation.isPending ? (
+                                    <Loader2 className='h-4 w-4 animate-spin' />
+                                ) : (
+                                    <Trash2 className='h-4 w-4' />
+                                )}
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent className='px-2 py-1'>
+                            <p className='text-xs'>Remove copy</p>
+                        </TooltipContent>
+                    </Tooltip>
                 </div>
                 <CollectionManagerModal
                     isOpen={isEditModalOpen}
@@ -220,14 +245,21 @@ export function CollectionControl({
     // User owns 0 of this card -> show 'Add' button
     if (count === 0) {
         return (
-            <Button
-                variant='secondary'
-                size={'icon'}
-                className='h-8 w-8 rounded-full bg-white/90 text-black shadow-md transition-all duration-300 hover:scale-110 hover:bg-white'
-                onClick={handleAdd}
-            >
-                <Plus className='h-4 w-4' />
-            </Button>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button
+                        variant='secondary'
+                        size={'icon'}
+                        className='h-8 w-8 rounded-full bg-white/90 text-black shadow-md transition-all duration-300 hover:scale-110 hover:bg-white'
+                        onClick={handleAdd}
+                    >
+                        <Plus className='h-4 w-4' />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent className='px-2 py-1'>
+                    <p className='text-xs'>Add to collection</p>
+                </TooltipContent>
+            </Tooltip>
         );
     }
 
@@ -238,25 +270,41 @@ export function CollectionControl({
                 className='flex items-center gap-1 rounded-full bg-black/80 p-1 shadow-md backdrop-blur-sm'
                 onClick={(e) => e.preventDefault()}
             >
-                <Button
-                    variant='ghost'
-                    size='icon'
-                    className='hover:bg-primary-foreground/20 h-6 w-6 rounded-full text-primary-foreground'
-                    onClick={handleRemove}
-                >
-                    <Minus className='h-3 w-3' />
-                </Button>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant='ghost'
+                            size='icon'
+                            className='h-6 w-6 rounded-full text-white hover:bg-white/20'
+                            onClick={handleRemove}
+                        >
+                            <Minus className='h-3 w-3' />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className='px-2 py-1'>
+                        <p className='text-xs'>Remove copy</p>
+                    </TooltipContent>
+                </Tooltip>
+
                 <span className='min-w-[20px] text-center text-xs font-bold tabular-nums text-white'>
                     {count}
                 </span>
-                <Button
-                    variant='ghost'
-                    size='icon'
-                    className='hover:bg-primary-foreground/20 h-6 w-6 rounded-full text-primary-foreground'
-                    onClick={handleAdd}
-                >
-                    <Plus className='h-3 w-3' />
-                </Button>
+
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant='ghost'
+                            size='icon'
+                            className='h-6 w-6 rounded-full text-white hover:bg-white/20'
+                            onClick={handleAdd}
+                        >
+                            <Plus className='h-3 w-3' />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className='px-2 py-1'>
+                        <p className='text-xs'>Add another</p>
+                    </TooltipContent>
+                </Tooltip>
             </div>
         </>
     );
