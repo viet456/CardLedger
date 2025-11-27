@@ -3,15 +3,12 @@ import type { Viewport } from 'next';
 import './globals.css';
 import { Footer } from '../components/layout/Footer';
 import { Inter } from 'next/font/google';
-import { ThemeProvider } from '@/src/components/layout/theme-provider';
-import { TrpcProvider } from '../providers/TRPCProvider';
 import { ScrollToTopButton } from '../components/ScrollToTopButton';
 import { CardDataInitializer } from '../components/CardDataInitializer';
-import { Toaster } from '../components/ui/sonner';
 import Script from 'next/script';
 import { Suspense } from 'react';
 import { HeaderWrapper } from '../components/layout/HeaderWrapper';
-import { TooltipProvider } from '../components/ui/tooltip';
+import { ProvidersWrapper } from '../providers/ProvidersWrapper';
 
 const inter = Inter({
     subsets: ['latin'],
@@ -46,25 +43,17 @@ export default async function RootLayout({
             <body
                 className={`flex min-h-screen flex-col bg-background font-sans text-foreground antialiased`}
             >
-                <TrpcProvider>
-                    <ThemeProvider
-                        attribute='class'
-                        defaultTheme='system'
-                        enableSystem
-                        disableTransitionOnChange
-                    >
-                        <TooltipProvider delayDuration={500} skipDelayDuration={0}>
-                            <CardDataInitializer />
-                            <Suspense fallback={<div className='h-16 w-full border-b bg-card' />}>
-                                <HeaderWrapper />
-                            </Suspense>
-                            <main className='flex-grow'>{children}</main>
-                            <Toaster />
-                            <Footer />
-                            <ScrollToTopButton />
-                        </TooltipProvider>
-                    </ThemeProvider>
-                </TrpcProvider>
+                <ProvidersWrapper>
+                    <CardDataInitializer />
+                    <Suspense fallback={<div className='h-16 w-full border-b bg-card' />}>
+                        <HeaderWrapper />
+                    </Suspense>
+
+                    <main className='flex-grow'>{children}</main>
+
+                    <Footer />
+                    <ScrollToTopButton />
+                </ProvidersWrapper>
             </body>
         </html>
     );

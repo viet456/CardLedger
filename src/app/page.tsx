@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Metadata } from 'next';
 import { auth } from '@/src/lib/auth';
 import { headers } from 'next/headers';
+import { Suspense } from 'react';
 
 export const metadata: Metadata = {
     title: 'CardLedger: Your Pokémon TCG Collection Manager',
@@ -10,10 +11,35 @@ export const metadata: Metadata = {
         'Track, manage, and browse your entire Pokémon TCG collection. Fast, modern, and powerful tools for every collector.'
 };
 
-export default async function Home() {
+async function HomeContent() {
     const session = await auth.api.getSession({
         headers: await headers()
     });
+
+    return (
+        <div className='mt-4 flex flex-col gap-4'>
+            <Button asChild size='lg' className='mt-4 text-lg'>
+                <Link
+                    href='/cards'
+                    className='hover:bg-primary-hover hover:ring-1 hover:ring-ring focus:ring-1 focus:ring-ring'
+                >
+                    Explore the Card Catalog
+                </Link>
+            </Button>
+            {session ? (
+                <Button asChild size='lg' variant='outline' className='text-lg'>
+                    <Link href='/dashboard'>Go to Dashboard</Link>
+                </Button>
+            ) : (
+                <Button asChild size='lg' variant='outline' className='text-lg'>
+                    <Link href='/sign-in'>Get Started</Link>
+                </Button>
+            )}
+        </div>
+    );
+}
+
+export default function Home() {
     return (
         <div className='container mx-auto flex flex-col items-center justify-center gap-16 px-4 py-16 text-center'>
             {/* Hero Section */}
@@ -25,25 +51,17 @@ export default async function Home() {
                     Browse every card ever made and get ready for powerful collection management and
                     financial tools, coming soon.
                 </p>
-                <div className='mt-4 flex flex-col gap-4'>
-                    <Button asChild size='lg' className='mt-4 text-lg'>
-                        <Link
-                            href='/cards'
-                            className='hover:bg-primary-hover hover:ring-1 hover:ring-ring focus:ring-1 focus:ring-ring'
-                        >
-                            Explore the Card Catalog
-                        </Link>
-                    </Button>
-                    {session ? (
-                        <Button asChild size='lg' variant='outline' className='text-lg'>
-                            <Link href='/dashboard'>Go to Dashboard</Link>
-                        </Button>
-                    ) : (
-                        <Button asChild size='lg' variant='outline' className='text-lg'>
-                            <Link href='/sign-in'>Get Started</Link>
-                        </Button>
-                    )}
-                </div>
+                <Suspense
+                    fallback={
+                        <div className='mt-4 flex flex-col gap-4'>
+                            <Button size='lg' className='mt-4 text-lg' disabled>
+                                Loading...
+                            </Button>
+                        </div>
+                    }
+                >
+                    <HomeContent />
+                </Suspense>
             </section>
 
             {/* Features Section */}
@@ -67,7 +85,7 @@ export default async function Home() {
                         🧩 Build Decks & Curate Custom Card Sets
                     </h3>
                     <p className='leading-relaxed text-muted-foreground'>
-                        Create battle-ready decks or collect by your favorite Pokémon themes — then
+                        Create battle-ready decks or collect by your favorite Pokémon themes – then
                         share them with others.
                     </p>
                 </div>
