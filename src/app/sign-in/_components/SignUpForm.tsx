@@ -6,6 +6,8 @@ import { Button } from '@/src/components/ui/button';
 import { Widget } from '@/src/components/Turnstile';
 import { Input } from '@/src/components/ui/input';
 import { Label } from '@/src/components/ui/label';
+import { SocialButtons } from './SocialButtons';
+import { AuthDivider } from './AuthDivider';
 
 export function SignUpForm() {
     const router = useRouter();
@@ -85,6 +87,8 @@ export function SignUpForm() {
     return (
         <div className='space-y-4 py-4'>
             {error && <p className='text-destructive text-sm font-medium'>{error}</p>}
+            <SocialButtons />
+            <AuthDivider />
             <form onSubmit={handleSubmit} className='space-y-4'>
                 <div className='space-y-2'>
                     <Label htmlFor='signup-name'>Name (Optional)</Label>

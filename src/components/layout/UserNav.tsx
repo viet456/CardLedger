@@ -12,6 +12,7 @@ import { Button } from '@/src/components/ui/button';
 import { LayoutDashboard, LogOut } from 'lucide-react';
 import { signOut } from '@/src/lib/auth-client';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface UserNavProps {
     user: {
@@ -22,6 +23,7 @@ interface UserNavProps {
 }
 
 export function UserNav({ user }: UserNavProps) {
+    const router = useRouter();
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -52,8 +54,16 @@ export function UserNav({ user }: UserNavProps) {
 
                 <DropdownMenuItem
                     className='cursor-pointer text-red-600 focus:text-red-600'
-                    onSelect={() => {
-                        signOut();
+                    onSelect={async () => {
+                        await signOut({
+                            fetchOptions: {
+                                onSuccess: () => {
+                                    window.location.href = '/';
+                                    router.push('/');
+                                    router.refresh();
+                                }
+                            }
+                        });
                     }}
                 >
                     <LogOut className='mr-2 h-4 w-4' />
