@@ -1,9 +1,12 @@
 import { prisma } from '@/src/lib/prisma';
 import { DenormalizedCard } from '@/src/shared-types/card-index';
 import { PriceHistoryDataPoint } from '@/src/shared-types/price-api';
-import { unstable_cache } from 'next/cache';
+import { cacheTag, cacheLife } from 'next/cache';
 
-export async function getPriceHistory(cardId: string): Promise<PriceHistoryDataPoint[]> {
+export async function getCachedPriceHistory(cardId: string): Promise<PriceHistoryDataPoint[]> {
+    'use cache';
+    cacheTag('card-data', 'price-history');
+    cacheLife('days');
     const history = await prisma.priceHistory.findMany({
         where: { cardId: cardId },
         orderBy: { timestamp: 'asc' },
@@ -27,7 +30,7 @@ export async function getPriceHistory(cardId: string): Promise<PriceHistoryDataP
     }));
 }
 
-export async function getCardData(cardId: string): Promise<DenormalizedCard | null> {
+async function getCardDataRaw(cardId: string): Promise<DenormalizedCard | null> {
     const rawCard = await prisma.card.findUnique({
         where: { id: cardId },
         include: {
@@ -105,18 +108,10 @@ export async function getCardData(cardId: string): Promise<DenormalizedCard | nu
     return denormalizedCard;
 }
 
-export const getCachedCardData = unstable_cache(
-    async (cardId: string) => getCardData(cardId),
-    ['card-data'],
-    {
-        tags: ['card-data', 'card-details']
-    }
-);
+export async function getCachedCardData(cardId: string) {
+    'use cache';
+    cacheTag('card-data', 'card-details');
+    cacheLife('days');
 
-export const getCachedPriceHistory = unstable_cache(
-    async (cardId: string) => getPriceHistory(cardId),
-    ['price-history'],
-    {
-        tags: ['card-data', 'price-history']
-    }
-);
+    return getCardDataRaw(cardId);
+}

@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     }
     try {
         // Revalidate all pages with fetches tagged with 'card-data'
-        revalidateTag('card-data');
+        revalidateTag('card-data', 'days');
 
         return new NextResponse(JSON.stringify({ revalidated: true, now: Date.now() }), {
             headers: { 'Content-Type': '' }

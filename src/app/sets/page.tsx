@@ -2,20 +2,24 @@ import { prisma } from '@/src/lib/prisma';
 import { SetObject } from '@/src/shared-types/card-index';
 import { SetCard } from '@/src/components/SetCard';
 import { Metadata } from 'next';
+import { cacheLife, cacheTag } from 'next/cache';
+import { type Set as PrismaSet } from '@prisma/client';
 
 export const metadata: Metadata = {
     title: 'All Sets | CardLedger',
     description: 'Browse a complete list of all Pokémon TCG sets, grouped by series.'
 };
-export const revalidate = 86400; // requires regeneration daily
 
-async function getGroupedSets() {
+async function getCachedGroupedSets() {
+    'use cache';
+    cacheLife('days');
+    cacheTag('all-sets'); // Tag for manual invalidation
     const allSets = await prisma.set.findMany({
         orderBy: {
             releaseDate: 'desc'
         }
     });
-    return allSets.reduce((acc: Record<string, SetObject[]>, set) => {
+    return allSets.reduce((acc: Record<string, SetObject[]>, set: PrismaSet) => {
         const series = set.series;
         if (!acc[series]) {
             acc[series] = [];
@@ -29,7 +33,7 @@ async function getGroupedSets() {
 }
 
 export default async function SetsPage() {
-    const groupedSets = await getGroupedSets();
+    const groupedSets = await getCachedGroupedSets();
     const prioritySetCount = 5;
 
     return (
@@ -40,7 +44,7 @@ export default async function SetsPage() {
                     <div key={series}>
                         <h2 className='mb-4 border-b pb-2 text-2xl font-semibold'>{series}</h2>
                         <div className='grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5'>
-                            {groupedSets[series].map((set, setIndex) => {
+                            {groupedSets[series].map((set: SetObject, setIndex: number) => {
                                 const isPriority = seriesIndex < 2 && setIndex < prioritySetCount;
                                 return <SetCard key={set.id} set={set} isPriority={isPriority} />;
                             })}

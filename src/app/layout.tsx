@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import type { Viewport } from 'next';
 import './globals.css';
-import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import { Inter } from 'next/font/google';
 import { ThemeProvider } from '@/src/components/layout/theme-provider';
@@ -10,8 +9,8 @@ import { ScrollToTopButton } from '../components/ScrollToTopButton';
 import { CardDataInitializer } from '../components/CardDataInitializer';
 import { Toaster } from '../components/ui/sonner';
 import Script from 'next/script';
-import { auth } from '@/src/lib/auth';
-import { headers } from 'next/headers';
+import { Suspense } from 'react';
+import { HeaderWrapper } from '../components/layout/HeaderWrapper';
 
 const inter = Inter({
     subsets: ['latin'],
@@ -32,16 +31,6 @@ export default async function RootLayout({
 }: Readonly<{
     children: React.ReactNode;
 }>) {
-    const session = await auth.api.getSession({
-        headers: await headers()
-    });
-    const initialUser = session?.user
-        ? {
-              name: session.user.name,
-              email: session.user.email,
-              image: session.user.image
-          }
-        : null;
     return (
         <html lang='en' className={`${inter.variable}`} suppressHydrationWarning>
             <head>
@@ -64,7 +53,9 @@ export default async function RootLayout({
                         disableTransitionOnChange
                     >
                         <CardDataInitializer />
-                        <Header initialUser={initialUser} />
+                        <Suspense fallback={<div className='h-16 w-full border-b bg-card' />}>
+                            <HeaderWrapper />
+                        </Suspense>
                         <main className='flex-grow'>{children}</main>
                         <Toaster />
                         <Footer />
