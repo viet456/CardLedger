@@ -19,6 +19,8 @@ import {
 import { navItems } from './Header';
 import { ThemeToggle } from './ThemeToggle';
 import { useSession, signOut } from '@/src/lib/auth-client';
+import { Avatar, AvatarFallback, AvatarImage } from '@/src/components/ui/avatar';
+import { LogOut } from 'lucide-react';
 
 const NavLink = ({
     href,
@@ -55,7 +57,7 @@ export function MobileNav() {
                 <SheetTrigger aria-label='Open navigation menu'>
                     <Menu className='h-8 w-8' />
                 </SheetTrigger>
-                <SheetContent className='flex w-[70%] flex-col border-border bg-card text-card-foreground'>
+                <SheetContent className='flex w-[70%] flex-col border-border bg-card p-0 text-card-foreground'>
                     <SheetHeader className='flex flex-row items-center justify-between p-4'>
                         <SheetTitle className='text-2xl text-primary'>
                             <Link href='/' className='text-3xl'>
@@ -92,60 +94,83 @@ export function MobileNav() {
                             />
                         ))}
                     </div>
-                    {/* Loading, button skeletons */}
-                    {isPending && (
-                        <div className='mx-2 flex flex-col gap-2'>
-                            <div className='h-9 w-20 animate-pulse rounded-md bg-muted'></div>
-                            <div className='h-9 w-20 animate-pulse rounded-md bg-muted'></div>
-                        </div>
-                    )}
-                    {/* Logged out */}
-                    {!session?.user && !isPending && (
-                        <div className='mx-2 flex flex-col gap-2'>
-                            <Button variant='ghost' asChild>
-                                <Link href='/sign-in' onClick={() => setIsMenuOpen(false)}>
-                                    Sign In
-                                </Link>
-                            </Button>
+                    <SheetFooter className='bg-muted/20 mt-auto flex flex-col gap-4 border-t border-border p-6 sm:justify-start'>
+                        {!isPending && session?.user ? (
+                            // LOGGED IN
+                            <div className='flex w-full flex-col gap-6'>
+                                <div className='flex items-center gap-3'>
+                                    <Avatar className='h-10 w-10 border border-border'>
+                                        <AvatarImage
+                                            src={session.user.image || ''}
+                                            alt={session.user.name || ''}
+                                        />
+                                        <AvatarFallback>
+                                            {session.user.name?.charAt(0) || 'U'}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <div className='flex flex-col overflow-hidden text-left'>
+                                        <span className='truncate text-sm font-medium'>
+                                            {session.user.name}
+                                        </span>
+                                        <span className='truncate text-xs text-muted-foreground'>
+                                            {session.user.email}
+                                        </span>
+                                    </div>
+                                </div>
 
-                            <Button asChild>
-                                <Link href='/sign-up' onClick={() => setIsMenuOpen(false)}>
-                                    Sign Up
-                                </Link>
-                            </Button>
-                        </div>
-                    )}
-                    {/* Logged in */}
-                    {!isPending && session?.user && (
-                        <div className='gap-2'>
-                            <div>
-                                <Button variant='ghost' asChild>
-                                    <Link href='/dashboard' onClick={() => setIsMenuOpen(false)}>
-                                        Dashboard
-                                    </Link>
-                                </Button>
+                                <div className='flex items-center justify-between'>
+                                    <div className='flex items-center gap-2 text-xs text-muted-foreground'>
+                                        <ThemeToggle />
+                                        <span>Theme</span>
+                                    </div>
+                                    <Button
+                                        variant='destructive'
+                                        size='sm'
+                                        className='h-9 gap-2 text-foreground'
+                                        onClick={() => {
+                                            signOut();
+                                            setIsMenuOpen(false);
+                                        }}
+                                    >
+                                        <LogOut className='h-4 w-4' />
+                                        Sign Out
+                                    </Button>
+                                </div>
                             </div>
+                        ) : (
+                            // LOGGED OUT
+                            <div className='flex w-full flex-col gap-4'>
+                                <div className='grid grid-cols-2 gap-3'>
+                                    <Button
+                                        variant='outline'
+                                        asChild
+                                        onClick={() => setIsMenuOpen(false)}
+                                    >
+                                        <Link href='/sign-in'>Sign In</Link>
+                                    </Button>
+                                    <Button asChild onClick={() => setIsMenuOpen(false)}>
+                                        <Link href='/sign-up'>Sign Up</Link>
+                                    </Button>
+                                </div>
+                                <div className='mt-2 flex items-center justify-between px-1'>
+                                    <span className='text-sm text-muted-foreground'>
+                                        Appearance
+                                    </span>
+                                    <ThemeToggle />
+                                </div>
+                            </div>
+                        )}
 
-                            <Button
-                                variant='outline'
-                                onClick={() => {
-                                    (signOut(), setIsMenuOpen(false));
-                                }}
+                        <div className='text-muted-foreground/50 mt-4 text-center text-xs'>
+                            <a
+                                href='https://vietle.me'
+                                target='_blank'
+                                rel='noopener noreferrer'
+                                className='hover:text-primary hover:underline'
                             >
-                                Sign Out
-                            </Button>
+                                Made by Viet Le, 2025
+                            </a>
                         </div>
-                    )}
-                    <SheetFooter className='bottom-4 left-0 right-0 mt-auto flex w-full flex-row items-center justify-between p-4'>
-                        <ThemeToggle />
-                        <a
-                            href='https://vietle.me'
-                            target='_blank'
-                            rel='noopener noreferrer'
-                            className='text-center text-sm text-muted-foreground'
-                        >
-                            Made by Viet Le, 2025
-                        </a>
                     </SheetFooter>
                 </SheetContent>
             </Sheet>

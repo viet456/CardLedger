@@ -3,6 +3,8 @@
 import { useSearchStore } from '@/src/lib/store/searchStore';
 import { useRef, useEffect } from 'react';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { X } from 'lucide-react';
 
 export function SearchBar() {
     const { filters, setFilters } = useSearchStore();
@@ -58,21 +60,23 @@ export function SearchBar() {
 
     return (
         <div className='relative w-full'>
-            <input
+            <Input
+                className='h-12 w-full rounded border border-border bg-card p-2 pr-10 !text-base text-card-foreground shadow-sm transition-all focus:border-ring'
                 ref={inputRef}
                 type='text'
                 placeholder='Search for cards...'
                 value={filters.search || ''}
                 onChange={handleSearchChange}
-                className='h-10 w-full rounded border bg-card p-2 text-card-foreground'
             />
             {filters.search && (
                 <Button
+                    variant={'ghost'}
+                    size={'icon'}
                     onClick={handleClear}
-                    className='absolute right-2 top-1/2 -translate-y-1/2 text-xl text-gray-400 hover:text-primary-foreground md:text-base'
+                    className='absolute right-2 top-1/2 h-8 w-8 -translate-y-1/2 text-xl text-gray-400 hover:text-foreground md:text-base'
                     aria-label='Clear search'
                 >
-                    ✕
+                    <X className='h-4 w-4' />
                 </Button>
             )}
         </div>

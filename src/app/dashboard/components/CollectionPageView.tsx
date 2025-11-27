@@ -124,13 +124,21 @@ export function CollectionPageView({ cards }: CollectionPageViewProps) {
     ];
 
     return (
-        <div className='flex flex-col gap-4'>
-            <CardFilterControls filterOptions={filterOptions} sortOptions={sortOptions} />
-            <div className='rounded-md border bg-background p-4'>
-                <p className='mb-4 text-sm text-muted-foreground'>
-                    Showing {filteredAndSortedCards.length} cards
-                </p>
-                <SimpleCardGrid cards={filteredAndSortedCards} />
+        <div className='mb-12 flex flex-col gap-6'>
+            <div className='rounded-xl border border-border bg-background text-card-foreground shadow-sm'>
+                <div className='border-b border-border p-6'>
+                    <CardFilterControls filterOptions={filterOptions} sortOptions={sortOptions} />
+                </div>
+
+                <div className='bg-muted/10 min-h-[500px] p-6'>
+                    <div className='mb-4 flex items-center justify-between'>
+                        <p className='text-sm font-medium text-muted-foreground'>
+                            Showing {filteredAndSortedCards.length} cards
+                        </p>
+                    </div>
+
+                    <SimpleCardGrid cards={filteredAndSortedCards} />
+                </div>
             </div>
         </div>
     );
