@@ -8,8 +8,6 @@ import { Input } from '@/src/components/ui/input';
 import { Label } from '@/src/components/ui/label';
 import Link from 'next/link';
 import { Widget } from '@/src/components/Turnstile';
-import { SocialButtons } from './SocialButtons';
-import { AuthDivider } from './AuthDivider';
 
 export function SignInForm() {
     const router = useRouter();
@@ -67,8 +65,6 @@ export function SignInForm() {
                     {error}
                 </div>
             )}
-            <SocialButtons />
-            <AuthDivider />
             <form onSubmit={handleSubmit} className='space-y-4'>
                 <div className='space-y-2'>
                     <Label htmlFor='identifier'>Email or Username</Label>
