@@ -140,18 +140,9 @@ export function MobileNav() {
                         ) : (
                             // LOGGED OUT
                             <div className='flex w-full flex-col gap-4'>
-                                <div className='grid grid-cols-2 gap-3'>
-                                    <Button
-                                        variant='outline'
-                                        asChild
-                                        onClick={() => setIsMenuOpen(false)}
-                                    >
-                                        <Link href='/sign-in'>Sign In</Link>
-                                    </Button>
-                                    <Button asChild onClick={() => setIsMenuOpen(false)}>
-                                        <Link href='/sign-up'>Sign Up</Link>
-                                    </Button>
-                                </div>
+                                <Button asChild onClick={() => setIsMenuOpen(false)}>
+                                    <Link href='/sign-in'>Sign In</Link>
+                                </Button>
                                 <div className='mt-2 flex items-center justify-between px-1'>
                                     <span className='text-sm text-muted-foreground'>
                                         Appearance

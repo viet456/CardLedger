@@ -4,7 +4,7 @@ import { useSession } from '@/src/lib/auth-client';
 import { useEffect } from 'react';
 import { trpc } from '@/src/utils/trpc';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/src/components/ui/tabs';
-import { CollectionPageView } from './components/CollectionPageView';
+import { CollectionPageView } from './_components/CollectionPageView';
 import { mapPrismaCardToDenormalized } from '@/src/utils/cardMapper';
 
 export default function DashboardPage() {

@@ -1,117 +1,51 @@
-'use client';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { signIn } from '@/src/lib/auth-client';
-import { Button } from '@/src/components/ui/button';
-import Link from 'next/link';
-import { Widget } from '@/src/components/Turnstile';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/src/components/ui/tabs';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle
+} from '@/src/components/ui/card';
+import { SignInForm } from './_components/SignInForm';
+import { SignUpForm } from './_components/SignUpForm';
 
-export default function SignInPage() {
-    const router = useRouter();
-    const [error, setError] = useState<string | null>(null);
-    const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
-
-    const [identifier, setIdentifier] = useState('');
-    const [password, setPassword] = useState('');
-    const [loginAttempts, setLoginAttempts] = useState(0);
-
-    async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-        e.preventDefault();
-        setError(null);
-
-        // Check for Cloudflare token before submitting form
-        if (!turnstileToken) {
-            setError('Please complete the security check.');
-            return;
-        }
-
-        const isEmail = identifier.includes('@');
-        try {
-            const response = isEmail
-                ? await signIn.email({
-                      email: identifier,
-                      password: password,
-                      fetchOptions: {
-                          headers: {
-                              'x-captcha-response': turnstileToken
-                          }
-                      }
-                  })
-                : await signIn.username({
-                      username: identifier,
-                      password: password,
-                      fetchOptions: {
-                          headers: {
-                              'x-captcha-response': turnstileToken
-                          }
-                      }
-                  });
-
-            if (response.error) {
-                setError(response.error.message || 'Something went wrong.');
-                setLoginAttempts((attempts) => attempts + 1);
-                setTurnstileToken(null);
-            } else {
-                router.push('/dashboard');
-            }
-        } catch (err) {
-            setError('Network error. Please try again.');
-        }
-    }
-
+export default function AuthPage() {
     return (
-        <main className='mx-auto flex h-screen w-full max-w-md flex-col items-center justify-center space-y-4 p-6 text-foreground'>
-            <div className='rounded-md border border-border px-12 py-20 shadow-md'>
-                <h1 className='mb-2 text-2xl font-bold'>Sign In</h1>
-                {error && <p className='text-red-500'>{error}</p>}
+        <div className='flex min-h-[80vh] flex-col items-center justify-start p-4'>
+            <Tabs defaultValue='signin' className='w-full max-w-[400px]'>
+                <TabsList className='mb-4 grid w-full grid-cols-2'>
+                    <TabsTrigger value='signin'>Sign In</TabsTrigger>
+                    <TabsTrigger value='signup'>Sign Up</TabsTrigger>
+                </TabsList>
 
-                <form onSubmit={handleSubmit} className='w-full space-y-4'>
-                    <div>
-                        <label htmlFor='identifier' className='mb-1 block text-sm font-medium'>
-                            Email or Username <span aria-hidden='true'>*</span>
-                            <span className='sr-only'>required</span>
-                        </label>
-                        <input
-                            id='identifier'
-                            name='identifier'
-                            placeholder='email@example.com or username'
-                            required
-                            className='w-full rounded-md border border-border bg-card px-3 py-2 text-card-foreground'
-                            value={identifier}
-                            onChange={(e) => setIdentifier(e.target.value)}
-                        />
-                    </div>
-                    <div>
-                        <label htmlFor='password' className='mb-1 block text-sm font-medium'>
-                            Password <span aria-hidden='true'>*</span>
-                            <span className='sr-only'>required</span>
-                        </label>
-                        <input
-                            id='password'
-                            name='password'
-                            type='password'
-                            placeholder='Password'
-                            required
-                            minLength={8}
-                            className='w-full rounded-md border border-border bg-card px-3 py-2 text-card-foreground'
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                        />
-                    </div>
-                    <Widget onTokenChange={setTurnstileToken} resetTrigger={loginAttempts} />
+                <TabsContent value='signin'>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Welcome Back</CardTitle>
+                            <CardDescription>
+                                Enter your credentials to access your collection.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <SignInForm />
+                        </CardContent>
+                    </Card>
+                </TabsContent>
 
-                    <Button
-                        type='submit'
-                        disabled={!turnstileToken || !identifier || password.length < 8}
-                        className='w-full rounded-md border border-border bg-primary px-4 py-2 font-medium text-primary-foreground hover:bg-primary-hover'
-                    >
-                        Sign In
-                    </Button>
-                    <Link href='/forgot-password' className='text-sm text-blue-500 hover:underline'>
-                        Forgot password
-                    </Link>
-                </form>
-            </div>
-        </main>
+                <TabsContent value='signup'>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Create Account</CardTitle>
+                            <CardDescription>
+                                Start tracking your card collection today.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <SignUpForm />
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
+        </div>
     );
 }
