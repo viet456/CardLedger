@@ -21,6 +21,7 @@ import { ThemeToggle } from './ThemeToggle';
 import { useSession, signOut } from '@/src/lib/auth-client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/src/components/ui/avatar';
 import { LogOut } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 const NavLink = ({
     href,
@@ -48,6 +49,7 @@ const NavLink = ({
 };
 
 export function MobileNav() {
+    const router = useRouter();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const { data: session, isPending } = useSession();
 
@@ -127,8 +129,17 @@ export function MobileNav() {
                                         variant='destructive'
                                         size='sm'
                                         className='h-9 gap-2 text-foreground'
-                                        onClick={() => {
-                                            signOut();
+                                        onClick={async () => {
+                                            await signOut({
+                                                redirectTo: '/',
+                                                fetchOptions: {
+                                                    onSuccess: () => {
+                                                        window.location.href = '/';
+                                                        router.push('/');
+                                                        router.refresh();
+                                                    }
+                                                }
+                                            });
                                             setIsMenuOpen(false);
                                         }}
                                     >
