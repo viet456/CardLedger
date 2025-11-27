@@ -69,7 +69,7 @@
         "react-day-picker": "^9.11.2",
         "react-dom": "19.2.0",
         "react-intersection-observer": "^9.16.0",
-        "react-virtuoso": "^4.14.1",
+        "react-virtuoso": "^4.15.0",
         "resend": "^6.4.2",
         "server-only": "^0.0.1",
         "sharp": "^0.34.5",
