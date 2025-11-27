@@ -11,6 +11,7 @@ import { Toaster } from '../components/ui/sonner';
 import Script from 'next/script';
 import { Suspense } from 'react';
 import { HeaderWrapper } from '../components/layout/HeaderWrapper';
+import { TooltipProvider } from '../components/ui/tooltip';
 
 const inter = Inter({
     subsets: ['latin'],
@@ -52,14 +53,16 @@ export default async function RootLayout({
                         enableSystem
                         disableTransitionOnChange
                     >
-                        <CardDataInitializer />
-                        <Suspense fallback={<div className='h-16 w-full border-b bg-card' />}>
-                            <HeaderWrapper />
-                        </Suspense>
-                        <main className='flex-grow'>{children}</main>
-                        <Toaster />
-                        <Footer />
-                        <ScrollToTopButton />
+                        <TooltipProvider delayDuration={500} skipDelayDuration={0}>
+                            <CardDataInitializer />
+                            <Suspense fallback={<div className='h-16 w-full border-b bg-card' />}>
+                                <HeaderWrapper />
+                            </Suspense>
+                            <main className='flex-grow'>{children}</main>
+                            <Toaster />
+                            <Footer />
+                            <ScrollToTopButton />
+                        </TooltipProvider>
                     </ThemeProvider>
                 </TrpcProvider>
             </body>
