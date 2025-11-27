@@ -5,7 +5,7 @@ export const metadata: Metadata = {
     description: 'Learn about the architecture and technology behind the CardLedger project.'
 };
 
-export default function About() {
+export default async function About() {
     return (
         <main className='mx-auto my-10 flex px-4'>
             <article className='prose dark:prose-invert'>
@@ -19,7 +19,7 @@ export default function About() {
 
                 <h2>The Backend & Data Foundation</h2>
                 <p>
-                    The project's foundation began with a significant data challenge: how to
+                    The project&apos;s foundation began with a significant data challenge: how to
                     efficiently manage and query the vast Pokémon TCG dataset. Instead of simply
                     relying on the public `pokemontcg.io` API for every user request, I engineered a
                     robust backend to ensure speed and control:
@@ -42,7 +42,7 @@ export default function About() {
                     <li>
                         <b>Data Normalization</b>: The ingestion script normalizes the data,
                         creating efficient lookup tables. This reduces data duplication and forms
-                        the backbone of the application's filtering capabilities.
+                        the backbone of the application&apos;s filtering capabilities.
                     </li>
                 </ul>
 
@@ -54,20 +54,20 @@ export default function About() {
                 <ul>
                     <li>
                         <b>Static Site Generation (SSG)</b>: For pages with a defined dataset, like
-                        an individual set's card list, I leveraged <b>Next.js's SSG</b>. These pages
-                        are pre-built on the server at build time, resulting in instant load times
-                        and optimal SEO. The user receives a static HTML file with all the card data
-                        and images ready to go.
+                        an individual set&apos;s card list, I leveraged <b>Next.js&apos;s SSG</b>.
+                        These pages are pre-built on the server at build time, resulting in instant
+                        load times and optimal SEO. The user receives a static HTML file with all
+                        the card data and images ready to go.
                     </li>
                     <li>
                         <b>Optimized Client-Side Power</b>: For browsing the entire card collection,
                         a custom build script generates a pruned, <b>normalized JSON artifact</b>{' '}
                         containing all cards and their associated metadata. This artifact is
-                        downloaded once to the user's <b>IndexedDB</b> and managed in memory with{' '}
-                        <b>Zustand</b>. A versioning system checks against a pointer file on{' '}
+                        downloaded once to the user&apos;s <b>IndexedDB</b> and managed in memory
+                        with <b>Zustand</b>. A versioning system checks against a pointer file on{' '}
                         <b>Cloudflare R2</b> to ensure data freshness, preventing unnecessary
-                        downloads. This provides an incredibly fast, "app-like" viewing and
-                        filtering experience locally.
+                        downloads. This provides an incredibly fast, &quot;app-like&quot; viewing
+                        and filtering experience locally.
                     </li>
                     <li>
                         This standalone script can be integrated into a <b>CI/CD pipeline</b>,
@@ -110,10 +110,11 @@ export default function About() {
 
                 <h2 className='mt-8 border-t pt-6'>About the Creator</h2>
                 <p>
-                    My name is Viet Le, and I'm a full-stack developer with a passion for building
-                    high-quality, performant web applications. CardLedger is my capstone portfolio
-                    project, built from the ground up to master modern application architecture,
-                    from database design and data flow to frontend performance optimization.
+                    My name is Viet Le, and I&apos;m a full-stack developer with a passion for
+                    building high-quality, performant web applications. CardLedger is my capstone
+                    portfolio project, built from the ground up to master modern application
+                    architecture, from database design and data flow to frontend performance
+                    optimization.
                 </p>
                 <p>
                     You can learn more about my journey and see my other work on my personal site,

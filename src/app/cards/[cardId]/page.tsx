@@ -4,16 +4,16 @@ import { Metadata } from 'next';
 import { SingleCardView } from './SingleCardView';
 import { PriceHistoryChart } from '@/src/components/cards/PriceHistoryChart';
 import { getCachedCardData, getCachedPriceHistory } from './data';
-
-export const revalidate = 86400; // Daily
+import { Suspense } from 'react';
 
 export async function generateMetadata({
     params
 }: {
-    params: { cardId: string };
+    params: Promise<{ cardId: string }>;
 }): Promise<Metadata> {
+    const { cardId } = await params;
     const card = await prisma.card.findUnique({
-        where: { id: params.cardId },
+        where: { id: cardId },
         include: {
             set: true
         }
@@ -44,17 +44,24 @@ export async function generateStaticParams() {
     }));
 }
 
-export default async function SingleCardPage({ params }: { params: { cardId: string } }) {
+export default async function SingleCardPage({ params }: { params: Promise<{ cardId: string }> }) {
+    const { cardId } = await params;
     const [card, priceHistory] = await Promise.all([
-        getCachedCardData(params.cardId),
-        getCachedPriceHistory(params.cardId)
+        getCachedCardData(cardId),
+        getCachedPriceHistory(cardId)
     ]);
     if (!card) {
         notFound();
     }
     return (
         <SingleCardView card={card}>
-            <PriceHistoryChart initialData={priceHistory} />
+            <Suspense
+                fallback={
+                    <div className='text-sm text-muted-foreground'>Loading price history...</div>
+                }
+            >
+                <PriceHistoryChart initialData={priceHistory} />
+            </Suspense>
         </SingleCardView>
     );
 }
