@@ -32,7 +32,7 @@ const GridList = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
 );
 GridList.displayName = 'GridList';
 const GridItem = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>((props, ref) => (
-    <div ref={ref} {...props} className='flex self-stretch' />
+    <div ref={ref} {...props} className='flex h-full w-full self-stretch' />
 ));
 GridItem.displayName = 'GridItem';
 const gridComponents: VirtuosoGridProps<ClientPokemonCardType, undefined>['components'] = {
@@ -44,16 +44,20 @@ export function CardGrid({ cards, totalCount }: CardGridProps) {
     return (
         <VirtuosoGrid
             useWindowScroll
-            overscan={2000}
+            overscan={1500}
             totalCount={totalCount}
-            components={{
-                ...gridComponents
+            components={gridComponents}
+            itemContent={(index) => {
+                const card = cards[index];
+                if (!card) return null;
+
+                return (
+                    // Add explicit key to help React reconciliation during scroll
+                    <div key={card.id} className='flex w-full'>
+                        <PokemonCard card={card} priority={index < 6} />
+                    </div>
+                );
             }}
-            itemContent={(index) => (
-                <div className='flex w-full'>
-                    <PokemonCard card={cards[index]} priority={index < 6} />
-                </div>
-            )}
         />
     );
 }
