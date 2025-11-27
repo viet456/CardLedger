@@ -18,7 +18,7 @@ export function Widget({ onTokenChange, resetTrigger }: WidgetProps) {
     }, [resetTrigger]);
 
     return (
-        <div className='min-h-[72px] min-w-[300px]'>
+        <div className='min-h-[72px]'>
             <Turnstile
                 ref={turnstileRef}
                 siteKey={sitekey}
