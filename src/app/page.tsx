@@ -1,6 +1,8 @@
 import { Button } from '@/src/components/ui/button';
 import Link from 'next/link';
 import { Metadata } from 'next';
+import { auth } from '@/src/lib/auth';
+import { headers } from 'next/headers';
 
 export const metadata: Metadata = {
     title: 'CardLedger: Your Pokémon TCG Collection Manager',
@@ -8,7 +10,10 @@ export const metadata: Metadata = {
         'Track, manage, and browse your entire Pokémon TCG collection. Fast, modern, and powerful tools for every collector.'
 };
 
-export default function Home() {
+export default async function Home() {
+    const session = await auth.api.getSession({
+        headers: await headers()
+    });
     return (
         <div className='container mx-auto flex flex-col items-center justify-center gap-16 px-4 py-16 text-center'>
             {/* Hero Section */}
@@ -29,9 +34,15 @@ export default function Home() {
                             Explore the Card Catalog
                         </Link>
                     </Button>
-                    <Button asChild size='lg' variant='outline' className='text-lg'>
-                        <Link href='/sign-up'>Create Your Account</Link>
-                    </Button>
+                    {session ? (
+                        <Button asChild size='lg' variant='outline' className='text-lg'>
+                            <Link href='/dashboard'>Go to Dashboard</Link>
+                        </Button>
+                    ) : (
+                        <Button asChild size='lg' variant='outline' className='text-lg'>
+                            <Link href='/sign-in'>Get Started</Link>
+                        </Button>
+                    )}
                 </div>
             </section>
 
