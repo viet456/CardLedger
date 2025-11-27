@@ -28,8 +28,7 @@ interface HeaderProps {
 
 export function Header({ initialUser }: HeaderProps) {
     const { data: session, isPending } = useSession();
-    const user = session?.user || initialUser;
-    const isLoading = isPending && !initialUser;
+    const user = isPending ? initialUser : session?.user;
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const pathname = usePathname();
     // don't show headersearchbar on Cards page or setId pages
@@ -86,13 +85,9 @@ export function Header({ initialUser }: HeaderProps) {
 
                     {/* Logged out */}
                     {!user && (
-                        <div className='flex gap-2'>
-                            <Button variant='ghost' asChild>
-                                <Link href='/sign-in'>Sign In</Link>
-                            </Button>
-
+                        <div className='flex'>
                             <Button asChild>
-                                <Link href='/sign-up'>Sign Up</Link>
+                                <Link href='/sign-in'>Sign In</Link>
                             </Button>
                         </div>
                     )}
