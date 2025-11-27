@@ -7,17 +7,21 @@ CardLedger is a web application for cataloging and tracking Pokémon card collec
 ## Key Features
 
 - **Custom Data Backend:** Card data and images are sourced via a custom ETL script, standardized, and served from a Neon PostgreSQL database and Cloudflare R2 bucket.
-- **Responsive Design:** A clean, mobile-first interface built with Tailwind CSS.
-- **Upcoming - User Accounts:** Sign up and manage your personal card collection.
+- **User Accounts & Collections:** Full authentication system (Email + Social Login) allowing users to build and manage their personal card portfolios.
+- **Optimistic UI:** Instant feedback for collection actions using React Query and optimistic cache updates.
+- **High Performance:** Hybrid architecture utilizing Next.js 16 Server Components, ISR caching, and client-side IndexedDB for browsing 20,000+ cards with zero latency.
+- **Security:** Protected routes via Middleware and bot protection via Cloudflare Turnstile.
 - **Upcoming - Investment Tracking:** Monitor the financial value and history of your cards.
 
 ## Tech Stack
 
 ### Application
 
-- **Framework:** Next.js / React
+- **Framework:** Next.js 16 (App Router) / React 19
 - **Language:** TypeScript
-- **Styling:** Tailwind CSS
+- **Auth:** Better Auth (Google, Discord, Email/Pass)
+- **State/API:** tRPC, TanStack Query, Zustand
+- **Styling:** Tailwind CSS, Shadcn UI
 - **Deployment:** Vercel
 
 ### Data Pipeline & Infrastructure
