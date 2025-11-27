@@ -7,6 +7,8 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { trpc } from '@/src/utils/trpc';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { X } from 'lucide-react';
 
 interface HeaderSearchBarProps {
     onSuggestionClick: () => void;

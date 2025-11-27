@@ -10,6 +10,8 @@ import { ScrollToTopButton } from '../components/ScrollToTopButton';
 import { CardDataInitializer } from '../components/CardDataInitializer';
 import { Toaster } from '../components/ui/sonner';
 import Script from 'next/script';
+import { auth } from '@/src/lib/auth';
+import { headers } from 'next/headers';
 
 const inter = Inter({
     subsets: ['latin'],
@@ -25,11 +27,21 @@ export const viewport: Viewport = {
     initialScale: 1
 };
 
-export default function RootLayout({
+export default async function RootLayout({
     children
 }: Readonly<{
     children: React.ReactNode;
 }>) {
+    const session = await auth.api.getSession({
+        headers: await headers()
+    });
+    const initialUser = session?.user
+        ? {
+              name: session.user.name,
+              email: session.user.email,
+              image: session.user.image
+          }
+        : null;
     return (
         <html lang='en' className={`${inter.variable}`} suppressHydrationWarning>
             <head>
@@ -52,7 +64,7 @@ export default function RootLayout({
                         disableTransitionOnChange
                     >
                         <CardDataInitializer />
-                        <Header />
+                        <Header initialUser={initialUser} />
                         <main className='flex-grow'>{children}</main>
                         <Toaster />
                         <Footer />

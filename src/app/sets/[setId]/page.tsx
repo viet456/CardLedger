@@ -68,7 +68,8 @@ async function getSetData(setId: string): Promise<SetPageData | null> {
                             }
                         }
                     },
-                    marketStats: true
+                    marketStats: true,
+                    set: true
                 }
             }
         }

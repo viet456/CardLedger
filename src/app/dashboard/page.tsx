@@ -42,7 +42,7 @@ export default function DashboardPage() {
             <p>Welcome back, {user.name || user.username || 'Collector'}</p>
             <Tabs defaultValue='gallery' className='w-full'>
                 <div className='flex items-center justify-between'>
-                    <TabsList>
+                    <TabsList className='rounded-lg bg-muted p-1'>
                         <TabsTrigger value='gallery'>Gallery View</TabsTrigger>
                         <TabsTrigger value='ledger' disabled className='opacity-50'>
                             Ledger (coming soon)

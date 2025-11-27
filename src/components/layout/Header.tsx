@@ -8,16 +8,28 @@ import { HeaderSearchBar } from '../search/HeaderSearchBar';
 import { ThemeToggle } from './ThemeToggle';
 import { Button } from '../ui/button';
 import { useSession, signOut } from '@/src/lib/auth-client';
+import { UserNav } from './UserNav';
 
 export const navItems = [
     { href: '/', label: 'Home' },
+    { href: '/dashboard', label: 'Dashboard' },
     { href: '/cards?sortBy=rD&sortOrder=desc', label: 'Cards' },
     { href: '/sets', label: 'Sets' },
     { href: '/about', label: 'About' }
 ];
 
-export function Header() {
+interface HeaderProps {
+    initialUser?: {
+        name?: string | null;
+        email?: string | null;
+        image?: string | null;
+    } | null;
+}
+
+export function Header({ initialUser }: HeaderProps) {
     const { data: session, isPending } = useSession();
+    const user = session?.user || initialUser;
+    const isLoading = isPending && !initialUser;
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const pathname = usePathname();
     // don't show headersearchbar on Cards page or setId pages
@@ -71,15 +83,9 @@ export function Header() {
                             <HeaderSearchBar onSuggestionClick={() => setIsMenuOpen(false)} />
                         )}
                     </div>
-                    {/* Loading, button skeletons */}
-                    {isPending && (
-                        <div className='flex gap-2'>
-                            <div className='h-9 w-20 animate-pulse rounded-md bg-muted'></div>
-                            <div className='h-9 w-20 animate-pulse rounded-md bg-muted'></div>
-                        </div>
-                    )}
+
                     {/* Logged out */}
-                    {!session?.user && !isPending && (
+                    {!user && (
                         <div className='flex gap-2'>
                             <Button variant='ghost' asChild>
                                 <Link href='/sign-in'>Sign In</Link>
@@ -91,15 +97,7 @@ export function Header() {
                         </div>
                     )}
                     {/* Logged in */}
-                    {!isPending && session?.user && (
-                        <div className='flex gap-2'>
-                            <Button variant='ghost' asChild>
-                                <Link href='/dashboard'>Dashboard</Link>
-                            </Button>
-
-                            <Button onClick={() => signOut()}>Sign Out</Button>
-                        </div>
-                    )}
+                    {user && <UserNav user={user} />}
                     <ThemeToggle />
                 </div>
                 {/* Mobile navigation*/}

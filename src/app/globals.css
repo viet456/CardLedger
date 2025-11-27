@@ -45,7 +45,7 @@
         --secondary-foreground: 0.2711 0.0204 263.89; /* zinc-900 */
 
         /* Muted color for subtle text */
-        --muted: 0.9537 0.0063 264.38; /* zinc-100 */
+        --muted: 0.8524 0.0084 264.2; /* zinc-300 */
         --muted-foreground: 0.5129 0.0099 264.1; /* zinc-500 (approximated from HSL) */
 
         /* Accent for hover states */
