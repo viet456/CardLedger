@@ -74,7 +74,7 @@ export function MobileNav() {
                             <Button
                                 variant='secondary'
                                 size='icon'
-                                className='absolute right-4 top-4 h-8 w-8 rounded-sm bg-slate-400 p-0 hover:bg-slate-500 hover:ring-1 hover:ring-ring focus:ring-1 focus:ring-ring'
+                                className='absolute right-4 top-4 h-8 w-8 rounded-md bg-background'
                             >
                                 <X className='!h-6 !w-6 text-slate-800' />
                                 <span className='sr-only'>Close</span>
@@ -99,8 +99,8 @@ export function MobileNav() {
                     <SheetFooter className='bg-muted/20 mt-auto flex flex-col gap-4 border-t border-border p-6 sm:justify-start'>
                         {!isPending && session?.user ? (
                             // LOGGED IN
-                            <div className='flex w-full flex-col gap-6'>
-                                <div className='flex items-center gap-3'>
+                            <div className='flex w-full flex-col gap-6 p-0'>
+                                <div className='flex items-center justify-between gap-3'>
                                     <Avatar className='h-10 w-10 border border-border'>
                                         <AvatarImage
                                             src={session.user.image || ''}
@@ -110,6 +110,7 @@ export function MobileNav() {
                                             {session.user.name?.charAt(0) || 'U'}
                                         </AvatarFallback>
                                     </Avatar>
+
                                     <div className='flex flex-col overflow-hidden text-left'>
                                         <span className='truncate text-sm font-medium'>
                                             {session.user.name}
@@ -118,52 +119,52 @@ export function MobileNav() {
                                             {session.user.email}
                                         </span>
                                     </div>
+                                    <div className='h-9 rounded-md bg-background'>
+                                        <ThemeToggle />
+                                        <span className='sr-only'>Toggle</span>
+                                    </div>
                                 </div>
 
-                                <div className='flex items-center justify-between'>
-                                    <div className='flex items-center gap-2 text-xs text-muted-foreground'>
-                                        <ThemeToggle />
-                                        <span>Theme</span>
-                                    </div>
-                                    <Button
-                                        variant='destructive'
-                                        size='sm'
-                                        className='h-9 gap-2 text-foreground'
-                                        onClick={async () => {
-                                            await signOut({
-                                                redirectTo: '/',
-                                                fetchOptions: {
-                                                    onSuccess: () => {
-                                                        window.location.href = '/';
-                                                        router.push('/');
-                                                        router.refresh();
-                                                    }
+                                <Button
+                                    variant={'secondary'}
+                                    size='sm'
+                                    className='h-9 flex-grow'
+                                    onClick={async () => {
+                                        await signOut({
+                                            redirectTo: '/',
+                                            fetchOptions: {
+                                                onSuccess: () => {
+                                                    window.location.href = '/';
+                                                    router.push('/');
+                                                    router.refresh();
                                                 }
-                                            });
-                                            setIsMenuOpen(false);
-                                        }}
-                                    >
-                                        <LogOut className='h-4 w-4' />
-                                        Sign Out
-                                    </Button>
-                                </div>
+                                            }
+                                        });
+                                        setIsMenuOpen(false);
+                                    }}
+                                >
+                                    <LogOut className='h-4 w-4' />
+                                    Sign Out
+                                </Button>
                             </div>
                         ) : (
                             // LOGGED OUT
-                            <div className='flex w-full flex-col gap-4'>
-                                <Button asChild onClick={() => setIsMenuOpen(false)}>
+                            <div className='flex flex-col gap-4'>
+                                <Button
+                                    asChild
+                                    className='w-full'
+                                    onClick={() => setIsMenuOpen(false)}
+                                >
                                     <Link href='/sign-in'>Sign In</Link>
                                 </Button>
-                                <div className='mt-2 flex items-center justify-between px-1'>
-                                    <span className='text-sm text-muted-foreground'>
-                                        Appearance
-                                    </span>
+                                <div className='h-9 w-9 rounded-md bg-background'>
                                     <ThemeToggle />
+                                    <span className='sr-only'>Theme toggle</span>
                                 </div>
                             </div>
                         )}
 
-                        <div className='text-muted-foreground/50 mt-4 text-center text-xs'>
+                        <div className='text-muted-foreground/50 text-center text-xs'>
                             <a
                                 href='https://vietle.me'
                                 target='_blank'
