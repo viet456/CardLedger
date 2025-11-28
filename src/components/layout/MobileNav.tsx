@@ -74,9 +74,9 @@ export function MobileNav() {
                             <Button
                                 variant='secondary'
                                 size='icon'
-                                className='absolute right-4 top-4 h-8 w-8 rounded-md bg-background'
+                                className='absolute right-4 top-4 h-8 w-8 rounded-md bg-secondary'
                             >
-                                <X className='!h-6 !w-6 text-slate-800' />
+                                <X className='!h-6 !w-6 text-foreground' />
                                 <span className='sr-only'>Close</span>
                             </Button>
                         </SheetClose>
@@ -119,7 +119,7 @@ export function MobileNav() {
                                             {session.user.email}
                                         </span>
                                     </div>
-                                    <div className='h-9 rounded-md bg-background'>
+                                    <div className='h-9 rounded-md bg-secondary'>
                                         <ThemeToggle />
                                         <span className='sr-only'>Toggle</span>
                                     </div>
@@ -157,7 +157,7 @@ export function MobileNav() {
                                 >
                                     <Link href='/sign-in'>Sign In</Link>
                                 </Button>
-                                <div className='h-9 w-9 rounded-md bg-background'>
+                                <div className='h-9 w-9 rounded-md bg-secondary'>
                                     <ThemeToggle />
                                     <span className='sr-only'>Theme toggle</span>
                                 </div>
