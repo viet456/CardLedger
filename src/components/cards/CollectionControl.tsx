@@ -1,12 +1,12 @@
 'use client';
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { trpc } from '@/src/utils/trpc';
 import { Button } from '@/src/components/ui/button';
 import { Plus, Minus, Check, Loader2, Trash2, Pencil } from 'lucide-react';
 import { CollectionManagerModal } from './CollectionManagerModal';
 import { CardCondition } from '@prisma/client';
 import { toast } from 'sonner';
-import { useSession } from '@/src/lib/auth-client';
+import { useAuthSession } from '@/src/providers/SessionProvider';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/src/components/ui/tooltip';
 
@@ -23,7 +23,7 @@ export function CollectionControl({
     entryId,
     cardName = 'Card'
 }: CollectionControlProps) {
-    const { data: session } = useSession();
+    const { data: session } = useAuthSession();
     const router = useRouter();
     const utils = trpc.useUtils();
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
