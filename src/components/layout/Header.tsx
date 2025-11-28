@@ -7,8 +7,8 @@ import { MobileNav } from './MobileNav';
 import { HeaderSearchBar } from '../search/HeaderSearchBar';
 import { ThemeToggle } from './ThemeToggle';
 import { Button } from '../ui/button';
-import { useSession, signOut } from '@/src/lib/auth-client';
 import { UserNav } from './UserNav';
+import { useAuthSession } from '@/src/providers/SessionProvider';
 
 export const navItems = [
     { href: '/', label: 'Home' },
@@ -18,17 +18,9 @@ export const navItems = [
     { href: '/about', label: 'About' }
 ];
 
-interface HeaderProps {
-    initialUser?: {
-        name?: string | null;
-        email?: string | null;
-        image?: string | null;
-    } | null;
-}
-
-export function Header({ initialUser }: HeaderProps) {
-    const { data: session, isPending } = useSession();
-    const user = isPending ? initialUser : session?.user;
+export function Header() {
+    const { data: session, isPending } = useAuthSession();
+    const user = session?.user;
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const pathname = usePathname();
     // don't show headersearchbar on Cards page or setId pages
