@@ -15,7 +15,7 @@ type TimeRange = '1m' | '3m' | '6m' | '1y' | 'YTD' | 'All';
 export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
     const chartRef = useRef<HTMLCanvasElement>(null);
     const chartInstanceRef = useRef<Chart | null>(null);
-    const [activeRange, setActiveRange] = useState<TimeRange>('All');
+    const [activeRange, setActiveRange] = useState<TimeRange>('3m');
     const { resolvedTheme } = useTheme();
 
     const filteredData = useMemo(() => {
@@ -74,14 +74,16 @@ export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
                     label: 'Near Mint',
                     data: filteredData.map((d) => d.tcgNearMint),
                     borderColor: '#10B981', // Green
-                    tension: 0.1
+                    tension: 0.1,
+                    spanGaps: true
                 },
                 {
                     label: 'Lightly Played',
                     data: filteredData.map((d) => d.tcgLightlyPlayed),
                     borderColor: '#6366F1', // Indigo
                     tension: 0.1,
-                    hidden: true // Hide by default
+                    hidden: true, // Hide by default
+                    spanGaps: true
                 },
                 {
                     label: 'Moderately Played',
@@ -95,43 +97,62 @@ export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
                     data: filteredData.map((d) => d.tcgHeavilyPlayed),
                     borderColor: '#EF4444', // Red
                     tension: 0.1,
-                    hidden: true
+                    hidden: true,
+                    spanGaps: true
                 },
                 {
                     label: 'Damaged',
                     data: filteredData.map((d) => d.tcgDamaged),
                     borderColor: '#71717A', // Zinc
                     tension: 0.1,
-                    hidden: true
+                    hidden: true,
+                    spanGaps: true
                 }
                 // only add datasets with data
             ].filter((d) => d.data.some((val) => val !== null));
 
-            let timeUnit: 'day' | 'week' | 'month' = 'month';
-            if (activeRange === '1m') {
-                timeUnit = 'day';
-            } else if (activeRange === '3m' || activeRange === '6m') {
-                timeUnit = 'week';
+            let timeUnit: 'day' | 'week' | 'month' = 'day';
+            if (filteredData.length > 1) {
+                const start = new Date(filteredData[0].timestamp).getTime();
+                const end = new Date(filteredData[filteredData.length - 1].timestamp).getTime();
+                const diffDays = (end - start) / (1000 * 60 * 60 * 24);
+                if (diffDays > 180) {
+                    // > 6 months
+                    timeUnit = 'month';
+                } else if (diffDays > 30) {
+                    // > 1 month
+                    timeUnit = 'week';
+                } else {
+                    timeUnit = 'day';
+                }
             }
 
             const chartOptions: ChartOptions = {
                 responsive: true,
+                maintainAspectRatio: false,
                 color: foregroundColor,
                 scales: {
                     x: {
-                        type: 'timeseries',
+                        type: 'time',
                         time: {
                             unit: timeUnit,
                             tooltipFormat: 'MMM d, yyyy'
                         },
                         title: {
-                            display: true,
-                            text: 'Date',
-                            color: foregroundColor
+                            display: false
+                            // display: true,
+                            // text: 'Date',
+                            // color: foregroundColor
                         },
                         ticks: {
-                            maxTicksLimit: 7,
-                            color: foregroundColor
+                            maxTicksLimit: 6,
+                            color: foregroundColor,
+                            maxRotation: 45,
+                            minRotation: 45,
+                            autoSkip: true,
+                            font: {
+                                size: 12
+                            }
                         },
                         grid: {
                             color: borderColor
@@ -139,18 +160,23 @@ export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
                     },
                     y: {
                         title: {
-                            display: true,
-                            text: 'Price ($)',
-                            color: foregroundColor
+                            display: false
+                            // display: true,
+                            // text: 'Price ($)',
+                            // color: foregroundColor
                         },
                         ticks: {
                             callback: (value: string | number) => {
                                 return new Intl.NumberFormat('en-US', {
                                     style: 'currency',
-                                    currency: 'USD'
+                                    currency: 'USD',
+                                    notation: 'compact'
                                 }).format(Number(value));
                             },
-                            color: foregroundColor
+                            color: foregroundColor,
+                            font: {
+                                size: 12
+                            }
                         },
                         grid: {
                             color: borderColor
@@ -206,7 +232,7 @@ export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
         return () => {
             clearTimeout(timerId);
         };
-    }, [filteredData, activeRange, resolvedTheme]);
+    }, [filteredData, resolvedTheme]);
 
     useEffect(() => {
         return () => {
@@ -245,6 +271,7 @@ export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
                             variant={activeRange === range ? 'default' : 'outline'}
                             size='sm'
                             disabled={isDisabled}
+                            className='flex-1 sm:flex-none'
                         >
                             {range.toUpperCase()}
                         </Button>
@@ -259,7 +286,9 @@ export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
                     No price history available for this period.
                 </div>
             ) : (
-                <canvas ref={chartRef} style={{ minHeight: '300px' }} />
+                <div className='relative h-[300px] w-full'>
+                    <canvas ref={chartRef} />
+                </div>
             )}
         </div>
     );

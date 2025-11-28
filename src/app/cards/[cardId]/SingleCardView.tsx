@@ -222,13 +222,13 @@ export function SingleCardView({
                                 >
                                     <div className='col-span-3'>
                                         <p className='font-semibold'>{attack.name}</p>
-                                        <p className='mt-1 text-sm text-muted-foreground'>
+                                        <p className='mt-1 text-sm text-foreground'>
                                             {attack.text}
                                         </p>
                                     </div>
                                     <div className='col-span-1 text-right'>
                                         <p className='text-lg font-bold'>{attack.damage}</p>
-                                        <p className='text-sm text-muted-foreground'>
+                                        <p className='text-sm text-foreground'>
                                             {attack.cost.join(', ')}
                                         </p>
                                     </div>
