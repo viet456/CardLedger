@@ -6,9 +6,11 @@ import { Inter } from 'next/font/google';
 import { ScrollToTopButton } from '../components/ScrollToTopButton';
 import { CardDataInitializer } from '../components/CardDataInitializer';
 import Script from 'next/script';
-import { Suspense } from 'react';
-import { HeaderWrapper } from '../components/layout/HeaderWrapper';
+import { auth } from '@/src/lib/auth';
+import { headers } from 'next/headers';
 import { ProvidersWrapper } from '../providers/ProvidersWrapper';
+import { Header } from '../components/layout/Header';
+import { Suspense } from 'react';
 
 const inter = Inter({
     subsets: ['latin'],
@@ -24,7 +26,23 @@ export const viewport: Viewport = {
     initialScale: 1
 };
 
-export default async function RootLayout({
+async function AppContent({ children }: { children: React.ReactNode }) {
+    const session = await auth.api.getSession({
+        headers: await headers()
+    });
+
+    return (
+        <ProvidersWrapper session={session}>
+            <CardDataInitializer />
+            <Header />
+            <main className='flex-grow'>{children}</main>
+            <Footer />
+            <ScrollToTopButton />
+        </ProvidersWrapper>
+    );
+}
+
+export default function RootLayout({
     children
 }: Readonly<{
     children: React.ReactNode;
@@ -43,17 +61,9 @@ export default async function RootLayout({
             <body
                 className={`flex min-h-screen flex-col bg-background font-sans text-foreground antialiased`}
             >
-                <ProvidersWrapper>
-                    <CardDataInitializer />
-                    <Suspense fallback={<div className='h-16 w-full border-b bg-card' />}>
-                        <HeaderWrapper />
-                    </Suspense>
-
-                    <main className='flex-grow'>{children}</main>
-
-                    <Footer />
-                    <ScrollToTopButton />
-                </ProvidersWrapper>
+                <Suspense fallback={<div className='min-h-screen bg-background' />}>
+                    <AppContent>{children}</AppContent>
+                </Suspense>
             </body>
         </html>
     );
