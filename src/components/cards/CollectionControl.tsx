@@ -136,7 +136,6 @@ export function CollectionControl({
     const handleRemove = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        if (count <= 0) return;
 
         if (entryId) {
             removeMutation.mutate({ entryId });
@@ -179,11 +178,6 @@ export function CollectionControl({
                 </TooltipContent>
             </Tooltip>
         );
-    }
-
-    // Loading state
-    if (!collectionEntries && isLoading) {
-        return <div className='h-8 w-8 rounded-full bg-white/50 shadow-md backdrop-blur-sm' />;
     }
 
     // Dashboard mode
@@ -239,6 +233,11 @@ export function CollectionControl({
                 />
             </>
         );
+    }
+
+    // Loading state
+    if (!collectionEntries && isLoading) {
+        return <div className='h-8 w-8 rounded-full bg-white/50 shadow-md backdrop-blur-sm' />;
     }
 
     // Browse mode
