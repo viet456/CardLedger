@@ -18,10 +18,11 @@ import {
 } from '@/src/components/ui/sheet';
 import { navItems } from './Header';
 import { ThemeToggle } from './ThemeToggle';
-import { useSession, signOut } from '@/src/lib/auth-client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/src/components/ui/avatar';
 import { LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useAuthSession } from '@/src/providers/SessionProvider';
+import { signOut } from '@/src/lib/auth-client';
 
 const NavLink = ({
     href,
@@ -51,7 +52,7 @@ const NavLink = ({
 export function MobileNav() {
     const router = useRouter();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const { data: session, isPending } = useSession();
+    const { data: session, isPending } = useAuthSession();
 
     return (
         <div className='md:hidden'>
@@ -86,7 +87,7 @@ export function MobileNav() {
                         <HeaderSearchBar onSuggestionClick={() => setIsMenuOpen(false)} />
                     </div>
 
-                    <div className='mt-4 flex flex-grow flex-col gap-6 overflow-y-auto p-8'>
+                    <div className='mt-4 flex flex-grow flex-col gap-6 p-8'>
                         {navItems.map((item) => (
                             <NavLink
                                 key={item.href}
