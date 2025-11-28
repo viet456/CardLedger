@@ -1,45 +1,51 @@
-'use client';
-import { useRouter } from 'next/navigation';
-import { useSession } from '@/src/lib/auth-client';
-import { useEffect } from 'react';
-import { trpc } from '@/src/utils/trpc';
+import { auth } from '@/src/lib/auth';
+import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { prisma } from '@/src/lib/prisma';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/src/components/ui/tabs';
 import { CollectionPageView } from './_components/CollectionPageView';
 import { mapPrismaCardToDenormalized } from '@/src/utils/cardMapper';
+import { Suspense } from 'react';
+import { DashboardSkeleton } from './_components/DashboardSkeleton';
 
-export default function DashboardPage() {
-    const router = useRouter();
-    const { data: session, isPending } = useSession();
-    // Fetch data
-    // automatically uses 'ctx.user.id' if no userId is provided
-    const { data: collectionEntries, isLoading: isCollectionLoading } =
-        trpc.collection.getCollection.useQuery(
-            //{ userId: session?.user?.id || '' },
-            undefined,
-            { enabled: !!session?.user?.id }
-        );
-    // Auth redirect
-    useEffect(() => {
-        if (!isPending && !session?.user) {
-            router.push('/sign-in');
-        }
-    }, [isPending, session, router]);
-    // Loading state
-    if (isPending || isCollectionLoading)
-        return <p className='mt-8 text-center text-foreground'>Loading...</p>;
-    if (!session?.user) return <p className='mt-8 text-center text-foreground'>Redirecting...</p>;
+async function DashboardContent() {
+    const session = await auth.api.getSession({
+        headers: await headers()
+    });
 
-    const { user } = session;
+    if (!session?.user) {
+        redirect('/sign-in');
+    }
+
+    const collectionEntries = await prisma.collectionEntry.findMany({
+        where: { userId: session.user.id },
+        include: {
+            card: {
+                include: {
+                    set: true,
+                    rarity: true,
+                    marketStats: true,
+                    artist: true,
+                    types: { include: { type: true } },
+                    subtypes: { include: { subtype: true } },
+                    weaknesses: { include: { type: true } },
+                    resistances: { include: { type: true } }
+                }
+            }
+        },
+        orderBy: { createdAt: 'desc' }
+    });
 
     const gridCards =
         collectionEntries?.map((entry) => ({
             ...mapPrismaCardToDenormalized(entry.card),
             uniqueId: entry.id
         })) || [];
+
     return (
         <main className='mx-auto flex min-h-screen w-full flex-col space-y-4 p-6 text-foreground'>
             <h1 className='text-2xl font-bold'>Dashboard</h1>
-            <p>Welcome back, {user.name || user.username || 'Collector'}</p>
+            <p>Welcome back, {session.user.name || session.user.username || 'Collector'}</p>
             <Tabs defaultValue='gallery' className='w-full'>
                 <div className='flex items-center justify-between'>
                     <TabsList className='rounded-lg bg-muted p-1'>
@@ -61,5 +67,13 @@ export default function DashboardPage() {
                 </TabsContent>
             </Tabs>
         </main>
+    );
+}
+
+export default function DashboardPage() {
+    return (
+        <Suspense fallback={<DashboardSkeleton />}>
+            <DashboardContent />
+        </Suspense>
     );
 }
