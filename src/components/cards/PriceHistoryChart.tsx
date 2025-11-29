@@ -15,8 +15,20 @@ type TimeRange = '1m' | '3m' | '6m' | '1y' | 'YTD' | 'All';
 export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
     const chartRef = useRef<HTMLCanvasElement>(null);
     const chartInstanceRef = useRef<Chart | null>(null);
-    const [activeRange, setActiveRange] = useState<TimeRange>('3m');
     const { resolvedTheme } = useTheme();
+    const [activeRange, setActiveRange] = useState<TimeRange>(() => {
+        if (!initialData || initialData.length === 0) return 'All';
+
+        // Assumes data is sorted ascending by timestamp
+        const earliest = new Date(initialData[0].timestamp).getTime();
+        const now = new Date().getTime();
+        const diffDays = (now - earliest) / (1000 * 60 * 60 * 24);
+
+        // Prefer '3m', fallback to '1m', fallback to 'All'
+        if (diffDays >= 90) return '3m';
+        if (diffDays >= 30) return '1m';
+        return 'All';
+    });
 
     const filteredData = useMemo(() => {
         const now = new Date();
