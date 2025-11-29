@@ -7,6 +7,7 @@ import { Toaster } from '../components/ui/sonner';
 import { SessionProvider } from './SessionProvider';
 import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { CollectionDataInitializer } from '../components/CollectionDataInitializer';
 
 export function ProvidersWrapper({
     children,
@@ -26,7 +27,10 @@ export function ProvidersWrapper({
                         enableSystem
                         disableTransitionOnChange
                     >
-                        <TooltipProvider>{children}</TooltipProvider>
+                        <TooltipProvider>
+                            <CollectionDataInitializer />
+                            {children}
+                        </TooltipProvider>
                         <Toaster />
                     </ThemeProvider>
                 </SessionProvider>
