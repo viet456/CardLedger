@@ -17,11 +17,6 @@ export type ApiHistoryEntry = {
     volume: number | string | null;
 };
 
-// export type ApiEbayHistoryEntry = {
-//     average: number | string;
-//     count: number | string | null;
-// }
-
 export type ApiCard = {
     cardNumber: string | number;
     name: string;
@@ -37,16 +32,6 @@ export type ApiCard = {
         };
         lastUpdated?: Date | string;
     };
-    // ebay?: {
-    //     priceHistory: {
-    //         [grade: string]:
-    //             | {
-    //                   //psa 8, 9, 10
-    //                   [date: string]: ApiEbayHistoryEntry;
-    //               }
-    //             | undefined;
-    //     };
-    // };
 };
 
 export type PriceHistoryDbRow = {
@@ -62,13 +47,6 @@ export type PriceHistoryDbRow = {
     tcgModeratelyPlayedVolume?: number | null;
     tcgHeavilyPlayedVolume?: number | null;
     tcgDamagedVolume?: number | null;
-
-    // psa8MedianPrice?: number | null;
-    // psa9MedianPrice?: number | null;
-    // psa10MedianPrice?: number | null;
-    // psa8SaleCount?: number | null;
-    // psa9SaleCount?: number | null;
-    // psa10SaleCount?: number | null;
 };
 
 export type MarketKey =
@@ -99,18 +77,3 @@ export const conditionsVolumeMap: { [key: string]: VolumeKey } = {
     'Heavily Played': 'tcgHeavilyPlayedVolume',
     Damaged: 'tcgDamagedVolume'
 };
-
-// type PsaMarketKey = 'psa8MedianPrice' | 'psa9MedianPrice' | 'psa10MedianPrice';
-// type PsaVolumeKey = 'psa8SaleCount' | 'psa9SaleCount' | 'psa10SaleCount';
-
-// const psaGradeMarketMap: { [key: string]: PsaMarketKey } = {
-//     psa8: 'psa8MedianPrice',
-//     psa9: 'psa9MedianPrice',
-//     psa10: 'psa10MedianPrice'
-// };
-
-// const psaGradeVolumeMap: { [key: string]: PsaVolumeKey } = {
-//     psa8: 'psa8SaleCount',
-//     psa9: 'psa9SaleCount',
-//     psa10: 'psa10SaleCount'
-// };

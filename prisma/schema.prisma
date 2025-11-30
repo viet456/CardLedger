@@ -21,9 +21,6 @@ enum CardCondition {
     tcgModeratelyPlayed
     tcgHeavilyPlayed
     tcgDamaged
-    psa10
-    psa9
-    psa8
 }
 
 model Set {
@@ -150,23 +147,7 @@ model MarketStats {
     tcgHeavilyPlayedListings    Int?
     tcgDamagedListings          Int?
 
-    // PSA pricing 
-    psa8MedianPrice  Decimal? @db.Decimal(10, 2)
-    psa9MedianPrice  Decimal? @db.Decimal(10, 2)
-    psa10MedianPrice Decimal? @db.Decimal(10, 2)
-
-    // PSA market trends
-    psa8MarketTrend  String?
-    psa9MarketTrend  String?
-    psa10MarketTrend String?
-
-    // PSA listings count
-    psa8SaleCount  Int?
-    psa9SaleCount  Int?
-    psa10SaleCount Int?
-
     tcgPlayerUpdatedAt DateTime?
-    ebayLastUpdatedAt  DateTime?
 }
 
 model PriceHistory {
@@ -185,15 +166,6 @@ model PriceHistory {
     tcgModeratelyPlayedVolume Int?
     tcgHeavilyPlayedVolume    Int?
     tcgDamagedVolume          Int?
-
-    // PSA pricing 
-    psa8MedianPrice  Decimal? @db.Decimal(10, 2)
-    psa9MedianPrice  Decimal? @db.Decimal(10, 2)
-    psa10MedianPrice Decimal? @db.Decimal(10, 2)
-
-    psa8SaleCount  Int?
-    psa9SaleCount  Int?
-    psa10SaleCount Int?
 
     cardId String
     card   Card   @relation(fields: [cardId], references: [id], onDelete: Cascade)
