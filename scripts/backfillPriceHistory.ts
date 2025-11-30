@@ -87,39 +87,6 @@ async function processAndWriteHistory(myCardId: string, myCardNumber: string, ap
         }
     }
 
-    // Ebay PSA pricing
-    // const grades = ['psa8', 'psa9', 'psa10'];
-    // const ebayPriceHistory = apiCard.ebay?.priceHistory;
-    // if (ebayPriceHistory) {
-    //     for (const grade of grades) {
-    //         const gradeHistory = ebayPriceHistory[grade];
-    //         if (!gradeHistory) continue;
-
-    //         const marketKey = psaGradeMarketMap[grade];
-    //         const volumeKey = psaGradeVolumeMap[grade];
-
-    //         for (const dateString of Object.keys(gradeHistory)) {
-    //             const historyItem = gradeHistory[dateString];
-    //             // merge with TCGplayer row
-    //             if (!entriesByDate.has(dateString)) {
-    //                 entriesByDate.set(dateString, { timestamp: new Date(dateString) });
-    //             }
-    //             const row = entriesByDate.get(dateString)!;
-    //             const market = parseFloat(String(historyItem.average));
-    //             const volume =
-    //                 historyItem.count !== null
-    //                     ? parseInt(String(historyItem.count), 10)
-    //                     : null;
-    //             if (!isNaN(market)) {
-    //                 row[marketKey] = market;
-    //             }
-    //             if (volume !== null && !isNaN(volume)) {
-    //                 row[volumeKey] = volume;
-    //             }
-    //         }
-    //     }
-    //}
-
     // normalize TCGplayer entries for db
     const dataForPrisma: PriceHistoryDbRow[] = Array.from(entriesByDate.values()).map((row) => ({
         cardId: myCardId,
