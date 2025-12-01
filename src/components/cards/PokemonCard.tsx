@@ -1,7 +1,7 @@
 import { DenormalizedCard } from '@/src/shared-types/card-index';
 import Link from 'next/link';
 import Image from 'next/image';
-import { CollectionControl } from '../ledger/CollectionControl';
+import { CollectionControl } from '../portfolio/CollectionControl';
 
 const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
 

@@ -37,6 +37,28 @@ async function DashboardContent() {
         },
         orderBy: { createdAt: 'desc' }
     });
+
+    const serializedEntries = collectionEntries.map((entry) => ({
+        ...entry,
+        purchasePrice: entry.purchasePrice.toNumber(),
+        card: {
+            ...entry.card,
+            marketStats: entry.card.marketStats
+                ? {
+                      ...entry.card.marketStats,
+                      tcgNearMintLatest:
+                          entry.card.marketStats.tcgNearMintLatest?.toNumber() ?? null,
+                      tcgLightlyPlayedLatest:
+                          entry.card.marketStats.tcgLightlyPlayedLatest?.toNumber() ?? null,
+                      tcgModeratelyPlayedLatest:
+                          entry.card.marketStats.tcgModeratelyPlayedLatest?.toNumber() ?? null,
+                      tcgHeavilyPlayedLatest:
+                          entry.card.marketStats.tcgHeavilyPlayedLatest?.toNumber() ?? null,
+                      tcgDamagedLatest: entry.card.marketStats.tcgDamagedLatest?.toNumber() ?? null
+                  }
+                : null
+        }
+    }));
     const portfolioHistory = await getPortfolioValue(session.user.id);
 
     const gridCards =
@@ -51,7 +73,7 @@ async function DashboardContent() {
                 <div className='flex items-center justify-between'>
                     <TabsList className='rounded-lg bg-muted p-1'>
                         <TabsTrigger value='gallery'>Gallery View</TabsTrigger>
-                        <TabsTrigger value='ledger'>Portfolio</TabsTrigger>
+                        <TabsTrigger value='portfolio'>Portfolio</TabsTrigger>
                     </TabsList>
                 </div>
                 <TabsContent value='gallery' className='mt-6 flex-grow'>
@@ -64,8 +86,8 @@ async function DashboardContent() {
                         <CollectionPageView cards={gridCards} />
                     )}
                 </TabsContent>
-                <TabsContent value='ledger' className='mt-6'>
-                    <PortfolioView history={portfolioHistory} />
+                <TabsContent value='portfolio' className='mt-6'>
+                    <PortfolioView history={portfolioHistory} entries={serializedEntries} />
                 </TabsContent>
             </Tabs>
         </main>
