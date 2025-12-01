@@ -14,13 +14,13 @@ import {
     TableHeader,
     TableRow
 } from '@/src/components/ui/table';
-import { Button } from '@/src/components/ui/button';
 import { trpc } from '@/src/utils/trpc';
 import { Loader2, Trash2, Save } from 'lucide-react';
-import { EditableConditionSelect } from '../ledger/EditableConditionSelect';
-import { EditablePriceInput } from '../ledger/EditablePriceInput';
-import { EditableDate } from '../ledger/EditableDate';
-import { SafeDeleteButton } from '../ledger/SafeDeleteButton';
+import { EditableConditionSelect } from './EditableConditionSelect';
+import { EditablePriceInput } from './EditablePriceInput';
+import { EditableDate } from './EditableDate';
+import { SafeDeleteButton } from './SafeDeleteButton';
+import { useRouter } from 'next/navigation';
 
 interface CollectionManagerModalProps {
     isOpen: boolean;

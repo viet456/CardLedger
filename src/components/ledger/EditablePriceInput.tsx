@@ -4,8 +4,10 @@ import { Input } from '@/src/components/ui/input';
 import { trpc } from '@/src/utils/trpc';
 import { toast } from 'sonner';
 import { Pencil } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export function EditablePriceInput({ id, initialPrice }: { id: string; initialPrice: number }) {
+    const router = useRouter();
     const [value, setValue] = useState(initialPrice);
     const [isEditing, setIsEditing] = useState(false);
     const utils = trpc.useUtils();
@@ -15,6 +17,7 @@ export function EditablePriceInput({ id, initialPrice }: { id: string; initialPr
             toast.success('Price updated');
             setIsEditing(false);
             utils.collection.getCollection.invalidate(); // Refreshes both Modal and Ledger
+            router.refresh();
         }
     });
 

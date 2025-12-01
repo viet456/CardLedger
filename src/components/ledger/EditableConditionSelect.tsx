@@ -9,6 +9,7 @@ import {
 } from '@/src/components/ui/select';
 import { CardCondition } from '@prisma/client';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 export function EditableConditionSelect({
     id,
@@ -17,11 +18,13 @@ export function EditableConditionSelect({
     id: string;
     initialCondition: CardCondition;
 }) {
+    const router = useRouter();
     const utils = trpc.useUtils();
     const mutation = trpc.collection.updateEntry.useMutation({
         onSuccess: () => {
             toast.success('Condition updated');
             utils.collection.getCollection.invalidate();
+            router.refresh();
         }
     });
 
