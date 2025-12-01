@@ -1,9 +1,13 @@
 'use client';
-import { PortfolioChart } from '@/src/components/ledger/PortfolioChart';
+import { PortfolioChart } from '@/src/components/portfolio/PortfolioChart';
 import { PortfolioChartPoint } from '@/src/services/portfolioService';
+import { CardCondition } from '@prisma/client';
+import { DataTable } from './DataTable';
+import { columns, PortfolioRow } from './Columns';
 
 interface PortfolioViewProps {
     history: PortfolioChartPoint[];
+    entries: any[];
 }
 
 interface SummaryCardProps {
@@ -13,6 +17,10 @@ interface SummaryCardProps {
     isProfit?: boolean;
     showSign?: boolean;
     suffix?: string;
+}
+
+function formatCondition(cond: string) {
+    return cond.replace('tcg', '').replace(/([A-Z])[a-z]+/g, '$1');
 }
 
 function SummaryCard({
@@ -44,13 +52,57 @@ function SummaryCard({
     );
 }
 
-export function PortfolioView({ history }: PortfolioViewProps) {
+export function PortfolioView({ history, entries }: PortfolioViewProps) {
     // Calculate Summary Stats
     const currentStats = history[history.length - 1] || { price: 0, costBasis: 0 };
     const totalValue = currentStats.price;
     const totalCost = currentStats.costBasis;
     const totalProfit = totalValue - totalCost;
     const profitPercent = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
+
+    const tableData: PortfolioRow[] = entries.map((entry) => {
+        let currentPrice = 0;
+        const stats = entry.card.marketStats;
+        if (stats) {
+            switch (entry.condition) {
+                case CardCondition.tcgNearMint:
+                    currentPrice = stats.tcgNearMintLatest ?? 0;
+                    break;
+                case CardCondition.tcgLightlyPlayed:
+                    currentPrice = stats.tcgLightlyPlayedLatest ?? 0;
+                    break;
+                case CardCondition.tcgModeratelyPlayed:
+                    currentPrice = stats.tcgModeratelyPlayedLatest ?? 0;
+                    break;
+                case CardCondition.tcgHeavilyPlayed:
+                    currentPrice = stats.tcgHeavilyPlayedLatest ?? 0;
+                    break;
+                case CardCondition.tcgDamaged:
+                    currentPrice = stats.tcgDamagedLatest ?? 0;
+                    break;
+                default:
+                    currentPrice = stats.tcgNearMintLatest ?? 0;
+            }
+        }
+
+        const cost = Number(entry.purchasePrice);
+        const gain = Number(currentPrice) - cost;
+        const percent = cost > 0 ? (gain / cost) * 100 : 0;
+
+        return {
+            id: entry.id,
+            cardId: entry.cardId,
+            name: entry.card.name,
+            setName: entry.card.set.name,
+            image: entry.card.imageKey,
+            condition: formatCondition(entry.condition),
+            purchasedAt: entry.createdAt.toString(),
+            purchasePrice: cost,
+            currentPrice: Number(currentPrice),
+            gain: gain,
+            gainPercent: percent
+        };
+    });
 
     return (
         <div className='space-y-8'>
@@ -85,7 +137,11 @@ export function PortfolioView({ history }: PortfolioViewProps) {
                 )}
             </div>
 
-            {/* C. The Holdings Table */}
+            {/* The Holdings Table */}
+            <div className='space-y-4'>
+                <h3 className='text-lg font-semibold'>Holdings</h3>
+                <DataTable columns={columns} data={tableData} />
+            </div>
         </div>
     );
 }
