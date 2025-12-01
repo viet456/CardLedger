@@ -102,9 +102,9 @@ function buildIndexes(fullData: FullCardData) {
         }
     }
 
-    console.log('[CardStore]: Building Fuse.js index...');
+    //console.log('[CardStore]: Building Fuse.js index...');
     const fuseInstance = new Fuse(fullData.cards, fuseOptions);
-    console.log('[CardStore]: ✅ Fuse.js index built.');
+    ////console.log('[CardStore]: ✅ Fuse.js index built.');
 
     return {
         cardMap,
@@ -121,15 +121,15 @@ function buildIndexes(fullData: FullCardData) {
 
 const indexedDbStorage: PersistStorage<PersistedState> = {
     getItem: async (name: string): Promise<{ state: PersistedState; version: number } | null> => {
-        console.log(`[IndexedDB]: Reading '${name}'...`);
+        //console.log(`[IndexedDB]: Reading '${name}'...`);
         const item = (await get(name)) || null;
-        console.log('[IndexedDB]: Read complete.', item ? 'Data found.' : 'No data found.');
+        //console.log('[IndexedDB]: Read complete.', item ? 'Data found.' : 'No data found.');
         return item;
     },
     setItem: async (name: string, value: StorageValue<PersistedState>): Promise<void> => {
-        console.log(`[IndexedDB]: Writing to '${name}'...`);
+        //console.log(`[IndexedDB]: Writing to '${name}'...`);
         await set(name, value);
-        console.log('[IndexedDB]: Write complete.');
+        //console.log('[IndexedDB]: Write complete.');
     },
     removeItem: async (name: string) => {
         await del(name);
@@ -169,31 +169,31 @@ export const useCardStore = create<CardStoreState>()(
                 if (get().status.startsWith('loading') || get().status.startsWith('ready')) {
                     return;
                 }
-                console.log('[CardStore]: Initializing card data...');
+                //console.log('[CardStore]: Initializing card data...');
                 set({ status: 'loading' });
 
                 try {
-                    console.log('[CardStore]: Fetching pointer file...');
+                    //console.log('[CardStore]: Fetching pointer file...');
                     const pointerRes = await fetch(
                         `${R2_PUBLIC_URL}/indices/card-index.current.json`
                     );
                     if (!pointerRes.ok) throw new Error("Failed to fetch card's pointer file.");
                     const pointer: PointerFile = await pointerRes.json();
-                    console.log(
-                        `[CardStore]: Latest version is ${pointer.version}. Local version is ${get().version || 'none'}.`
-                    );
+                    // console.log(
+                    //     `[CardStore]: Latest version is ${pointer.version}. Local version is ${get().version || 'none'}.`
+                    // );
 
                     // Check if our stored version is the same as the last created JSON
                     if (get().version === pointer.version) {
-                        console.log('✅ Local data is up-to-date. Using cache.');
+                        //console.log('✅ Local data is up-to-date. Using cache.');
                         set({ status: 'ready_from_cache' });
                         return;
                     }
 
-                    console.log('New data version found. Fetching from network...');
+                    //console.log('New data version found. Fetching from network...');
                     const cardsRes = await fetch(pointer.url);
                     if (!cardsRes.ok) throw new Error('Failed to fetch card data artifact.');
-                    console.log('[CardStore]: Download complete. Verifying checksum...');
+                    //console.log('[CardStore]: Download complete. Verifying checksum...');
                     const cardsDataString = await cardsRes.text();
 
                     const encoder = new TextEncoder();
@@ -207,17 +207,17 @@ export const useCardStore = create<CardStoreState>()(
                     if (calculatedCheckSum !== pointer.checkSum) {
                         throw new Error('Checksum validation failed! Data is corrupt.');
                     }
-                    console.log('[CardStore]: ✅ Checksum validation successful.');
+                    //console.log('[CardStore]: ✅ Checksum validation successful.');
 
                     const fullData: FullCardData = JSON.parse(cardsDataString);
 
                     // Build card filter indexes
-                    console.log('[CardStore]: Building indexes from network data...');
+                    //console.log('[CardStore]: Building indexes from network data...');
                     const indexes = buildIndexes(fullData);
 
-                    console.log(
-                        `[CardStore]: ✅ Loaded ${fullData.cards.length} cards from network. Updating state.`
-                    );
+                    // console.log(
+                    //     `[CardStore]: ✅ Loaded ${fullData.cards.length} cards from network. Updating state.`
+                    // );
                     set({ ...fullData, ...indexes, status: 'ready_from_network' });
                 } catch (error) {
                     const errorMessage =
@@ -248,7 +248,7 @@ export const useCardStore = create<CardStoreState>()(
             // Build indexes after rehydration from storage
             onRehydrateStorage: () => (state) => {
                 if (state && state.cards.length > 0) {
-                    console.log('[CardStore]: Building indexes after rehydration...');
+                    //console.log('[CardStore]: Building indexes after rehydration...');
                     const indexes = buildIndexes(state as FullCardData);
                     state.cardMap = indexes.cardMap;
                     state.rarityIndex = indexes.rarityIndex;
@@ -259,7 +259,7 @@ export const useCardStore = create<CardStoreState>()(
                     state.weaknessIndex = indexes.weaknessIndex;
                     state.resistanceIndex = indexes.resistanceIndex;
                     state.fuseInstance = indexes.fuseInstance;
-                    console.log('[CardStore]: ✅ Indexes built from rehydrated data.');
+                    //console.log('[CardStore]: ✅ Indexes built from rehydrated data.');
                 }
             }
         }

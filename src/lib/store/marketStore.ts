@@ -19,15 +19,15 @@ type MarketStoreState = MarketStats & {
 
 const indexedDbStorage: PersistStorage<PersistedState> = {
     getItem: async (name: string): Promise<{ state: PersistedState; version: number } | null> => {
-        console.log(`[IndexedDB]: Reading '${name}'...`);
+        //console.log(`[IndexedDB]: Reading '${name}'...`);
         const item = (await get(name)) || null;
-        console.log('[IndexedDB]: Read complete.', item ? 'Data found.' : 'No data found.');
+        //console.log('[IndexedDB]: Read complete.', item ? 'Data found.' : 'No data found.');
         return item;
     },
     setItem: async (name: string, value: StorageValue<PersistedState>): Promise<void> => {
-        console.log(`[IndexedDB]: Writing to '${name}'...`);
+        //console.log(`[IndexedDB]: Writing to '${name}'...`);
         await set(name, value);
-        console.log('[IndexedDB]: Write complete.');
+        //console.log('[IndexedDB]: Write complete.');
     },
     removeItem: async (name: string) => {
         await del(name);
@@ -46,32 +46,32 @@ export const useMarketStore = create<MarketStoreState>()(
                 if (get().status.startsWith('loading') || get().status.startsWith('ready')) {
                     return;
                 }
-                console.log('[MarketStore]: Initializing current price data...');
+                //console.log('[MarketStore]: Initializing current price data...');
                 set({ status: 'loading' });
 
                 // Check if our stored version is the same as the last created JSON
                 try {
-                    console.log('[MarketStore]: Fetching pointer file...');
+                    //console.log('[MarketStore]: Fetching pointer file...');
                     const pointerRes = await fetch(
                         `${R2_PUBLIC_URL}/market/market-index.current.json`
                     );
                     if (!pointerRes.ok) throw new Error("Failed to fetch market's pointer file.");
                     const pointer: PointerFile = await pointerRes.json();
-                    console.log(
-                        `[MarketStore]: Latest version is ${pointer.version}. Local version is ${get().version || 'none'}.`
-                    );
+                    //console.log(
+                    //     `[MarketStore]: Latest version is ${pointer.version}. Local version is ${get().version || 'none'}.`
+                    // );
 
                     // Check if our stored version is the same as the last created JSON
                     if (get().version === pointer.version) {
-                        console.log(' ✅ Local data is up-to-date. Using IndexedDB cache.');
+                        //console.log(' ✅ Local data is up-to-date. Using IndexedDB cache.');
                         set({ status: 'ready_from_cache' });
                         return;
                     }
 
-                    console.log('New data version found. Fetching from network...');
+                    //console.log('New data version found. Fetching from network...');
                     const cardsRes = await fetch(pointer.url);
                     if (!cardsRes.ok) throw new Error('Failed to fetch card data artifact.');
-                    console.log('[MarketStore]: Download complete. Verifying checksum...');
+                    //console.log('[MarketStore]: Download complete. Verifying checksum...');
                     const cardsDataString = await cardsRes.text();
 
                     const encoder = new TextEncoder();
@@ -85,12 +85,12 @@ export const useMarketStore = create<MarketStoreState>()(
                     if (calculatedCheckSum !== pointer.checkSum) {
                         throw new Error('Checksum validation failed! Data is corrupt.');
                     }
-                    console.log('[MarketStore]: ✅ Checksum validation successful.');
+                    //console.log('[MarketStore]: ✅ Checksum validation successful.');
 
                     const fullData: PersistedState = JSON.parse(cardsDataString);
-                    console.log(
-                        `[MarketStore]: ✅ Loaded ${Object.keys(fullData.prices).length} card prices from network. Updating state.`
-                    );
+                    //console.log(
+                    //     `[MarketStore]: ✅ Loaded ${Object.keys(fullData.prices).length} card prices from network. Updating state.`
+                    // );
                     set({ ...fullData, status: 'ready_from_network' });
                 } catch (error) {
                     const errorMessage =
