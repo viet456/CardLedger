@@ -42,7 +42,8 @@ export function PokemonCard({
     const conditionLabel = stats?.condition.replace('tcg', '').replace(/([A-Z])[a-z]+/g, '$1');
     return (
         <div className='group relative flex w-full flex-col rounded-xl bg-card text-card-foreground transition-transform will-change-transform hover:scale-[1.02]'>
-            <div className='absolute right-2 top-2 z-10 opacity-100 transition-opacity duration-200 lg:opacity-0 lg:group-hover:opacity-100'>
+            <div className='absolute right-2 top-2 z-10 opacity-100 transition-opacity duration-200 lg:opacity-0 lg:focus-within:opacity-100 lg:group-hover:opacity-100'>
+                {' '}
                 <CollectionControl
                     cardId={card.id}
                     currentPrice={card.price}

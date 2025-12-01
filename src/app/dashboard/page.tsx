@@ -73,7 +73,7 @@ async function DashboardContent() {
         })) || [];
 
     return (
-        <main className='mx-auto flex min-h-screen w-full flex-col p-6 text-foreground'>
+        <main className='mx-auto mb-16 flex min-h-screen w-full flex-col p-4 text-foreground lg:p-8'>
             <Tabs defaultValue='gallery' className='w-full'>
                 <div className='flex items-center justify-between'>
                     <TabsList className='rounded-lg bg-muted p-1'>
