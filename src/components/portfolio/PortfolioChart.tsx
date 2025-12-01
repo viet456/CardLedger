@@ -209,7 +209,8 @@ export function PortfolioChart({ initialData }: PortfolioChartProps) {
 
             {/* Chart Container */}
             <div className='relative h-[300px] w-full'>
-                <canvas ref={chartRef} />
+                <canvas ref={chartRef} aria-hidden='true' />
+                {/* Add a screen-reader-only table here */}
             </div>
         </div>
     );

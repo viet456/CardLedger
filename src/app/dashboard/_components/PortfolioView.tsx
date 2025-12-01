@@ -41,9 +41,14 @@ function SummaryCard({
         isProfit === undefined ? 'text-foreground' : isProfit ? 'text-emerald-500' : 'text-red-500';
 
     return (
-        <div className='rounded-xl border bg-card p-6 shadow-sm'>
+        <div
+            className='min-w-[240px] rounded-xl border bg-card p-6 shadow-sm'
+            tabIndex={0}
+            role='region'
+            aria-label={`${label}: ${formatted}`}
+        >
             <div className='text-sm font-medium text-muted-foreground'>{label}</div>
-            <div className={`text-2xl font-bold ${colorClass}`}>
+            <div className={`text-2xl font-bold ${colorClass}`} aria-hidden='true'>
                 {showSign && isProfit !== undefined ? (isProfit ? '+' : '-') : ''}
                 {formatted}
                 {suffix}
@@ -107,7 +112,7 @@ export function PortfolioView({ history, entries }: PortfolioViewProps) {
     return (
         <div className='space-y-8'>
             {/* Summary Cards */}
-            <div className='grid gap-4 md:grid-cols-3'>
+            <div className='flex gap-4 overflow-x-auto pb-2 md:grid md:grid-cols-3 md:pb-0'>
                 <SummaryCard label='Total Value' value={totalValue} isCurrency />
                 <SummaryCard
                     label='Total Profit'
@@ -126,7 +131,7 @@ export function PortfolioView({ history, entries }: PortfolioViewProps) {
             </div>
 
             {/* The Chart */}
-            <div className='rounded-xl border bg-card p-6 shadow-sm'>
+            <div className='rounded-xl border bg-card p-4 shadow-sm'>
                 <h3 className='mb-6 text-lg font-semibold'>Performance History</h3>
                 {history.length > 0 ? (
                     <PortfolioChart initialData={history} />
