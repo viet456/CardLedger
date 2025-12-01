@@ -2,7 +2,17 @@ import { z } from 'zod';
 import { Supertype, LegalityStatus } from '@prisma/client';
 
 // set what fields should be sortable
-const sortableKeys = z.enum(['n', 'rD', 'pS', 'num', 'price', 'relevance']);
+const sortableKeys = z.enum([
+    'n',
+    'rD',
+    'pS',
+    'num',
+    'price',
+    'relevance',
+    'cost',
+    'acquired',
+    'gain'
+]);
 export type SortableKey = z.infer<typeof sortableKeys>;
 
 // the shape of card requests

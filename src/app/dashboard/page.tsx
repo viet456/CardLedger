@@ -64,7 +64,12 @@ async function DashboardContent() {
     const gridCards =
         collectionEntries?.map((entry) => ({
             ...mapPrismaCardToDenormalized(entry.card),
-            uniqueId: entry.id
+            uniqueId: entry.id,
+            collectionStats: {
+                cost: entry.purchasePrice.toNumber(),
+                acquiredAt: entry.createdAt,
+                condition: entry.condition
+            }
         })) || [];
 
     return (

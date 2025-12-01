@@ -8,11 +8,19 @@ import { DenormalizedCard, FilterOptions, SetObject } from '@/src/shared-types/c
 import { SortableKey } from '@/src/services/pokemonCardValidator';
 // Modeled after /setId page view
 
-interface CollectionPageViewProps {
-    cards: DenormalizedCard[];
+interface DashboardCard extends DenormalizedCard {
+    collectionStats?: {
+        cost: number;
+        acquiredAt: Date;
+        condition: string;
+    };
 }
 
-function useCollectionFilters(initialCards: DenormalizedCard[]) {
+interface CollectionPageViewProps {
+    cards: DashboardCard[];
+}
+
+function useCollectionFilters(initialCards: DashboardCard[]) {
     const { filters } = useSearchStore(useShallow((state) => ({ filters: state.filters })));
 
     const filteredAndSortedCards = useMemo(() => {
@@ -45,13 +53,24 @@ function useCollectionFilters(initialCards: DenormalizedCard[]) {
             return true;
         });
 
-        const sortBy = (filters.sortBy || 'price') as SortableKey;
+        const sortBy = (filters.sortBy || 'acquired') as SortableKey;
         const sortOrder = filters.sortOrder || 'desc';
 
         filtered.sort((a, b) => {
             switch (sortBy) {
                 case 'price':
                     return (a.price || 0) - (b.price || 0);
+                case 'cost':
+                    return (a.collectionStats?.cost || 0) - (b.collectionStats?.cost || 0);
+                case 'acquired':
+                    return (
+                        new Date(a.collectionStats?.acquiredAt || 0).getTime() -
+                        new Date(b.collectionStats?.acquiredAt || 0).getTime()
+                    );
+                case 'gain':
+                    const gainA = (a.price || 0) - (a.collectionStats?.cost || 0);
+                    const gainB = (b.price || 0) - (b.collectionStats?.cost || 0);
+                    return gainA - gainB;
                 case 'n':
                     return a.n.localeCompare(b.n);
                 case 'num':
@@ -116,11 +135,12 @@ export function CollectionPageView({ cards }: CollectionPageViewProps) {
         };
     }, [cards]);
 
-    const sortOptions = [
-        { label: 'Price', value: 'price' as SortableKey },
-        { label: 'Name', value: 'n' as SortableKey },
-        { label: 'Card Number', value: 'num' as SortableKey }
-        // date acquired
+    const sortOptions: { label: string; value: SortableKey }[] = [
+        { label: 'Date Acquired', value: 'acquired' },
+        { label: 'Market Value', value: 'price' },
+        { label: 'Purchase Price', value: 'cost' },
+        { label: 'Total Gain', value: 'gain' },
+        { label: 'Name', value: 'n' }
     ];
 
     return (
