@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/src/components/ui/pop
 import { trpc } from '@/src/utils/trpc';
 import { toast } from 'sonner';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface EditableDateProps {
     id: string;
@@ -16,6 +17,7 @@ interface EditableDateProps {
 }
 
 export function EditableDate({ id, date }: EditableDateProps) {
+    const router = useRouter();
     const [currentDate, setCurrentDate] = useState<Date>(new Date(date));
     const [isOpen, setIsOpen] = useState(false);
 
@@ -26,6 +28,7 @@ export function EditableDate({ id, date }: EditableDateProps) {
             toast.success('Acquisition date updated');
             utils.collection.getCollection.invalidate();
             setIsOpen(false);
+            router.refresh();
         },
         onError: (error) => {
             toast.error('Failed to update date');

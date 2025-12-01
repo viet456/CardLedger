@@ -7,6 +7,8 @@ import { CollectionPageView } from './_components/CollectionPageView';
 import { mapPrismaCardToDenormalized } from '@/src/utils/cardMapper';
 import { Suspense } from 'react';
 import { DashboardSkeleton } from './_components/DashboardSkeleton';
+import { getPortfolioValue } from '@/src/services/portfolioService';
+import { PortfolioView } from './_components/PortfolioView';
 
 async function DashboardContent() {
     const session = await auth.api.getSession({
@@ -35,6 +37,7 @@ async function DashboardContent() {
         },
         orderBy: { createdAt: 'desc' }
     });
+    const portfolioHistory = await getPortfolioValue(session.user.id);
 
     const gridCards =
         collectionEntries?.map((entry) => ({
@@ -43,16 +46,12 @@ async function DashboardContent() {
         })) || [];
 
     return (
-        <main className='mx-auto flex min-h-screen w-full flex-col space-y-4 p-6 text-foreground'>
-            <h1 className='text-2xl font-bold'>Dashboard</h1>
-            <p>Welcome back, {session.user.name || session.user.username || 'Collector'}</p>
+        <main className='mx-auto flex min-h-screen w-full flex-col p-6 text-foreground'>
             <Tabs defaultValue='gallery' className='w-full'>
                 <div className='flex items-center justify-between'>
                     <TabsList className='rounded-lg bg-muted p-1'>
                         <TabsTrigger value='gallery'>Gallery View</TabsTrigger>
-                        <TabsTrigger value='ledger' disabled className='opacity-50'>
-                            Ledger (coming soon)
-                        </TabsTrigger>
+                        <TabsTrigger value='ledger'>Portfolio</TabsTrigger>
                     </TabsList>
                 </div>
                 <TabsContent value='gallery' className='mt-6 flex-grow'>
@@ -64,6 +63,9 @@ async function DashboardContent() {
                     ) : (
                         <CollectionPageView cards={gridCards} />
                     )}
+                </TabsContent>
+                <TabsContent value='ledger' className='mt-6'>
+                    <PortfolioView history={portfolioHistory} />
                 </TabsContent>
             </Tabs>
         </main>

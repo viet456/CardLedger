@@ -77,6 +77,7 @@ export function CollectionControl({
                 );
             });
             toast.success('Added to collection');
+            router.refresh();
         },
         onError: (error, vars, context) => {
             if (context?.previousCollection) {
@@ -103,6 +104,7 @@ export function CollectionControl({
             pendingDeletesRef.current.delete(variables.entryId);
             toast.success('Removed from collection');
             utils.collection.getCollection.invalidate();
+            router.refresh();
         },
         onError: (error, variables, context) => {
             if (context?.previousCollection) {
