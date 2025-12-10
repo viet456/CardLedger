@@ -49,7 +49,7 @@ export function SignInForm() {
                 setLoginAttempts((p) => p + 1);
                 setTurnstileToken(null); // Force captcha reset on error
             } else {
-                router.push('/dashboard');
+                window.location.href = '/dashboard';
             }
         } catch (err) {
             setError('Network error. Please try again.');

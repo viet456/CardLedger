@@ -73,7 +73,7 @@ export function SignUpForm() {
                 setSubmitAttempts((p) => p + 1);
                 setTurnstileToken(null);
             } else {
-                router.push('/dashboard');
+                window.location.href = '/dashboard';
             }
         } catch (error) {
             setError('Network error.');
