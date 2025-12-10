@@ -33,16 +33,22 @@ export function SignInForm() {
 
         try {
             const response = isEmail
-                ? await signIn.email({
-                      email: identifier,
-                      password,
-                      fetchOptions: { headers: { 'x-captcha-response': turnstileToken } }
-                  })
-                : await signIn.username({
-                      username: identifier,
-                      password,
-                      fetchOptions: { headers: { 'x-captcha-response': turnstileToken } }
-                  });
+                ? await signIn.email(
+                      {
+                          email: identifier,
+                          password
+                          //fetchOptions: { headers: { 'x-captcha-response': turnstileToken } },
+                      },
+                      { headers: { 'x-captcha-response': turnstileToken } }
+                  )
+                : await signIn.username(
+                      {
+                          username: identifier,
+                          password
+                          //fetchOptions: { headers: { 'x-captcha-response': turnstileToken } },
+                      },
+                      { headers: { 'x-captcha-response': turnstileToken } }
+                  );
 
             if (response.error) {
                 setError(response.error.message || 'Invalid credentials.');
