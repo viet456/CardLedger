@@ -4,11 +4,12 @@ import { prisma } from '@/src/lib/prisma';
 import { nextCookies } from 'better-auth/next-js';
 import { username } from 'better-auth/plugins';
 import { Resend } from 'resend';
-import { captcha } from 'better-auth/plugins';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const auth = betterAuth({
+    baseURL: process.env.BETTER_AUTH_URL,
+    trustedOrigins: ['https://cardledger.io', 'https://www.cardledger.io'],
     database: prismaAdapter(prisma, {
         provider: 'postgresql'
     }),
@@ -22,14 +23,11 @@ export const auth = betterAuth({
             clientSecret: process.env.DISCORD_CLIENT_SECRET!
         }
     },
-    email: {
-        sendResetPassword: async ({ user, url }: { user: { email: string }; url: string }) => {
-            await resend.emails.send({
-                from: 'CardLedger <noreply@updates.cardledger.io>',
-                to: user.email,
-                subject: 'Reset your password',
-                html: `<p>Click <a href="${url}">here</a> to reset your password.</p>`
-            });
+    advanced: {
+        defaultCookieAttributes: {
+            sameSite: 'lax',
+            secure: process.env.NODE_ENV === 'production',
+            httpOnly: true
         }
     },
     emailVerification: {
@@ -47,14 +45,15 @@ export const auth = betterAuth({
         enabled: true,
         autoSignIn: true,
         requireEmailVerification: true,
-        minPasswordLength: 8
+        minPasswordLength: 8,
+        sendResetPassword: async ({ user, url }) => {
+            await resend.emails.send({
+                from: 'CardLedger <noreply@updates.cardledger.io>',
+                to: user.email,
+                subject: 'Reset your password',
+                html: `<p>Click <a href="${url}">here</a> to reset your password.</p>`
+            });
+        }
     },
-    plugins: [
-        username(),
-        captcha({
-            provider: 'cloudflare-turnstile',
-            secretKey: process.env.TURNSTILE_SECRET_KEY!
-        }),
-        nextCookies()
-    ]
+    plugins: [username(), nextCookies()]
 });

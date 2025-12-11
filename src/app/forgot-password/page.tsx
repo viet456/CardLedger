@@ -1,14 +1,12 @@
 'use client';
 import { useState } from 'react';
 import { Button } from '@/src/components/ui/button';
-import { Widget } from '@/src/components/Turnstile';
-import { forgetPassword } from '@/src/lib/auth-client';
+import { requestPasswordReset } from '@/src/lib/auth-client';
 
 export default function ForgotPasswordPage() {
     const [email, setEmail] = useState('');
     const [message, setMessage] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
     const [submitAttempts, setSubmitAttempts] = useState(0);
 
     async function handleSubmit(e: React.FormEvent) {
@@ -16,33 +14,20 @@ export default function ForgotPasswordPage() {
         setError(null);
         setMessage(null);
 
-        // Check for Cloudflare token before submitting form
-        if (!turnstileToken) {
-            setError('Please complete the security check.');
-            return;
-        }
-
         try {
-            const response = await forgetPassword({
+            const response = await requestPasswordReset({
                 email,
-                redirectTo: '/reset-password',
-                fetchOptions: {
-                    headers: {
-                        'x-captcha-response': turnstileToken
-                    }
-                }
+                redirectTo: '/reset-password'
             });
             if (response.error) {
                 setError(response.error.message || 'Something went wrong.');
                 setSubmitAttempts((attempts) => attempts + 1);
-                setTurnstileToken(null);
             } else {
                 setMessage('Check your email for a password reset link.');
             }
         } catch (error) {
             setError('An unexpected error occurred.');
             setSubmitAttempts((attempts) => attempts + 1);
-            setTurnstileToken(null);
         }
     }
 
@@ -69,10 +54,9 @@ export default function ForgotPasswordPage() {
                             className='w-full rounded-md border border-border bg-card px-3 py-2'
                         />
                     </div>
-                    <Widget onTokenChange={setTurnstileToken} resetTrigger={submitAttempts} />
                     <Button
                         type='submit'
-                        disabled={!turnstileToken || !email}
+                        disabled={!email}
                         className='w-full rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground hover:bg-primary-hover'
                     >
                         Send Reset Link

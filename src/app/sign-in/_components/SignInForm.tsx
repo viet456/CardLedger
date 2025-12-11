@@ -1,18 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { signIn } from '@/src/lib/auth-client';
 import { Button } from '@/src/components/ui/button';
 import { Input } from '@/src/components/ui/input';
 import { Label } from '@/src/components/ui/label';
 import Link from 'next/link';
-import { Widget } from '@/src/components/Turnstile';
 
 export function SignInForm() {
-    const router = useRouter();
     const [error, setError] = useState<string | null>(null);
-    const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
     const [identifier, setIdentifier] = useState('');
     const [password, setPassword] = useState('');
@@ -23,11 +19,6 @@ export function SignInForm() {
         e.preventDefault();
         setError(null);
 
-        if (!turnstileToken) {
-            setError('Please complete the security check.');
-            return;
-        }
-
         setIsLoading(true);
         const isEmail = identifier.includes('@');
 
@@ -35,19 +26,16 @@ export function SignInForm() {
             const response = isEmail
                 ? await signIn.email({
                       email: identifier,
-                      password,
-                      fetchOptions: { headers: { 'x-captcha-response': turnstileToken } }
+                      password
                   })
                 : await signIn.username({
                       username: identifier,
-                      password,
-                      fetchOptions: { headers: { 'x-captcha-response': turnstileToken } }
+                      password
                   });
 
             if (response.error) {
                 setError(response.error.message || 'Invalid credentials.');
                 setLoginAttempts((p) => p + 1);
-                setTurnstileToken(null); // Force captcha reset on error
             } else {
                 window.location.href = '/dashboard';
             }
@@ -99,14 +87,10 @@ export function SignInForm() {
                     />
                 </div>
 
-                <div className='flex justify-center'>
-                    <Widget onTokenChange={setTurnstileToken} resetTrigger={loginAttempts} />
-                </div>
-
                 <Button
                     type='submit'
                     className='w-full'
-                    disabled={!turnstileToken || !identifier || password.length < 8 || isLoading}
+                    disabled={!identifier || password.length < 8 || isLoading}
                 >
                     {isLoading ? 'Signing In...' : 'Sign In'}
                 </Button>
