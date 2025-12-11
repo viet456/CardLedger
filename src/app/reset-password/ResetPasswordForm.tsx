@@ -1,7 +1,6 @@
 'use client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/src/components/ui/button';
-import { Widget } from '@/src/components/Turnstile';
 import { resetPassword } from '@/src/lib/auth-client';
 import { useState } from 'react';
 
@@ -13,17 +12,12 @@ export default function ResetPasswordForm() {
     const initialError = !resetToken ? 'Invalid or missing reset token' : null;
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(initialError);
-    const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
     const [submitAttempts, setSubmitAttempts] = useState(0);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         setError(null);
 
-        if (!turnstileToken) {
-            setError('Please complete the security check.');
-            return;
-        }
         if (!resetToken) {
             setError('Invalid or missing reset token.');
             return;
@@ -32,25 +26,18 @@ export default function ResetPasswordForm() {
         try {
             const response = await resetPassword({
                 token: resetToken,
-                newPassword: password,
-                fetchOptions: {
-                    headers: {
-                        'x-captcha-response': turnstileToken
-                    }
-                }
+                newPassword: password
             });
 
             if (response.error) {
                 setError(response.error.message || 'Something went wrong.');
                 setSubmitAttempts((attempts) => attempts + 1);
-                setTurnstileToken(null);
             } else {
                 router.push('/sign-in');
             }
         } catch (error) {
             setError('An unexpected error occurred.');
             setSubmitAttempts((attempts) => attempts + 1);
-            setTurnstileToken(null);
         }
     }
 
@@ -77,10 +64,9 @@ export default function ResetPasswordForm() {
                             className='w-full rounded-md border border-border bg-card px-3 py-2'
                         />
                     </div>
-                    <Widget onTokenChange={setTurnstileToken} resetTrigger={submitAttempts} />
                     <Button
                         type='submit'
-                        disabled={!turnstileToken || !resetToken || password.length < 8}
+                        disabled={!resetToken || password.length < 8}
                         className='w-full rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground hover:bg-primary-hover'
                     >
                         Reset Password

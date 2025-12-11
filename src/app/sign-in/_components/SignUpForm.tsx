@@ -3,17 +3,14 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { signUp, authClient } from '@/src/lib/auth-client';
 import { Button } from '@/src/components/ui/button';
-import { Widget } from '@/src/components/Turnstile';
 import { Input } from '@/src/components/ui/input';
 import { Label } from '@/src/components/ui/label';
 
 export function SignUpForm() {
-    const router = useRouter();
     const [error, setError] = useState<string | null>(null);
     const [username, setUsername] = useState('');
     const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
     const [checkingUsername, setCheckingUsername] = useState(false);
-    const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
     const [submitAttempts, setSubmitAttempts] = useState(0);
 
     const [name, setName] = useState('');
@@ -45,7 +42,6 @@ export function SignUpForm() {
         e.preventDefault();
         setError(null);
 
-        if (!turnstileToken) return setError('Please wait for the security check.');
         if (username.length < 3 || username.length > 20)
             return setError('Username must be 3-20 chars');
         if (!/^[a-zA-Z0-9_-]+$/.test(username)) return setError('Invalid characters in username');
@@ -56,14 +52,12 @@ export function SignUpForm() {
                 email,
                 password,
                 username,
-                name,
-                fetchOptions: { headers: { 'x-captcha-response': turnstileToken } }
+                name
             });
 
             if (response.error) {
                 setError(response.error.message || 'Something went wrong.');
                 setSubmitAttempts((p) => p + 1);
-                setTurnstileToken(null);
             } else if (response.data.token === null && response.data.user) {
                 setName('');
                 setUsername('');
@@ -71,14 +65,12 @@ export function SignUpForm() {
                 setPassword('');
                 setError(`Success! Please verify email: ${response.data.user.email}`);
                 setSubmitAttempts((p) => p + 1);
-                setTurnstileToken(null);
             } else {
                 window.location.href = '/dashboard';
             }
         } catch (error) {
             setError('Network error.');
             setSubmitAttempts((p) => p + 1);
-            setTurnstileToken(null);
         }
     }
 
@@ -141,16 +133,10 @@ export function SignUpForm() {
                     />
                 </div>
 
-                <div className='flex justify-center'>
-                    <Widget onTokenChange={setTurnstileToken} resetTrigger={submitAttempts} />
-                </div>
-
                 <Button
                     type='submit'
                     className='w-full'
-                    disabled={
-                        !turnstileToken || !email || password.length < 8 || !usernameAvailable
-                    }
+                    disabled={!email || password.length < 8 || !usernameAvailable}
                 >
                     Create Account
                 </Button>

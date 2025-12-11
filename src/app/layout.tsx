@@ -5,7 +5,6 @@ import { Footer } from '../components/layout/Footer';
 import { Inter } from 'next/font/google';
 import { ScrollToTopButton } from '../components/ScrollToTopButton';
 import { CardDataInitializer } from '../components/CardDataInitializer';
-import Script from 'next/script';
 import { auth } from '@/src/lib/auth';
 import { headers } from 'next/headers';
 import { ProvidersWrapper } from '../providers/ProvidersWrapper';
@@ -49,15 +48,6 @@ export default function RootLayout({
 }>) {
     return (
         <html lang='en' className={`${inter.variable}`} suppressHydrationWarning>
-            <head>
-                <Script
-                    src='https://challenges.cloudflare.com/turnstile/v0/api.js'
-                    strategy='afterInteractive'
-                    async
-                    defer
-                />
-                <link rel='preconnect' href='https://challenges.cloudflare.com' />
-            </head>
             <body
                 className={`flex min-h-screen flex-col bg-background font-sans text-foreground antialiased`}
             >
