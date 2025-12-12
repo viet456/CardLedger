@@ -152,27 +152,29 @@ async function main() {
         }
     });
     // Fetch half of our sets alternating, always get latest set
-    const latestSet = dbSets[0];
-    const dayOfMonth = new Date().getDate();
-    const isEvenDay = dayOfMonth % 2 === 0;
-    const alternatingSets = dbSets.filter((_, index) => {
-        return (index % 2 === 0) === isEvenDay;
-    });
-    const setsToProcessMap = new Map(alternatingSets.map((set) => [set.id, set]));
-    if (latestSet) {
-        setsToProcessMap.set(latestSet.id, latestSet);
-    }
-    const setsToProcess = Array.from(setsToProcessMap.values());
-    // Force the latest set to be processed first
-    setsToProcess.sort((a, b) => {
-        if (a.id === latestSet.id) return -1; // 'a' (latest set) comes first
-        if (b.id === latestSet.id) return 1; // 'b' (latest set) comes first
-        return 0; // Keep original alternating order for all others
-    });
+    // const latestSet = dbSets[0];
+    // const dayOfMonth = new Date().getDate();
+    // const isEvenDay = dayOfMonth % 2 === 0;
+    // const alternatingSets = dbSets.filter((_, index) => {
+    //     return (index % 2 === 0) === isEvenDay;
+    // });
+    // const setsToProcessMap = new Map(alternatingSets.map((set) => [set.id, set]));
+    // if (latestSet) {
+    //     setsToProcessMap.set(latestSet.id, latestSet);
+    // }
+    // const setsToProcess = Array.from(setsToProcessMap.values());
+    // // Force the latest set to be processed first
+    // setsToProcess.sort((a, b) => {
+    //     if (a.id === latestSet.id) return -1; // 'a' (latest set) comes first
+    //     if (b.id === latestSet.id) return 1; // 'b' (latest set) comes first
+    //     return 0; // Keep original alternating order for all others
+    // });
 
     console.log(`Starting daily MarketStats update for ${dbSets.length} sets...`);
 
-    for (const set of setsToProcess) {
+    // for (const set of setsToProcess) {
+    // Process all sets
+    for (const set of dbSets) {
         if (!set.tcgPlayerSetId) {
             console.log(`Skipping set ${set.name} (missing tcgPlayerSetId)`);
             continue;
@@ -223,6 +225,8 @@ async function main() {
 
             const waitTimeInSeconds = Math.ceil(PAGE_SIZE / 10) + 1; // 10 cards = 1 request / minute / 60 max
 
+            const upsertPromises: Promise<void>[] = [];
+
             for (const apiCard of apiCards) {
                 const apiCardNumberRaw = String(apiCard.cardNumber);
                 const normalizedApiNumberString = apiCardNumberRaw.split('/')[0].replace(/^0+/, '');
@@ -243,9 +247,9 @@ async function main() {
                     normalizedDbCardName.includes(normalizedApiCardName) ||
                     normalizedApiCardName.includes(normalizedDbCardName)
                 ) {
-                    console.log(
-                        ` ✅ Match found! DB: ${myCard.number} (${myCard.name}), API: ${apiCardNumberRaw} (${apiCardName})`
-                    );
+                    // console.log(
+                    //     ` ✅ Match found! DB: ${myCard.number} (${myCard.name}), API: ${apiCardNumberRaw} (${apiCardName})`
+                    // );
                     cardMatchIsValid = true;
                 } else {
                     // Number match but names don't
@@ -256,18 +260,23 @@ async function main() {
                 if (!cardMatchIsValid) {
                     continue;
                 }
-                try {
-                    await upsertCardMarketStats(myCard!.id, apiCard);
-                } catch (error) {
-                    console.error(
-                        `❌ Error processing history write for card ${apiCard.cardNumber} (${apiCardName}) in set ${set.name}:`,
-                        error
+                if (cardMatchIsValid) {
+                    upsertPromises.push(
+                        upsertCardMarketStats(myCard!.id, apiCard).catch((error) => {
+                            console.error(
+                                `❌ Error processing card ${apiCard.cardNumber} (${apiCardName}):`,
+                                error
+                            );
+                        })
                     );
                 }
             }
 
             console.log(` -> Fetched ${cardsFetched} cards. Waiting ${waitTimeInSeconds}s...`);
-            await new Promise((resolve) => setTimeout(resolve, waitTimeInSeconds * 1000));
+            await Promise.all([
+                Promise.all(upsertPromises),
+                new Promise((resolve) => setTimeout(resolve, waitTimeInSeconds * 1000))
+            ]);
             currentOffset += PAGE_SIZE;
             if (apiCards.length < PAGE_SIZE) {
                 keepFetching = false;
