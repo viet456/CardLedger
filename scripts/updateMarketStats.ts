@@ -223,7 +223,7 @@ async function main() {
             const apiCards: ApiCard[] = pageData.data;
             const cardsFetched = apiCards.length;
 
-            const waitTimeInSeconds = Math.ceil(PAGE_SIZE / 10) + 1; // 10 cards = 1 request / minute / 60 max
+            const waitTimeInSeconds = Math.ceil(PAGE_SIZE / 10) + 2; // 10 cards = 1 request / minute / 60 max
 
             const upsertPromises: Promise<void>[] = [];
 
