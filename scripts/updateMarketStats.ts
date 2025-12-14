@@ -151,30 +151,30 @@ async function main() {
             releaseDate: 'desc'
         }
     });
-    // Fetch half of our sets alternating, always get latest set
-    // const latestSet = dbSets[0];
-    // const dayOfMonth = new Date().getDate();
-    // const isEvenDay = dayOfMonth % 2 === 0;
-    // const alternatingSets = dbSets.filter((_, index) => {
-    //     return (index % 2 === 0) === isEvenDay;
-    // });
-    // const setsToProcessMap = new Map(alternatingSets.map((set) => [set.id, set]));
-    // if (latestSet) {
-    //     setsToProcessMap.set(latestSet.id, latestSet);
-    // }
-    // const setsToProcess = Array.from(setsToProcessMap.values());
-    // // Force the latest set to be processed first
-    // setsToProcess.sort((a, b) => {
-    //     if (a.id === latestSet.id) return -1; // 'a' (latest set) comes first
-    //     if (b.id === latestSet.id) return 1; // 'b' (latest set) comes first
-    //     return 0; // Keep original alternating order for all others
-    // });
+
+    //Fetch half of our sets alternating, always get latest set
+    const latestSet = dbSets[0];
+    const dayOfMonth = new Date().getDate();
+    const isEvenDay = dayOfMonth % 2 === 0;
+    const alternatingSets = dbSets.filter((_, index) => {
+        return (index % 2 === 0) === isEvenDay;
+    });
+    const setsToProcessMap = new Map(alternatingSets.map((set) => [set.id, set]));
+    if (latestSet) {
+        setsToProcessMap.set(latestSet.id, latestSet);
+    }
+    const setsToProcess = Array.from(setsToProcessMap.values());
+    // Force the latest set to be processed first
+    setsToProcess.sort((a, b) => {
+        if (a.id === latestSet.id) return -1; // 'a' (latest set) comes first
+        if (b.id === latestSet.id) return 1; // 'b' (latest set) comes first
+        return 0; // Keep original alternating order for all others
+    });
 
     console.log(`Starting daily MarketStats update for ${dbSets.length} sets...`);
 
-    // for (const set of setsToProcess) {
-    // Process all sets
-    for (const set of dbSets) {
+    for (const set of setsToProcess) {
+        // for (const set of dbSets) {
         if (!set.tcgPlayerSetId) {
             console.log(`Skipping set ${set.name} (missing tcgPlayerSetId)`);
             continue;
