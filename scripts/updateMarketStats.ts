@@ -1,10 +1,16 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Card } from '@prisma/client';
 import axios from 'axios';
 import { ApiCard } from '../src/shared-types/price-api';
 
 const POKEPRICETRACKER_KEY = process.env.POKEPRICETRACKER_KEY;
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+    log: ['error']
+});
 const API_BASE_URL = 'https://www.pokemonpricetracker.com/api/v2/cards/';
+
+// Track active DB operations to prevent memory overflow
+const MAX_PENDING_DB_BATCHES = 3;
+const pendingBatches: Promise<any>[] = [];
 
 function normalizePokemonName(name: string): string {
     return (
@@ -35,14 +41,21 @@ async function revalidateNextCache() {
 
     try {
         console.log(`Attempting to revalidate Next.js cache...`);
-        const response = await axios.post(`${appUrl}/api/revalidate-cards?token=${token}`);
+        const response = await axios.post(
+            `${appUrl}/api/revalidate-cards?token=${token}`,
+            {},
+            { timeout: 10000 }
+        );
         if (response.status === 200) {
             console.log(`✅ Successfully revalidated Next.js cache.`);
         } else {
             console.error(`❌ Failed to revalidate cache. Status: ${response.status}`);
         }
     } catch (error) {
-        console.error('❌ Error calling revalidation API:', error.message);
+        console.error(
+            '❌ Error calling revalidation API:',
+            error instanceof Error ? error.message : error
+        );
     }
 }
 
@@ -61,7 +74,8 @@ async function getCardPage(setId: string, limit: number, offset: number) {
         });
         return response.data;
     } catch (error) {
-        console.error(` ❌ FAILED to fetch data for ${setId} at offset ${offset}:`, error.message);
+        const msg = axios.isAxiosError(error) ? error.message : String(error);
+        console.error(` ❌ FAILED to fetch data for ${setId} at offset ${offset}:`, msg);
         throw error;
     }
 }
@@ -81,7 +95,6 @@ async function upsertCardMarketStats(myCardId: string, apiCard: ApiCard) {
 
     const upsertMarketStats = prisma.marketStats.upsert({
         where: { cardId: myCardId },
-        // no ?? null, client pulls previous existing price
         update: {
             tcgNearMintLatest: latestNearMintPrice,
             tcgLightlyPlayedLatest: latestLightlyPlayedPrice,
@@ -125,10 +138,12 @@ async function upsertCardMarketStats(myCardId: string, apiCard: ApiCard) {
             tcgDamaged: latestDamagedPrice
         }
     });
+
     const [marketStatsResult, priceHistoryResult] = await Promise.allSettled([
         upsertMarketStats,
         upsertPriceHistory
     ]);
+
     if (marketStatsResult.status === 'rejected') {
         console.error(
             ` ❌ FAILED to upsert MarketStats for ${myCardId}:`,
@@ -138,6 +153,56 @@ async function upsertCardMarketStats(myCardId: string, apiCard: ApiCard) {
     if (priceHistoryResult.status === 'rejected') {
         console.error(` ❌ FAILED to write history for ${myCardId}:`, priceHistoryResult.reason);
     }
+}
+
+async function processBatch(apiCards: ApiCard[], dbCards: Pick<Card, 'id' | 'number' | 'name'>[]) {
+    const upsertPromises: Promise<void>[] = [];
+
+    for (const apiCard of apiCards) {
+        const apiCardNumberRaw = String(apiCard.cardNumber);
+        const normalizedApiNumberString = apiCardNumberRaw.split('/')[0].replace(/^0+/, '');
+        const apiCardName = apiCard.name;
+
+        // Find by number first
+        const myCard = dbCards.find((c) => c.number === normalizedApiNumberString);
+
+        if (!myCard) {
+            console.log(
+                ` - ℹ️  No match found for API card number: '${apiCardNumberRaw}' (${apiCardName})`
+            );
+            continue;
+        }
+
+        const normalizedApiCardName = normalizePokemonName(apiCardName);
+        const normalizedDbCardName = normalizePokemonName(myCard.name);
+
+        let cardMatchIsValid = false;
+
+        // Perform name validation
+        if (
+            normalizedDbCardName.includes(normalizedApiCardName) ||
+            normalizedApiCardName.includes(normalizedDbCardName)
+        ) {
+            cardMatchIsValid = true;
+        } else {
+            console.log(
+                `  - ⚠️  Number match (${myCard.number}), but normalized names differ! DB_norm: '${normalizedDbCardName}', API_norm: '${normalizedApiCardName}'. Skipping.`
+            );
+        }
+
+        if (cardMatchIsValid) {
+            upsertPromises.push(
+                upsertCardMarketStats(myCard.id, apiCard).catch((error) => {
+                    console.error(
+                        `❌ Error processing card ${apiCard.cardNumber} (${apiCardName}):`,
+                        error
+                    );
+                })
+            );
+        }
+    }
+
+    await Promise.all(upsertPromises);
 }
 
 async function main() {
@@ -152,7 +217,8 @@ async function main() {
         }
     });
 
-    //Fetch half of our sets alternating, always get latest set
+    // Uncomment this section to revert to "Alternating Days" strategy
+    /*
     const latestSet = dbSets[0];
     const dayOfMonth = new Date().getDate();
     const isEvenDay = dayOfMonth % 2 === 0;
@@ -164,17 +230,18 @@ async function main() {
         setsToProcessMap.set(latestSet.id, latestSet);
     }
     const setsToProcess = Array.from(setsToProcessMap.values());
-    // Force the latest set to be processed first
     setsToProcess.sort((a, b) => {
-        if (a.id === latestSet.id) return -1; // 'a' (latest set) comes first
-        if (b.id === latestSet.id) return 1; // 'b' (latest set) comes first
-        return 0; // Keep original alternating order for all others
+        if (a.id === latestSet.id) return -1; 
+        if (b.id === latestSet.id) return 1; 
+        return 0; 
     });
+    */
 
-    console.log(`Starting daily MarketStats update for ${dbSets.length} sets...`);
+    const setsToProcess = dbSets; // Currently processing ALL sets
+
+    console.log(`Starting daily MarketStats update for ${setsToProcess.length} sets...`);
 
     for (const set of setsToProcess) {
-        // for (const set of dbSets) {
         if (!set.tcgPlayerSetId) {
             console.log(`Skipping set ${set.name} (missing tcgPlayerSetId)`);
             continue;
@@ -191,11 +258,7 @@ async function main() {
                 name: true
             }
         });
-        // Paginate api requests
-        // 10 cards = 1 request / 60 / minute according to API dev
-        // The daily 20000 credit limit is only consumed by *actual cards returned*.
-        // We pace our script based on the number of cards we call for,
-        // not the amount of cards actually returned.
+
         const PAGE_SIZE = 50;
         let currentOffset = 0;
         let keepFetching = true;
@@ -215,68 +278,35 @@ async function main() {
                     break;
                 }
             }
+
             if (!pageData || !pageData.data || pageData.data.length === 0) {
-                // This set is done, or the first page was empty
                 keepFetching = false;
                 break;
             }
+
             const apiCards: ApiCard[] = pageData.data;
-            const cardsFetched = apiCards.length;
 
-            const waitTimeInSeconds = Math.ceil(PAGE_SIZE / 10) + 2; // 10 cards = 1 request / minute / 60 max
+            const waitTimeInSeconds = Math.ceil(PAGE_SIZE / 10) + 1;
+            const timerPromise = new Promise((resolve) =>
+                setTimeout(resolve, waitTimeInSeconds * 1000)
+            );
 
-            const upsertPromises: Promise<void>[] = [];
+            const batchPromise = processBatch(apiCards, dbCards).catch((error) =>
+                console.error('Batch failed', error)
+            );
+            pendingBatches.push(batchPromise);
 
-            for (const apiCard of apiCards) {
-                const apiCardNumberRaw = String(apiCard.cardNumber);
-                const normalizedApiNumberString = apiCardNumberRaw.split('/')[0].replace(/^0+/, '');
-                const apiCardName = apiCard.name;
-                const normalizedApiCardName = normalizePokemonName(apiCardName);
-                const myCard = dbCards.find((c) => c.number === normalizedApiNumberString);
-
-                let cardMatchIsValid = false;
-
-                if (!myCard) {
-                    console.log(
-                        ` - ℹ️  No match found for API card number: '${apiCardNumberRaw}' (${apiCardName})`
-                    );
-                    continue;
-                }
-                const normalizedDbCardName = normalizePokemonName(myCard.name);
-                if (
-                    normalizedDbCardName.includes(normalizedApiCardName) ||
-                    normalizedApiCardName.includes(normalizedDbCardName)
-                ) {
-                    // console.log(
-                    //     ` ✅ Match found! DB: ${myCard.number} (${myCard.name}), API: ${apiCardNumberRaw} (${apiCardName})`
-                    // );
-                    cardMatchIsValid = true;
-                } else {
-                    // Number match but names don't
-                    console.log(
-                        `  - ⚠️  Number match (${myCard.number} ends with ${normalizedApiNumberString}), but normalized names differ! DB_norm: '${normalizedDbCardName}', API_norm: '${normalizedApiCardName}'. Skipping.`
-                    );
-                }
-                if (!cardMatchIsValid) {
-                    continue;
-                }
-                if (cardMatchIsValid) {
-                    upsertPromises.push(
-                        upsertCardMarketStats(myCard!.id, apiCard).catch((error) => {
-                            console.error(
-                                `❌ Error processing card ${apiCard.cardNumber} (${apiCardName}):`,
-                                error
-                            );
-                        })
-                    );
-                }
+            if (pendingBatches.length > MAX_PENDING_DB_BATCHES) {
+                const oldestBatch = pendingBatches.shift();
+                await oldestBatch;
             }
 
-            console.log(` -> Fetched ${cardsFetched} cards. Waiting ${waitTimeInSeconds}s...`);
-            await Promise.all([
-                Promise.all(upsertPromises),
-                new Promise((resolve) => setTimeout(resolve, waitTimeInSeconds * 1000))
-            ]);
+            await timerPromise;
+
+            console.log(
+                ` -> Fetched ${apiCards.length} cards. (Queue: ${pendingBatches.length} active batches)`
+            );
+
             currentOffset += PAGE_SIZE;
             if (apiCards.length < PAGE_SIZE) {
                 keepFetching = false;
@@ -284,6 +314,10 @@ async function main() {
         }
         console.log(` -> Finished processing set: ${set.name}.`);
     }
+
+    console.log('Waiting for final DB writes...');
+    await Promise.all(pendingBatches);
+
     console.log('✅ Daily MarketStats update complete.');
     await revalidateNextCache();
 }
