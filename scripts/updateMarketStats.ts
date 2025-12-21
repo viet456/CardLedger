@@ -157,6 +157,11 @@ async function upsertCardMarketStats(myCardId: string, apiCard: ApiCard) {
 
 async function processBatch(apiCards: ApiCard[], dbCards: Pick<Card, 'id' | 'number' | 'name'>[]) {
     const upsertPromises: Promise<void>[] = [];
+    const dbCardMap = new Map<string, (typeof dbCards)[0]>();
+    for (const card of dbCards) {
+        const normalizedDbNumber = card.number.split('/')[0].replace(/^0+/, '');
+        dbCardMap.set(normalizedDbNumber, card);
+    }
 
     for (const apiCard of apiCards) {
         const apiCardNumberRaw = String(apiCard.cardNumber);
@@ -164,7 +169,7 @@ async function processBatch(apiCards: ApiCard[], dbCards: Pick<Card, 'id' | 'num
         const apiCardName = apiCard.name;
 
         // Find by number first
-        const myCard = dbCards.find((c) => c.number === normalizedApiNumberString);
+        const myCard = dbCardMap.get(normalizedApiNumberString);
 
         if (!myCard) {
             console.log(
@@ -206,6 +211,9 @@ async function processBatch(apiCards: ApiCard[], dbCards: Pick<Card, 'id' | 'num
 }
 
 async function main() {
+    const START_TIME = Date.now();
+    const MAX_RUNTIME_MS = 90 * 60 * 1000; // 90 mins
+
     const dbSets = await prisma.set.findMany({
         select: {
             id: true,
@@ -216,32 +224,30 @@ async function main() {
             releaseDate: 'desc'
         }
     });
+    const highPrioritySets = dbSets.slice(0, 5);
 
-    // Uncomment this section to revert to "Alternating Days" strategy
-    /*
-    const latestSet = dbSets[0];
-    const dayOfMonth = new Date().getDate();
-    const isEvenDay = dayOfMonth % 2 === 0;
+    // Starts day count from Jan 1 1970, Unix Epoch
+    const msPerDay = 1000 * 60 * 60 * 24;
+    const daysSinceEpoch = Math.floor(Date.now() / msPerDay);
+    const isEvenDay = daysSinceEpoch % 2 === 0;
+
     const alternatingSets = dbSets.filter((_, index) => {
         return (index % 2 === 0) === isEvenDay;
     });
     const setsToProcessMap = new Map(alternatingSets.map((set) => [set.id, set]));
-    if (latestSet) {
-        setsToProcessMap.set(latestSet.id, latestSet);
+
+    for (const set of highPrioritySets) {
+        setsToProcessMap.set(set.id, set);
     }
     const setsToProcess = Array.from(setsToProcessMap.values());
-    setsToProcess.sort((a, b) => {
-        if (a.id === latestSet.id) return -1; 
-        if (b.id === latestSet.id) return 1; 
-        return 0; 
-    });
-    */
-
-    const setsToProcess = dbSets; // Currently processing ALL sets
 
     console.log(`Starting daily MarketStats update for ${setsToProcess.length} sets...`);
 
     for (const set of setsToProcess) {
+        if (Date.now() - START_TIME > MAX_RUNTIME_MS) {
+            console.warn('⚠️ Max runtime reached. Stopping set processing early.');
+            break;
+        }
         if (!set.tcgPlayerSetId) {
             console.log(`Skipping set ${set.name} (missing tcgPlayerSetId)`);
             continue;
