@@ -224,7 +224,9 @@ async function main() {
             releaseDate: 'desc'
         }
     });
-    const highPrioritySets = dbSets.slice(0, 5);
+
+    // Latest sets to always be updated
+    const highPrioritySets = dbSets.slice(0, 8);
 
     // Starts day count from Jan 1 1970, Unix Epoch
     const msPerDay = 1000 * 60 * 60 * 24;
