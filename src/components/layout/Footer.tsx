@@ -18,7 +18,7 @@ export function Footer() {
                 >
                     Viet Le
                 </a>
-                . All other content © 2025 CardLedger.
+                . All other content © 2026 CardLedger.
             </p>
         </div>
     );
