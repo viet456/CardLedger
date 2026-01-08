@@ -12,6 +12,7 @@ import {
     ChartNoAxesColumn
 } from 'lucide-react';
 
+import { HeroAssetInspector } from '../components/layout/HeroAssetInspector';
 export const metadata: Metadata = {
     title: 'CardLedger: Your Pokémon TCG Collection Manager',
     description:
@@ -50,8 +51,8 @@ export default function Home() {
                 </div>
 
                 {/* HERO IMAGE PLACEHOLDER: Ideally a screenshot of your Dashboard/Collection */}
-                <div className='mt-12 w-full max-w-5xl overflow-hidden rounded-xl border border-border bg-card shadow-2xl md:mt-16'>
-                    <div className='from-muted/50 to-muted/10 aspect-video w-full bg-gradient-to-br p-4 md:p-8'></div>
+                <div className='mt-12 w-full'>
+                    <HeroAssetInspector />
                 </div>
             </section>
 
