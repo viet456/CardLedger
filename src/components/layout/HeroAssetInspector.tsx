@@ -51,7 +51,7 @@ export function HeroAssetInspector() {
             <div className='pointer-events-none absolute -top-[12%] left-1/2 -z-10 w-[150%] max-w-none -translate-x-1/2 select-none bg-zinc-900 opacity-100'>
                 {' '}
                 <div
-                    className='relative aspect-[1/2] w-full origin-top transform-gpu md:aspect-[2/1]'
+                    className='relative aspect-[1/2.2] w-full origin-top transform-gpu md:aspect-[2/1]'
                     style={{
                         // Perspective + Rotation
                         transform: 'perspective(1200px) rotateX(10deg)  scale(0.65)'
@@ -111,7 +111,7 @@ export function HeroAssetInspector() {
                             top: '5%',
                             left: '85.5%',
                             width: '8%',
-                            height: '5.5%'
+                            height: '6%'
                         },
                         {
                             id: 'hp',
@@ -120,16 +120,16 @@ export function HeroAssetInspector() {
                             top: '5%',
                             left: '66%',
                             width: '19.5%',
-                            height: '5.5%'
+                            height: '6%'
                         },
                         {
                             id: 'name',
                             label: 'Charizard',
                             icon: Search,
-                            top: '6%',
-                            left: '24%',
-                            width: '31%',
-                            height: '5%'
+                            top: '5.5%',
+                            left: '23.5%',
+                            width: '32%',
+                            height: '6%'
                         },
                         {
                             id: 'art',
@@ -171,10 +171,10 @@ export function HeroAssetInspector() {
                             id: 'artist',
                             label: 'Mitsuhiro Arita',
                             icon: PenTool,
-                            top: '95%',
-                            left: '3%',
-                            width: '22%',
-                            height: '3%'
+                            top: '94%',
+                            left: '2%',
+                            width: '23%',
+                            height: '4.5%'
                         }
                     ]}
                 />
@@ -217,7 +217,7 @@ export function HeroAssetInspector() {
                             top: '3%',
                             left: '87%',
                             width: '9%',
-                            height: '6%'
+                            height: '6.5%'
                         },
                         {
                             id: 'hp',
@@ -226,7 +226,7 @@ export function HeroAssetInspector() {
                             top: '3%',
                             left: '71%',
                             width: '16%',
-                            height: '6%'
+                            height: '6.5%'
                         },
                         {
                             id: 'art',
@@ -269,8 +269,8 @@ export function HeroAssetInspector() {
                             label: 'Umbreon VMAX',
                             icon: Search,
                             top: '3%',
-                            left: '18%',
-                            width: '44%',
+                            left: '17.5%',
+                            width: '45%',
                             height: '6%'
                         }
                     ]}
@@ -298,7 +298,7 @@ function SchematicCard({
             )}
         >
             {/* IMAGE CONTAINER */}
-            <div className='relative h-[420px] w-full shrink-0 rounded-2xl border border-border bg-zinc-900 shadow-2xl transition-colors duration-300 hover:border-emerald-500/30'>
+            <div className='relative h-[420px] w-full shrink-0 rounded-2xl border border-border bg-background shadow-2xl transition-colors duration-300 hover:border-emerald-500/30'>
                 <div className='relative h-full w-full overflow-hidden rounded-2xl'>
                     <Image
                         src={`${R2_PUBLIC_URL}/${image}`}
@@ -362,7 +362,7 @@ function SchematicCard({
                         href={`/cards/${id}`}
                         className='group/link flex items-center justify-between'
                     >
-                        <p className='text-lg font-medium leading-none text-card-foreground underline decoration-dotted underline-offset-4'>
+                        <p className='text-lg font-medium leading-tight text-card-foreground underline decoration-dotted underline-offset-4'>
                             {name}
                         </p>
                         <ArrowUpRight className='h-3.5 w-3.5 -translate-x-0.5 text-muted-foreground transition-all group-hover/link:translate-x-0' />
