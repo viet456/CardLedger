@@ -42,6 +42,7 @@ interface AssetCardProps {
     className?: string;
     side?: 'left' | 'right';
     specs?: { label: string; value: string }[];
+    priority?: boolean;
 }
 
 export function HeroAssetInspector() {
@@ -93,6 +94,7 @@ export function HeroAssetInspector() {
             <div className='relative z-10 flex w-full snap-x snap-mandatory items-start gap-4 overflow-x-auto px-8 pb-8 pt-8 [scrollbar-width:none] md:items-center md:justify-center md:gap-16 md:overflow-visible md:p-0'>
                 <SchematicCard
                     side='left'
+                    priority={true}
                     className='z-10 shrink-0 snap-center'
                     image='cards/base1-4'
                     name='Charizard'
@@ -181,6 +183,7 @@ export function HeroAssetInspector() {
 
                 <SchematicCard
                     side='right'
+                    priority={true}
                     className='z-10 shrink-0 snap-center'
                     image='cards/swsh7-215'
                     name='Umbreon VMAX'
@@ -288,7 +291,8 @@ function SchematicCard({
     hotspots,
     className,
     side = 'right',
-    specs = []
+    specs = [],
+    priority = false
 }: AssetCardProps) {
     return (
         <div
@@ -298,103 +302,106 @@ function SchematicCard({
             )}
         >
             {/* IMAGE CONTAINER */}
-            <div className='relative h-[420px] w-full shrink-0 rounded-2xl border border-border bg-background shadow-2xl transition-colors duration-300 hover:border-emerald-500/30'>
-                <div className='relative h-full w-full overflow-hidden rounded-2xl'>
-                    <Image
-                        src={`${R2_PUBLIC_URL}/${image}`}
-                        alt={name}
-                        fill
-                        className='object-cover'
-                        preload={true}
-                        loading='eager'
-                    />
-                    <div className='absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_100%)]' />
-                </div>
-
-                {/* HOTSPOTS */}
-                <div className='absolute inset-0'>
-                    {hotspots.map((spot) => (
-                        <div
-                            key={spot.id}
-                            className='group/spot absolute z-20'
-                            style={{
-                                top: spot.top,
-                                left: spot.left,
-                                width: spot.width,
-                                height: spot.height
-                            }}
-                        >
-                            <div className='absolute inset-0 rounded border border-white/20 bg-white/5 shadow-[0_0_15px_rgba(0,0,0,0.5)] transition-all duration-200 group-hover/spot:border-2 group-hover/spot:border-emerald-400 group-hover/spot:bg-emerald-500/10 group-hover/spot:opacity-100' />
-                            <div className='absolute -left-px -top-px h-2.5 w-2.5 border-l-2 border-t-2 border-white opacity-60' />
-                            <div className='absolute -right-px -top-px h-2.5 w-2.5 border-r-2 border-t-2 border-white opacity-60' />
-                            <div className='absolute -bottom-px -right-px h-2.5 w-2.5 border-b-2 border-r-2 border-white opacity-60' />
-                            <div className='absolute -bottom-px -left-px h-2 w-2.5 border-b-2 border-l-2 border-white opacity-60' />
-
-                            <div className='pointer-events-none absolute -top-10 left-1/2 z-30 -translate-x-1/2 whitespace-nowrap opacity-0 transition-all duration-200 group-hover/spot:-translate-y-1 group-hover/spot:opacity-100'>
-                                <div className='flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-sm font-medium text-card-foreground shadow-xl backdrop-blur-md'>
-                                    <spot.icon className='h-3.5 w-3.5 text-emerald-400' />
-                                    {spot.label}
-                                </div>
-                                <div className='absolute -bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 border-b border-r border-emerald-500/30 bg-card' />
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            {/* INFO HUD */}
-            <div
-                className={cn(
-                    'z-0 mt-2 w-full md:absolute md:top-8 md:mt-0 md:w-[160px]',
-                    side === 'left' ? 'md:right-[105%] md:pr-2' : 'md:left-[105%] md:pl-2'
-                )}
+            <Link
+                href={`/cards/${id}`}
+                className='group relative block h-[420px] w-full shrink-0 transition-transform duration-300'
+                prefetch={true} // Explicitly ensure prefetch is on
             >
-                {/* Connector Line (Desktop) */}
+                <div className='relative h-[420px] w-full shrink-0 rounded-2xl border border-border bg-background shadow-2xl transition-colors duration-300 hover:border-emerald-500/30'>
+                    <div className='relative h-full w-full overflow-hidden rounded-2xl'>
+                        <Image
+                            src={`${R2_PUBLIC_URL}/${image}`}
+                            alt={name}
+                            fill
+                            className='object-cover'
+                            preload={priority}
+                            loading='eager'
+                        />
+                        <div className='absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_100%)]' />
+                    </div>
+
+                    {/* HOTSPOTS */}
+                    <div className='absolute inset-0'>
+                        {hotspots.map((spot) => (
+                            <div
+                                key={spot.id}
+                                className='group/spot absolute z-20'
+                                style={{
+                                    top: spot.top,
+                                    left: spot.left,
+                                    width: spot.width,
+                                    height: spot.height
+                                }}
+                            >
+                                <div className='absolute inset-0 rounded border border-white/20 bg-white/5 shadow-[0_0_15px_rgba(0,0,0,0.5)] transition-all duration-200 group-hover/spot:border-2 group-hover/spot:border-emerald-400 group-hover/spot:bg-emerald-500/10 group-hover/spot:opacity-100' />
+                                <div className='absolute -left-px -top-px h-2.5 w-2.5 border-l-2 border-t-2 border-white opacity-60' />
+                                <div className='absolute -right-px -top-px h-2.5 w-2.5 border-r-2 border-t-2 border-white opacity-60' />
+                                <div className='absolute -bottom-px -right-px h-2.5 w-2.5 border-b-2 border-r-2 border-white opacity-60' />
+                                <div className='absolute -bottom-px -left-px h-2 w-2.5 border-b-2 border-l-2 border-white opacity-60' />
+
+                                <div className='pointer-events-none absolute -top-10 left-1/2 z-30 -translate-x-1/2 whitespace-nowrap opacity-0 transition-all duration-200 group-hover/spot:-translate-y-1 group-hover/spot:opacity-100'>
+                                    <div className='flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-sm font-medium text-card-foreground shadow-xl backdrop-blur-md'>
+                                        <spot.icon className='h-3.5 w-3.5 text-emerald-400' />
+                                        {spot.label}
+                                    </div>
+                                    <div className='absolute -bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 border-b border-r border-emerald-500/30 bg-card' />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* INFO HUD */}
                 <div
                     className={cn(
-                        'absolute top-6 hidden h-px w-4 bg-card md:block',
-                        side === 'left' ? 'right-0' : 'left-0'
+                        'z-0 mt-2 w-full md:absolute md:top-8 md:mt-0 md:w-[160px]',
+                        side === 'left' ? 'md:right-[105%] md:pr-2' : 'md:left-[105%] md:pl-2'
                     )}
-                />
+                >
+                    {/* Connector Line (Desktop) */}
+                    <div
+                        className={cn(
+                            'absolute top-6 hidden h-px w-4 bg-card md:block',
+                            side === 'left' ? 'right-0' : 'left-0'
+                        )}
+                    />
 
-                <div className='flex flex-col gap-2 rounded-xl border border-border bg-card p-3 text-left shadow-xl backdrop-blur-sm'>
-                    <Link
-                        href={`/cards/${id}`}
-                        className='group/link flex items-center justify-between'
-                    >
-                        <p className='text-lg font-medium leading-tight text-card-foreground underline decoration-dotted underline-offset-4'>
-                            {name}
-                        </p>
-                        <ArrowUpRight className='h-3.5 w-3.5 -translate-x-0.5 text-muted-foreground transition-all group-hover/link:translate-x-0' />
-                    </Link>
-
-                    <div className='h-px w-full bg-border' />
-                    {specs.map((spec) => (
-                        <div key={spec.label}>
-                            <p className='text-[10px] font-medium uppercase text-muted-foreground'>
-                                {spec.label}
+                    <div className='flex flex-col gap-2 rounded-xl border border-border bg-card p-3 text-left shadow-xl backdrop-blur-sm'>
+                        <div className='group/link flex items-center justify-between'>
+                            <p className='text-lg font-medium leading-tight text-card-foreground decoration-dotted underline-offset-4 group-hover:underline'>
+                                {name}
                             </p>
-                            <p className='text-xs font-semibold text-card-foreground'>
-                                {spec.value}
+                            <ArrowUpRight className='h-3.5 w-3.5 -translate-x-0.5 text-muted-foreground transition-all group-hover:translate-x-0' />
+                        </div>
+
+                        <div className='h-px w-full bg-border' />
+                        {specs.map((spec) => (
+                            <div key={spec.label}>
+                                <p className='text-[10px] font-medium uppercase text-muted-foreground'>
+                                    {spec.label}
+                                </p>
+                                <p className='text-xs font-semibold text-card-foreground'>
+                                    {spec.value}
+                                </p>
+                            </div>
+                        ))}
+                        <div className='mt-1'>
+                            <p className='text-[10px] font-medium uppercase text-muted-foreground'>
+                                Market Value
+                            </p>
+                            <p className='font-mono text-lg font-bold leading-none tracking-tighter text-card-foreground'>
+                                {price}
                             </p>
                         </div>
-                    ))}
-                    <div className='mt-1'>
-                        <p className='text-[10px] font-medium uppercase text-muted-foreground'>
-                            Market Value
-                        </p>
-                        <p className='font-mono text-lg font-bold leading-none tracking-tighter text-card-foreground'>
-                            {price}
-                        </p>
-                    </div>
-                    <div>
-                        <div className='flex items-center gap-1.5 text-xs font-bold text-emerald-600'>
-                            <TrendingUp className='h-3.5 w-3.5' />
-                            <span>{trend}</span>
+                        <div>
+                            <div className='flex items-center gap-1.5 text-xs font-bold text-emerald-600'>
+                                <TrendingUp className='h-3.5 w-3.5' />
+                                <span>{trend}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            </Link>
         </div>
     );
 }
