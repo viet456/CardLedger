@@ -12,31 +12,41 @@ import {
 const POKEPRICETRACKER_KEY = process.env.POKEPRICETRACKER_KEY;
 const prisma = new PrismaClient();
 const API_BASE_URL = 'https://www.pokemonpricetracker.com/api/v2/cards/';
-// Track completed sets
 const COMPLETED_SETS_FILE = path.join(__dirname, '_completed_backfill_sets.txt');
+
+// CONFIG
+const MAX_CONCURRENT_WRITES = 5;
+const DEBUG_CARD_NUMBER = '215';
+
+const IGNORED_TERMS = [
+    'Booster Box',
+    'Booster Pack',
+    'Elite Trainer Box',
+    'ETB',
+    'Theme Deck',
+    'League Battle Deck',
+    'Premium Collection',
+    'Special Collection',
+    'Pin Collection',
+    'Blister Pack'
+];
 
 async function getSets() {
     const dbSets = await prisma.set.findMany({
-        select: {
-            id: true,
-            tcgPlayerSetId: true,
-            name: true
-        }
+        select: { id: true, tcgPlayerSetId: true, name: true }
     });
     return dbSets;
 }
+
 async function getSetPriceHistory(set: string, setName: string) {
     try {
         const response = await axios.get(`${API_BASE_URL}`, {
-            headers: {
-                Authorization: `Bearer ${POKEPRICETRACKER_KEY}`
-            },
+            headers: { Authorization: `Bearer ${POKEPRICETRACKER_KEY}` },
             params: {
                 setId: `${set}`,
                 fetchAllInSet: true,
-                //includeBoth: true,
                 includeHistory: true,
-                days: 9999 // back to 1999, year of first release
+                days: 9999
             },
             timeout: 60000
         });
@@ -46,15 +56,17 @@ async function getSetPriceHistory(set: string, setName: string) {
         }
         return response.data;
     } catch (error) {
-        console.error(` ❌ FAILED to fetch data for ${set}:`, error.message);
+        console.error(
+            ` ❌ FAILED to fetch data for ${set}:`,
+            error instanceof Error ? error.message : error
+        );
         return null;
     }
 }
 
-async function processAndWriteHistory(myCardId: string, myCardNumber: string, apiCard: ApiCard) {
+async function processAndWriteHistory(myCardId: string, apiCard: ApiCard) {
     const entriesByDate = new Map<string, Partial<PriceHistoryDbRow>>();
 
-    // tcgplayer data
     const conditions = [
         'Near Mint',
         'Lightly Played',
@@ -78,16 +90,12 @@ async function processAndWriteHistory(myCardId: string, myCardNumber: string, ap
             const market = parseFloat(String(historyItem.market));
             const volume =
                 historyItem.volume !== null ? parseInt(String(historyItem.volume), 10) : null;
-            if (!isNaN(market)) {
-                row[marketKey] = market;
-            }
-            if (volume !== null && !isNaN(volume)) {
-                row[volumeKey] = volume;
-            }
+
+            if (!isNaN(market)) row[marketKey] = market;
+            if (volume !== null && !isNaN(volume)) row[volumeKey] = volume;
         }
     }
 
-    // normalize TCGplayer entries for db
     const dataForPrisma: PriceHistoryDbRow[] = Array.from(entriesByDate.values()).map((row) => ({
         cardId: myCardId,
         timestamp: row.timestamp!,
@@ -101,105 +109,55 @@ async function processAndWriteHistory(myCardId: string, myCardNumber: string, ap
         tcgModeratelyPlayedVolume: row.tcgModeratelyPlayedVolume ?? null,
         tcgHeavilyPlayedVolume: row.tcgHeavilyPlayedVolume ?? null,
         tcgDamagedVolume: row.tcgDamagedVolume ?? null
-
-        // psa8MedianPrice: row.psa8MedianPrice ?? null,
-        // psa9MedianPrice: row.psa9MedianPrice ?? null,
-        // psa10MedianPrice: row.psa10MedianPrice ?? null,
-        // psa8SaleCount: row.psa8SaleCount ?? null,
-        // psa9SaleCount: row.psa9SaleCount ?? null,
-        // psa10SaleCount: row.psa10SaleCount ?? null
     }));
 
     if (dataForPrisma.length > 0) {
-        console.log(
-            `  ⏳ Upserting ${dataForPrisma.length} history entries for card ${myCardId}...`
-        );
-        let processedCount = 0;
         for (const row of dataForPrisma) {
-            try {
-                await prisma.priceHistory.upsert({
-                    where: {
-                        cardId_timestamp: {
-                            cardId: row.cardId,
-                            timestamp: row.timestamp
-                        }
-                    },
-                    update: row,
-                    create: row
-                });
-                processedCount++;
-            } catch (upsertError) {
-                console.error(
-                    ` ❌ FAILED to upsert history for ${myCardId} on ${row.timestamp}:`,
-                    upsertError.message
-                );
-                throw upsertError;
-            }
+            await prisma.priceHistory.upsert({
+                where: { cardId_timestamp: { cardId: row.cardId, timestamp: row.timestamp } },
+                update: row,
+                create: row
+            });
         }
-        console.log(` ✅ Processed ${processedCount} history entries for card ${myCardId}`);
-        // try {
-        //     const result = await prisma.priceHistory.createMany({
-        //         data: dataForPrisma,
-        //         skipDuplicates: true
-        //     });
-        //     console.log(`  ✅ Saved ${result.count} history entries for card ${myCardId}`);
-        // } catch (error) {
-        //     console.error(`  ❌ FAILED to write history for ${myCardId}:`, error.message);
-        //     throw error;
-        // }
     }
+
     const prices = apiCard.prices?.conditions;
-    const latestNearMintPrice = prices?.['Near Mint']?.price;
-    const latestLightlyPlayedPrice = prices?.['Lightly Played']?.price;
-    const latestModeratelyPlayedPrice = prices?.['Moderately Played']?.price;
-    const latestHeavilyPlayedPrice = prices?.['Heavily Played']?.price;
-    const latestDamagedPrice = prices?.['Damaged']?.price;
     const tcgLastUpdatedAt = apiCard.prices?.lastUpdated;
     const validTcgUpdatedAt = tcgLastUpdatedAt ? new Date(tcgLastUpdatedAt) : undefined;
 
-    try {
-        await prisma.marketStats.upsert({
-            where: { cardId: myCardId },
-            update: {
-                tcgNearMintLatest: latestNearMintPrice,
-                tcgLightlyPlayedLatest: latestLightlyPlayedPrice ?? null,
-                tcgModeratelyPlayedLatest: latestModeratelyPlayedPrice ?? null,
-                tcgHeavilyPlayedLatest: latestHeavilyPlayedPrice ?? null,
-                tcgDamagedLatest: latestDamagedPrice ?? null,
-                tcgPlayerUpdatedAt: validTcgUpdatedAt
-            },
-            create: {
-                cardId: myCardId,
-                tcgNearMintLatest: latestNearMintPrice,
-                tcgLightlyPlayedLatest: latestLightlyPlayedPrice ?? null,
-                tcgModeratelyPlayedLatest: latestModeratelyPlayedPrice ?? null,
-                tcgHeavilyPlayedLatest: latestHeavilyPlayedPrice ?? null,
-                tcgDamagedLatest: latestDamagedPrice ?? null,
-                tcgPlayerUpdatedAt: validTcgUpdatedAt ?? new Date()
-                // PSA fields will be null by default
-            }
-        });
-        console.log(` 📊 Upserted MarketStats for card ${myCardId}`);
-    } catch (error) {
-        console.error(` ❌ FAILED to upsert MarketStats for ${myCardId}:`, error.message);
-        throw error;
-    }
+    await prisma.marketStats.upsert({
+        where: { cardId: myCardId },
+        update: {
+            tcgNearMintLatest: prices?.['Near Mint']?.price,
+            tcgLightlyPlayedLatest: prices?.['Lightly Played']?.price ?? null,
+            tcgModeratelyPlayedLatest: prices?.['Moderately Played']?.price ?? null,
+            tcgHeavilyPlayedLatest: prices?.['Heavily Played']?.price ?? null,
+            tcgDamagedLatest: prices?.['Damaged']?.price ?? null,
+            tcgPlayerUpdatedAt: validTcgUpdatedAt
+        },
+        create: {
+            cardId: myCardId,
+            tcgNearMintLatest: prices?.['Near Mint']?.price,
+            tcgLightlyPlayedLatest: prices?.['Lightly Played']?.price ?? null,
+            tcgModeratelyPlayedLatest: prices?.['Moderately Played']?.price ?? null,
+            tcgHeavilyPlayedLatest: prices?.['Heavily Played']?.price ?? null,
+            tcgDamagedLatest: prices?.['Damaged']?.price ?? null,
+            tcgPlayerUpdatedAt: validTcgUpdatedAt ?? new Date()
+        }
+    });
 }
 
 function normalizePokemonName(name: string): string {
-    return (
-        name
-            .toLowerCase()
-            .replace(/lv\.x/g, 'level x') // Handle Lv.X variations
-            .replace(/ ★/g, 'star') // Handle Star symbol
-            .replace(/ δ/g, 'deltaspecies') // Handle Delta Species symbol
-            // Remove accents
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^\w\s]|_/g, '') // Remove punctuation and spaces
-            .replace(/\s+/g, '') // Collapse multiple spaces
-            .trim()
-    );
+    return name
+        .toLowerCase()
+        .replace(/lv\.x/g, 'levelx') // Handle Lv.X variations
+        .replace(/ ★/g, 'star') // Handle Star symbol
+        .replace(/ δ/g, 'deltaspecies') // Handle Delta Species symbol
+        .normalize('NFD') // Remove accents
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^\w\s]|_/g, '') // Remove punctuation and spaces
+        .replace(/\s+/g, '') // Collapse multiple spaces
+        .trim();
 }
 
 async function main() {
@@ -208,120 +166,190 @@ async function main() {
         if (fs.existsSync(COMPLETED_SETS_FILE)) {
             const fileContent = fs.readFileSync(COMPLETED_SETS_FILE, 'utf-8');
             completedSetIds = new Set(fileContent.split('\n').filter((id) => id.trim() !== ''));
-            console.log(`Loaded ${completedSetIds.size} completed set IDs from file.`);
+            console.log(`Loaded ${completedSetIds.size} completed set IDs.`);
         } else {
-            console.log(`'${COMPLETED_SETS_FILE}' not found, creating it.`);
             fs.writeFileSync(COMPLETED_SETS_FILE, '');
         }
     } catch (error) {
-        console.error(`Error reading or creating completed sets file: `, error);
-        process.exit(1);
+        console.error(`Error with completed sets file: `, error);
     }
 
     const dbSets = await getSets();
     console.log(`Found ${dbSets.length - completedSetIds.size} sets to process.`);
 
     for (const set of dbSets) {
-        if (completedSetIds.has(set.id)) {
-            console.log(`Skipping already completed set: ${set.name} (${set.id})`);
-            continue;
-        }
-
+        if (completedSetIds.has(set.id)) continue;
         if (!set.tcgPlayerSetId) {
-            console.log(`Skipping set ${set.name} (${set.id}) due to missing tcgPlayerSetId.`);
+            console.log(`Skipping set ${set.name} (No TCGPlayer ID)`);
             continue;
         }
 
-        console.log(`\nProcessing set: ${set.name} (${set.id})...`);
+        console.log(`\nProcessing: ${set.name} (${set.id})...`);
         const setPriceHistory = await getSetPriceHistory(set.tcgPlayerSetId, set.name);
-        if (!setPriceHistory) {
-            console.log(` -> Set fetch failed for ${set.name}. Will retry on next run.`);
+
+        if (!setPriceHistory || !setPriceHistory.data) {
+            console.log(` -> Failed/Empty response. Skipping.`);
             continue;
         }
-        const apiCards = setPriceHistory.data;
-        const cardsFetched = apiCards.length;
 
-        if (!apiCards) {
-            console.warn(` ⚠️  No 'data' array found for set ${set.name}. Skipping.`);
-            try {
-                fs.appendFileSync(COMPLETED_SETS_FILE, `${set.id}\n`);
-                console.log(
-                    ` ✅  Marked set ${set.name} (${set.id}) as completed (no cards found).`
-                );
-            } catch (error) {
-                console.error(`Error writing completed set ID to file for set ${set.id}:`, error);
-            }
-            continue;
-        }
-        console.log(` Found ${apiCards.length} cards in API response for ${set.name}.`);
-        console.log(` Fetching ${set.name} cards from local DB...`);
-
+        const apiCards: ApiCard[] = setPriceHistory.data;
         const dbCards = await prisma.card.findMany({
             where: { setId: set.id },
-            select: {
-                id: true,
-                number: true,
-                name: true
-            }
+            select: { id: true, number: true, name: true, setId: true }
         });
 
-        let setProcessingFullySuccessful = true;
-        for (const apiCard of apiCards) {
-            const apiCardNumberRaw = String(apiCard.cardNumber);
-            const apiCardName = apiCard.name;
-            const normalizedApiCardName = normalizePokemonName(apiCardName);
-            const normalizedApiNumberString = apiCardNumberRaw.split('/')[0].replace(/^0+/, '');
-            const myCard = dbCards.find((c) => c.number === normalizedApiNumberString);
+        // FILTER: Ignore SEALED PRODUCT, but be careful not to ignore Cards
+        const validApiCards = apiCards.filter((c) => {
+            // Filter out items with no card number (code cards, promos, etc.)
+            if (!c.cardNumber || String(c.cardNumber).trim() === '') {
+                console.log(`    Filtered out (no number): ${c.name}`);
+                return false;
+            }
 
-            let cardMatchIsValid = false;
+            // Filter out "Code Card" items
+            if (c.name.includes('Code Card')) {
+                console.log(`    Filtered out (code card): ${c.name}`);
+                return false;
+            }
+
+            // Filter out known sealed product terms
+            const isIgnored = IGNORED_TERMS.some((term) => c.name.includes(term));
+            if (isIgnored) {
+                console.log(`    Filtered out (sealed): ${c.name}`);
+            }
+            return !isIgnored;
+        });
+        const ignoredCount = apiCards.length - validApiCards.length;
+
+        console.log(` -> API Items: ${apiCards.length} (${ignoredCount} ignored sealed items)`);
+        console.log(
+            ` -> Valid Cards to Sync: ${validApiCards.length} | DB Cards: ${dbCards.length}`
+        );
+
+        let setProcessingFullySuccessful = true;
+        const pendingPromises: Promise<void>[] = [];
+        let processedCount = 0;
+        let skippedCount = 0;
+        const skippedCards: Array<{ number: string; name: string; reason: string }> = [];
+
+        for (const apiCard of validApiCards) {
+            const isDebug = String(apiCard.cardNumber).includes(DEBUG_CARD_NUMBER);
+
+            // 2. NUMBER MATCHING
+            const apiNumClean = String(apiCard.cardNumber).split('/')[0].replace(/^0+/, '');
+
+            const myCard = dbCards.find((c) => {
+                const dbNumClean = c.number.split('/')[0].replace(/^0+/, '').trim();
+                return dbNumClean === apiNumClean;
+            });
+
             if (!myCard) {
-                console.log(
-                    ` - ℹ️  No match found for API card number: '${apiCardNumberRaw}' (${apiCardName})`
-                );
+                skippedCards.push({
+                    number: String(apiCard.cardNumber),
+                    name: apiCard.name,
+                    reason: 'Card number not found in DB'
+                });
+                skippedCount++;
                 continue;
             }
-            const normalizedDbCardName = normalizePokemonName(myCard.name);
-            if (
-                normalizedDbCardName.includes(normalizedApiCardName) ||
-                normalizedApiCardName.includes(normalizedDbCardName)
-            ) {
-                console.log(
-                    ` ✅  Match found! DB: ${myCard.number} (${myCard.name}), API: ${apiCardNumberRaw} (${apiCardName})`
-                );
-                cardMatchIsValid = true;
+
+            // Strip parentheses from API name only (DB names typically don't have them)
+            const apiNameClean = apiCard.name.replace(/\s*\([^)]*\)\s*/g, '').trim();
+
+            // Normalize both for comparison
+            const nApiName = normalizePokemonName(apiNameClean);
+            const nDbName = normalizePokemonName(myCard.name);
+
+            // Match if either name contains the other
+            const namesMatch = nDbName.includes(nApiName) || nApiName.includes(nDbName);
+
+            if (!namesMatch) {
+                skippedCards.push({
+                    number: String(apiCard.cardNumber),
+                    name: apiCard.name,
+                    reason: `Name mismatch: DB="${myCard.name}" (${nDbName}) vs API="${apiNameClean}" (${nApiName})`
+                });
+                skippedCount++;
+                continue;
             } else {
-                // Number match but names don't
-                console.log(
-                    ` - ⚠️  Number match (${myCard.number} ends with ${normalizedApiNumberString}), but normalized names differ! DB_norm: '${normalizedDbCardName}', API_norm: '${normalizedApiCardName}'. Skipping.`
-                );
+                if (isDebug)
+                    console.log(`\n[DEBUG] ✅ MATCH SUCCESS: ${myCard.name} <=> ${apiCard.name}`);
             }
-            if (!cardMatchIsValid) {
-                continue;
-            }
-            try {
-                await processAndWriteHistory(myCard!.id, myCard!.number, apiCard);
-            } catch (error) {
-                console.error(
-                    ` ❌  Error processing history write for card ${apiCard.cardNumber} (${apiCardName}) in set ${set.name}:`,
-                    error
-                );
-                setProcessingFullySuccessful = false;
+
+            const op = processAndWriteHistory(myCard.id, apiCard)
+                .then(() => {
+                    processedCount++;
+                    if (processedCount % 10 === 0 || processedCount === validApiCards.length) {
+                        process.stdout.write(
+                            `\r  [${processedCount}/${validApiCards.length}] Syncing...`
+                        );
+                    }
+                })
+                .catch((err) => {
+                    console.error(`\n  ❌ Error on ${apiCard.name}: ${err.message}`);
+                    setProcessingFullySuccessful = false;
+                });
+
+            pendingPromises.push(op);
+
+            if (pendingPromises.length >= MAX_CONCURRENT_WRITES) {
+                const oldest = pendingPromises.shift();
+                if (oldest) await oldest;
             }
         }
-        if (setProcessingFullySuccessful) {
-            try {
-                fs.appendFileSync(COMPLETED_SETS_FILE, `${set.id}\n`);
-                console.log(` ✅  Marked set ${set.name} (${set.id}) as completed.`);
-            } catch (error) {
-                console.error(`Error writing completed set ID to file for set ${set.id}:`, error);
+
+        await Promise.all(pendingPromises);
+
+        console.log(`\n  ✅ Final Report: ${processedCount} Updated | ${skippedCount} Skipped`);
+
+        // Find which DB cards weren't matched
+        const processedCardIds = new Set<string>();
+        for (const apiCard of validApiCards) {
+            const apiNumClean = String(apiCard.cardNumber).split('/')[0].replace(/^0+/, '');
+            const myCard = dbCards.find((c) => {
+                const dbNumClean = c.number.split('/')[0].replace(/^0+/, '').trim();
+                return dbNumClean === apiNumClean;
+            });
+            if (myCard) {
+                const apiNameClean = apiCard.name.replace(/\s*\([^)]*\)\s*/g, '').trim();
+                const nApiName = normalizePokemonName(apiNameClean);
+                const nDbName = normalizePokemonName(myCard.name);
+                const namesMatch = nDbName.includes(nApiName) || nApiName.includes(nDbName);
+                if (namesMatch) {
+                    processedCardIds.add(myCard.id);
+                }
             }
+        }
+
+        const unmatchedDbCards = dbCards.filter((c) => !processedCardIds.has(c.id));
+        if (unmatchedDbCards.length > 0) {
+            console.log(`\n  🚨 UNMATCHED DB CARDS (${unmatchedDbCards.length}):`);
+            for (const card of unmatchedDbCards) {
+                console.log(`    #${card.number} - ${card.name}`);
+            }
+        }
+
+        // Print detailed skip report
+        if (skippedCards.length > 0) {
+            console.log(`\n  📋 SKIPPED API ITEMS (${skippedCards.length}):`);
+            for (const skip of skippedCards) {
+                console.log(`    #${skip.number} - ${skip.name}`);
+            }
+        }
+
+        // Success if we matched all actual cards (skips are okay if they're sealed products)
+        const matchedAllCards = processedCount === dbCards.length;
+
+        if (setProcessingFullySuccessful && matchedAllCards) {
+            fs.appendFileSync(COMPLETED_SETS_FILE, `${set.id}\n`);
+            console.log(` ✅ DONE: ${set.name} marked as complete.`);
         } else {
-            console.log(
-                ` -> Set ${set.name} (${set.id}) processing incomplete due to errors. Will retry remaining/failed cards on next run.`
-            );
+            console.log(` ⚠️ INCOMPLETE: ${set.name} still has missing cards.`);
         }
-        console.log(` -> Fetched ${cardsFetched} cards. Waiting 31s...`);
-        await new Promise((resolve) => setTimeout(resolve, 31000));
+
+        const waitTime = Math.ceil(validApiCards.length / 10) + 2;
+        console.log(` ⏳ Cooling down for ${waitTime}s...`);
+        await new Promise((resolve) => setTimeout(resolve, waitTime * 1000));
     }
 }
 
