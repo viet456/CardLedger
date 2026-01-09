@@ -55,7 +55,7 @@ const fuseOptions = {
     useExtendedSearch: true,
     minMatchCharLength: 1,
     threshold: 0.3,
-    distance: 10
+    ignoreLocation: true
 };
 
 // Helper function to build search indexes
