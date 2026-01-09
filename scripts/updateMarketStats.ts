@@ -13,19 +13,16 @@ const MAX_PENDING_DB_BATCHES = 3;
 const pendingBatches: Promise<any>[] = [];
 
 function normalizePokemonName(name: string): string {
-    return (
-        name
-            .toLowerCase()
-            .replace(/lv\.x/g, 'levelx') // Handle Lv.X variations
-            .replace(/ ★/g, 'star') // Handle Star symbol
-            .replace(/ δ/g, 'deltaspecies') // Handle Delta Species symbol
-            // Remove accents
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^\w\s]|_/g, '') // Remove punctuation and spaces
-            .replace(/\s+/g, '') // Collapse multiple spaces
-            .trim()
-    );
+    return name
+        .toLowerCase()
+        .replace(/lv\.x/g, 'levelx') // Handle Lv.X variations
+        .replace(/ ★/g, 'star') // Handle Star symbol
+        .replace(/ δ/g, 'deltaspecies') // Handle Delta Species symbol
+        .normalize('NFD') // Remove accents
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^\w\s]|_/g, '') // Remove punctuation and spaces
+        .replace(/\s+/g, '') // Collapse multiple spaces
+        .trim();
 }
 
 async function revalidateNextCache() {
@@ -157,41 +154,47 @@ async function upsertCardMarketStats(myCardId: string, apiCard: ApiCard) {
 
 async function processBatch(apiCards: ApiCard[], dbCards: Pick<Card, 'id' | 'number' | 'name'>[]) {
     const upsertPromises: Promise<void>[] = [];
+
+    // Create a generic number map
     const dbCardMap = new Map<string, (typeof dbCards)[0]>();
     for (const card of dbCards) {
-        const normalizedDbNumber = card.number.split('/')[0].replace(/^0+/, '');
+        const normalizedDbNumber = card.number.split('/')[0].replace(/^0+/, '').trim();
         dbCardMap.set(normalizedDbNumber, card);
     }
 
     for (const apiCard of apiCards) {
         const apiCardNumberRaw = String(apiCard.cardNumber);
-        const normalizedApiNumberString = apiCardNumberRaw.split('/')[0].replace(/^0+/, '');
+        const normalizedApiNumberString = apiCardNumberRaw.split('/')[0].replace(/^0+/, '').trim();
         const apiCardName = apiCard.name;
 
         // Find by number first
         const myCard = dbCardMap.get(normalizedApiNumberString);
 
         if (!myCard) {
-            console.log(
-                ` - ℹ️  No match found for API card number: '${apiCardNumberRaw}' (${apiCardName})`
-            );
+            // console.log(` - ℹ️  No match found for API card number: '${apiCardNumberRaw}' (${apiCardName})`);
             continue;
         }
 
-        const normalizedApiCardName = normalizePokemonName(apiCardName);
-        const normalizedDbCardName = normalizePokemonName(myCard.name);
+        // --- ROBUST NAME MATCHING ---
+        // Strip suffixes like "(Alternate Art Secret)" or "(Promo)"
+        const apiNameClean = apiCardName.replace(/\s*\([^)]*\)\s*/g, '').trim();
+        const dbNameClean = myCard.name.replace(/\s*\([^)]*\)\s*/g, '').trim();
+
+        const normalizedApiCardName = normalizePokemonName(apiNameClean);
+        const normalizedDbCardName = normalizePokemonName(dbNameClean);
 
         let cardMatchIsValid = false;
 
-        // Perform name validation
+        // Perform loose validation
         if (
             normalizedDbCardName.includes(normalizedApiCardName) ||
             normalizedApiCardName.includes(normalizedDbCardName)
         ) {
             cardMatchIsValid = true;
         } else {
+            // Only log significant name mismatches
             console.log(
-                `  - ⚠️  Number match (${myCard.number}), but normalized names differ! DB_norm: '${normalizedDbCardName}', API_norm: '${normalizedApiCardName}'. Skipping.`
+                `  - ⚠️  Number match (${myCard.number}), but names differ greatly: DB='${normalizedDbCardName}' vs API='${normalizedApiCardName}'`
             );
         }
 
