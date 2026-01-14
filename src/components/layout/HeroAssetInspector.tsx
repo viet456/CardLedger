@@ -47,7 +47,7 @@ interface AssetCardProps {
 
 export function HeroAssetInspector() {
     return (
-        <div className='relative -mx-4 overflow-hidden pb-4 pt-20 sm:-mx-8 md:py-32'>
+        <div className='relative -mx-4 overflow-hidden sm:-mx-8 md:py-32'>
             {/*  3D BACKGROUND LAYER */}
             <div className='pointer-events-none absolute -top-[12%] left-1/2 -z-10 w-[150%] max-w-none -translate-x-1/2 select-none bg-zinc-900 opacity-100'>
                 {' '}
@@ -91,7 +91,7 @@ export function HeroAssetInspector() {
             </div>
 
             {/* THE CARDS */}
-            <div className='relative z-10 flex w-full snap-x snap-mandatory items-start gap-4 overflow-x-auto px-8 pb-8 pt-8 [scrollbar-width:none] md:items-center md:justify-center md:gap-16 md:overflow-visible md:p-0'>
+            <div className='relative z-10 flex h-full w-full snap-x snap-mandatory items-start gap-4 overflow-x-auto px-8 pb-56 pt-8 [scrollbar-width:none] md:items-center md:justify-center md:gap-16 md:overflow-visible md:p-0'>
                 <SchematicCard
                     side='left'
                     priority={true}
