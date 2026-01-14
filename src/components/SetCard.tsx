@@ -14,7 +14,7 @@ export function SetCard({ set, isPriority = false }: SetCardProps) {
     return (
         <Link
             href={`/sets/${set.id}?sortBy=num&sortOrder=asc`}
-            prefetch={false}
+            prefetch={null}
             className='hover:bg-muted/50 group flex flex-col items-center justify-between rounded-lg border bg-card p-4 text-card-foreground transition-colors'
         >
             {/* Header */}
