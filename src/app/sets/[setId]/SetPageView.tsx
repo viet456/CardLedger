@@ -3,13 +3,10 @@ import { SortableKey } from '@/src/services/pokemonCardValidator';
 import { CardFilterControls } from '@/src/components/search/CardFilterControls';
 import { SimpleCardGrid } from '@/src/components/cards/SimpleCardGrid';
 import { SetObject, FilterOptions } from '@/src/shared-types/card-index';
-import { useHasHydrated } from '@/hooks/useHasHydrated';
 import { useShallow } from 'zustand/react/shallow';
 import { useSearchStore } from '@/src/lib/store/searchStore';
 import { useEffect, useMemo } from 'react';
 import { DenormalizedCard } from '@/src/shared-types/card-index';
-import { useMarketStore } from '@/src/lib/store/marketStore';
-import { PokemonCardSkeleton } from '@/src/components/cards/PokemonCardSkeleton';
 
 interface SetPageViewProps {
     setInfo: SetObject;
@@ -90,7 +87,6 @@ function useSetFilters(initialCards: DenormalizedCard[]) {
 }
 
 export function SetPageView({ setInfo, cards, filterOptions }: SetPageViewProps) {
-    const isHydrated = useHasHydrated();
     const { replaceFilters } = useSearchStore();
 
     useEffect(() => {
@@ -113,7 +109,6 @@ export function SetPageView({ setInfo, cards, filterOptions }: SetPageViewProps)
         { label: 'Pokedex Number', value: 'pS' },
         { label: 'Price', value: 'price' }
     ];
-    const isLoading = !isHydrated;
 
     return (
         <div className='flex flex-grow flex-col'>
@@ -122,15 +117,7 @@ export function SetPageView({ setInfo, cards, filterOptions }: SetPageViewProps)
                 <p className='text-muted-foreground'>Series: {setInfo.series}</p>
             </header>
             <CardFilterControls filterOptions={filterOptions} sortOptions={sortOptions} />
-            {isLoading ? (
-                <div className='mt-4 grid grid-cols-2 gap-4 px-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'>
-                    {Array.from({ length: 20 }).map((_, i) => (
-                        <PokemonCardSkeleton key={i} />
-                    ))}
-                </div>
-            ) : (
-                <SimpleCardGrid cards={filteredAndSortedCards} />
-            )}
+            <SimpleCardGrid cards={filteredAndSortedCards} />
         </div>
     );
 }
