@@ -12,7 +12,10 @@ export async function POST(request: NextRequest) {
     }
     try {
         // Revalidate all pages with fetches tagged with 'card-data'
-        revalidateTag('card-data', 'days');
+        revalidateTag('card-data', 'max');
+
+        // Revalidate the set overview pages (SetPageView cache)
+        revalidateTag('set-data', 'max');
 
         return new NextResponse(JSON.stringify({ revalidated: true, now: Date.now() }), {
             headers: { 'Content-Type': '' }
