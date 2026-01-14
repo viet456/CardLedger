@@ -57,7 +57,20 @@ export default async function SingleCardPage({ params }: { params: Promise<{ car
         <SingleCardView card={card}>
             <Suspense
                 fallback={
-                    <div className='text-sm text-muted-foreground'>Loading price history...</div>
+                    <div className='animate-pulse'>
+                        <div className='mb-4 flex gap-2'>
+                            {Array.from({ length: 6 }).map((_, i) => (
+                                <div
+                                    key={i}
+                                    className='h-9 flex-1 rounded bg-muted sm:w-12 sm:flex-none'
+                                />
+                            ))}
+                        </div>
+
+                        <div className='bg-muted/30 flex h-[300px] w-full items-center justify-center rounded-md'>
+                            <span className='text-sm text-muted-foreground'>Loading chart...</span>
+                        </div>
+                    </div>
                 }
             >
                 <PriceHistoryChart initialData={priceHistory} />
