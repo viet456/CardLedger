@@ -84,7 +84,7 @@
 
         /* Dark mode muted */
         --muted: 0.3591 0.018 263.93; /* zinc-800 */
-        --muted-foreground: 0.6806 0.009 264.12; /* zinc-400 */
+        --muted-foreground: 0.8524 0.0084 264.2; /* zinc-300 */
 
         /* Dark mode accent/hover */
         --accent: 0.3591 0.018 263.93; /* zinc-800 */

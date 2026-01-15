@@ -61,12 +61,13 @@ export function HeroAssetInspector() {
                     {/* The Image */}
                     <div className='relative h-full w-full rounded-xl border border-white/10 bg-zinc-900 shadow-2xl'>
                         <Image
-                            src={`${R2_PUBLIC_URL}/dashboard-bg.png`}
+                            src='/hero/dashboard-bg.avif'
                             unoptimized
                             alt='CardLedger Interface'
                             fill
-                            className='object-cover opacity-50 blur-[1.5px] grayscale-[20%]'
-                            priority
+                            className='object-cover'
+                            fetchPriority='high'
+                            preload={true}
                         />
                     </div>
 
@@ -315,6 +316,7 @@ function SchematicCard({
                             fill
                             className='object-cover'
                             preload={priority}
+                            fetchPriority='high'
                             loading='eager'
                         />
                         <div className='absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_100%)]' />
