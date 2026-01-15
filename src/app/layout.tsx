@@ -10,6 +10,7 @@ import { headers } from 'next/headers';
 import { ProvidersWrapper } from '../providers/ProvidersWrapper';
 import { Header } from '../components/layout/Header';
 import { Suspense } from 'react';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 const inter = Inter({
     subsets: ['latin'],
@@ -54,6 +55,7 @@ export default function RootLayout({
                 <Suspense fallback={<div className='min-h-screen bg-background' />}>
                     <AppContent>{children}</AppContent>
                 </Suspense>
+                <SpeedInsights />
             </body>
         </html>
     );
