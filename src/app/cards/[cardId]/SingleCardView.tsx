@@ -80,7 +80,11 @@ export function SingleCardView({
                         <h2 className='mb-4 text-2xl font-semibold tracking-tight'>Details</h2>
                         <div className='grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3'>
                             <DetailItem label='Set'>
-                                <FilterLink field='setId' value={card.set.name} />
+                                <FilterLink
+                                    field='setId'
+                                    value={card.set.id}
+                                    label={card.set.name}
+                                />
                             </DetailItem>
                             <DetailItem label='Card Number'>
                                 {card.num} / {card.set.printedTotal}
