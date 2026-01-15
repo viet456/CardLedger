@@ -21,7 +21,8 @@
         "db:sync": "pnpm run db:populate && pnpm run images:migrate",
         "index:cards": "tsx scripts/generateCardIndex.ts",
         "index:market": "tsx scripts/generateMarketIndex.ts",
-        "optimize:images": "tsx scripts/optimizeImages.ts"
+        "optimize:images": "tsx scripts/optimizeImages.ts",
+        "maintain-images": "tsx scripts/imgMaintenance.ts"
     },
     "dependencies": {
         "@aws-sdk/client-s3": "^3.948.0",

@@ -8,10 +8,7 @@ import pLimit from 'p-limit';
 const prisma = new PrismaClient();
 const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME;
 
-const DEVICE_SIZES = [640, 750, 828, 1080];
-const IMAGE_SIZES = [16, 32, 48, 64, 96];
-const CARD_SIZES = [192, 384];
-const ALL_SIZES = [...IMAGE_SIZES, ...CARD_SIZES, ...DEVICE_SIZES];
+const ALL_SIZES = [64, 384, 512, 640]; // 640 is near the original PNG size
 const QUALITY = 75;
 const limit = pLimit(4);
 
@@ -50,8 +47,13 @@ async function optimizeImage(image: ImageToOptimize): Promise<void> {
     try {
         const originalBuffer = await downloadFromR2(image.r2Key);
 
+        // Only process sizes <= sourceWidth
+        const metadata = await sharp(originalBuffer).metadata();
+        const sourceWidth = metadata.width || 0;
+        const validSizes = ALL_SIZES.filter((size) => size <= sourceWidth);
+
         // Run resizes in parallel
-        const variantPromises = ALL_SIZES.map(async (width) => {
+        const variantPromises = validSizes.map(async (width) => {
             const pathWithoutExtension = image.r2Key.replace(/\.[^/.]+$/, '');
             const optimizedKey = `optimized/${pathWithoutExtension}/${width}.avif`;
             const optimizedBuffer = await sharp(originalBuffer)
