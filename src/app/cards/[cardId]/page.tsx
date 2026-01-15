@@ -12,19 +12,14 @@ export async function generateMetadata({
     params: Promise<{ cardId: string }>;
 }): Promise<Metadata> {
     const { cardId } = await params;
-    const card = await prisma.card.findUnique({
-        where: { id: cardId },
-        include: {
-            set: true
-        }
-    });
+    const card = await getCachedCardData(cardId);
     if (!card) {
         return {
             title: 'Card not found | CardLedger'
         };
     }
-    const title = `${card.name} - ${card.set.name} (${card.number}/${card.set.printedTotal}) | CardLedger`;
-    const description = `Details for the Pokémon card ${card.name} from the ${card.set.name} set.`;
+    const title = `${card.n} - ${card.set.name} (${card.n}/${card.set.printedTotal}) | CardLedger`;
+    const description = `Details for the Pokémon card ${card.n} from the ${card.set.name} set.`;
     return {
         title: title,
         description: description
@@ -34,7 +29,7 @@ export async function generateMetadata({
 export async function generateStaticParams() {
     const cards = await prisma.card.findMany({
         orderBy: { releaseDate: 'desc' },
-        take: 200,
+        take: 250,
         select: {
             id: true
         }
