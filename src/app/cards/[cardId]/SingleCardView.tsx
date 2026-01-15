@@ -1,26 +1,10 @@
-'use client';
-
 import Link from 'next/link';
 import Image from 'next/image';
 import { DenormalizedCard, AbilityObject } from '@/src/shared-types/card-index';
 import { ChevronRight } from 'lucide-react';
-import { useSearchStore } from '@/src/lib/store/searchStore';
+import { FilterLink } from './FilterLink';
 
 const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
-
-// Helper component for creating consistent filter links
-const FilterLink = ({ field, value }: { field: string; value: string }) => {
-    const replaceFilters = useSearchStore((state) => state.replaceFilters);
-    return (
-        <Link
-            href={`/cards?${field}=${encodeURIComponent(value)}`}
-            className='text-primary hover:underline'
-            onClick={() => replaceFilters({ [field]: value })}
-        >
-            {value}
-        </Link>
-    );
-};
 
 // A reusable component for displaying a key-value pair in the details grid
 const DetailItem = ({ label, children }: { label: string; children: React.ReactNode }) => (
