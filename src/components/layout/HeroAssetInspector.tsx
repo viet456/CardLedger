@@ -314,6 +314,7 @@ function SchematicCard({
                             src={`${R2_PUBLIC_URL}/${image}`}
                             alt={name}
                             fill
+                            sizes='512px'
                             className='object-cover'
                             preload={priority}
                             fetchPriority='high'
