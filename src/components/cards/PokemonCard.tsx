@@ -51,7 +51,11 @@ export function PokemonCard({
                 />
             </div>
 
-            <Link href={`/cards/${card.id}`} className='flex h-full w-full flex-col'>
+            <Link
+                href={`/cards/${card.id}`}
+                prefetch={true}
+                className='flex h-full w-full flex-col'
+            >
                 {card.img ? (
                     <div className='relative aspect-[2.5/3.5] w-full'>
                         <Image
