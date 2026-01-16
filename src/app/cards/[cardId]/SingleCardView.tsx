@@ -49,7 +49,7 @@ export function SingleCardView({
                             height={700}
                             sizes='(max-width: 768px) 100vw, 33vw'
                             className='w-full rounded-xl shadow-lg'
-                            priority
+                            preload={true}
                         />
                     ) : (
                         <div className='flex aspect-[2.5/3.5] w-full items-center justify-center rounded-xl bg-muted text-muted-foreground'>
