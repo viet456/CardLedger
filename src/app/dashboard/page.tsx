@@ -1,18 +1,11 @@
-import { auth } from '@/src/lib/auth';
-import { headers } from 'next/headers';
-import { redirect } from 'next/navigation';
-import { getPortfolioValue } from '@/src/services/portfolioService';
 import { DashboardClient } from './_components/DashboardClient';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+    title: 'Dashboard | CardLedger',
+    description: 'Manage your Pokémon card collection and track portfolio value.'
+};
 
 export default async function DashboardPage() {
-    const session = await auth.api.getSession({
-        headers: await headers()
-    });
-
-    if (!session?.user) {
-        redirect('/sign-in');
-    }
-    const portfolioHistory = await getPortfolioValue(session.user.id);
-
-    return <DashboardClient portfolioHistory={portfolioHistory} />;
+    return <DashboardClient />;
 }

@@ -2,7 +2,7 @@ import { publicProcedure, router, protectedProcedure } from '../trpc';
 import { z } from 'zod';
 import { prisma } from '@/src/lib/prisma';
 import { CardCondition } from '@prisma/client';
-import { TRPCError } from '@trpc/server';
+import { getPortfolioValue } from '@/src/services/portfolioService';
 
 const CardConditionValues = Object.values(CardCondition) as [string, ...string[]];
 
@@ -108,5 +108,8 @@ export const collectionRouter = router({
                 where: { id: entryId, userId: ctx.user.id }
             });
             return { success: true };
-        })
+        }),
+    getPortfolioHistory: protectedProcedure.query(async ({ ctx }) => {
+        return await getPortfolioValue(ctx.user.id);
+    })
 });
