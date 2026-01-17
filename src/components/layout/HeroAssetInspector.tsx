@@ -307,6 +307,18 @@ function SchematicCard({
                 href={`/cards/${id}`}
                 className='group relative block h-[420px] w-full shrink-0 transition-transform duration-300'
                 prefetch={true} // Explicitly ensure prefetch is on
+                onClick={(e) => {
+                    // Check if the user is on mobile
+                    if (window.innerWidth < 768) {
+                        // Check if the click originated from the Info HUD (which has data-clickable="true")
+                        const isHudClick = (e.target as Element).closest('[data-clickable="true"]');
+
+                        // If they clicked the Image/Hotspots (NOT the HUD), stop navigation
+                        if (!isHudClick) {
+                            e.preventDefault();
+                        }
+                    }
+                }}
             >
                 <div className='relative h-[420px] w-full shrink-0 rounded-2xl border border-border bg-background shadow-2xl transition-colors duration-300 hover:border-emerald-500/30'>
                     <div className='relative h-full w-full overflow-hidden rounded-2xl'>
@@ -356,6 +368,7 @@ function SchematicCard({
 
                 {/* INFO HUD */}
                 <div
+                    data-clickable='true'
                     className={cn(
                         'z-0 mt-2 w-full md:absolute md:top-8 md:mt-0 md:w-[160px]',
                         side === 'left' ? 'md:right-[105%] md:pr-2' : 'md:left-[105%] md:pl-2'
