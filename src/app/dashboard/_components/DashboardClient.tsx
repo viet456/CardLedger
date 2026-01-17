@@ -81,7 +81,10 @@ export function DashboardClient() {
             }));
     }, [entries]);
 
-    if (status === 'loading' || status === 'idle') {
+    const isLoading = status === 'loading' || status === 'idle';
+    const hasData = entries.length > 0;
+
+    if (isLoading && !hasData) {
         return <DashboardSkeleton />;
     }
 

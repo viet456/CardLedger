@@ -202,6 +202,9 @@ export const useCollectionStore = create<CollectionStoreState>()(
             onRehydrateStorage: () => (state) => {
                 if (state) {
                     console.log('[CollectionStore]: Rehydrated from IndexedDB');
+                    if (state.entries && state.entries.length > 0) {
+                        useCollectionStore.setState({ status: 'ready_from_cache' });
+                    }
                 }
             }
         }
