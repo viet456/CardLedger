@@ -1,18 +1,16 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useCollectionStore } from '@/src/lib/store/collectionStore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/src/components/ui/tabs';
 import { CollectionPageView } from './CollectionPageView';
 import { PortfolioView } from './PortfolioView';
 import { DashboardSkeleton } from './DashboardSkeleton';
 import { mapPrismaCardToDenormalized } from '@/src/utils/cardMapper';
-import { PortfolioChartPoint } from '@/src/services/portfolioService';
 import { RichCollectionEntry } from '@/src/shared-types/collection-types';
-
-interface DashboardClientProps {
-    portfolioHistory: PortfolioChartPoint[];
-}
+import { useAuthSession } from '@/src/providers/SessionProvider';
+import { useRouter } from 'next/navigation';
+import { trpc } from '@/src/utils/trpc';
 
 function toNum(val: any): number | null {
     if (val === null || val === undefined) return null;
@@ -21,11 +19,25 @@ function toNum(val: any): number | null {
     return Number(val);
 }
 
-export function DashboardClient({ portfolioHistory }: DashboardClientProps) {
+export function DashboardClient() {
+    const router = useRouter();
+    const { data: session, isPending: isAuthPending } = useAuthSession();
+
+    useEffect(() => {
+        if (!isAuthPending && !session) {
+            router.push('/sign-in');
+        }
+    }, [session, isAuthPending, router]);
+
     const entries = useCollectionStore(
         (state) => state.entries
     ) as unknown as RichCollectionEntry[];
     const status = useCollectionStore((state) => state.status);
+
+    // Fetch portfolio price history if logged in
+    const { data: portfolioHistory } = trpc.collection.getPortfolioHistory.useQuery(undefined, {
+        enabled: !!session?.user
+    });
 
     const gridCards = useMemo(() => {
         return entries
@@ -73,6 +85,8 @@ export function DashboardClient({ portfolioHistory }: DashboardClientProps) {
         return <DashboardSkeleton />;
     }
 
+    if (!isAuthPending && !session) return null;
+
     return (
         <main className='mx-auto mb-16 flex min-h-screen w-full flex-col p-4 text-foreground lg:p-8'>
             <Tabs defaultValue='gallery' className='w-full'>
@@ -95,7 +109,7 @@ export function DashboardClient({ portfolioHistory }: DashboardClientProps) {
                 </TabsContent>
 
                 <TabsContent value='portfolio' className='mt-6'>
-                    <PortfolioView history={portfolioHistory} entries={serializedEntries} />
+                    <PortfolioView history={portfolioHistory || []} entries={serializedEntries} />
                 </TabsContent>
             </Tabs>
         </main>
