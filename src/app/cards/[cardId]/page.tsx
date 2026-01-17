@@ -30,7 +30,6 @@ export async function generateStaticParams() {
     const allCards = await prisma.card.findMany({
         select: {
             id: true,
-            setId: true,
             releaseDate: true,
             number: true
         },
