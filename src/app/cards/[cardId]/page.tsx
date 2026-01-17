@@ -38,9 +38,6 @@ export async function generateStaticParams() {
         orderBy: [
             {
                 releaseDate: 'desc'
-            },
-            {
-                number: 'asc'
             }
         ]
     });
