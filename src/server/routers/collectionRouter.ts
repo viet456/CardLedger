@@ -65,6 +65,20 @@ export const collectionRouter = router({
                     purchasePrice,
                     condition: condition as CardCondition
                     //variantName
+                },
+                include: {
+                    card: {
+                        include: {
+                            set: true,
+                            rarity: true,
+                            marketStats: true,
+                            artist: true,
+                            types: { include: { type: true } },
+                            subtypes: { include: { subtype: true } },
+                            weaknesses: { include: { type: true } },
+                            resistances: { include: { type: true } }
+                        }
+                    }
                 }
             });
             return newEntry;
