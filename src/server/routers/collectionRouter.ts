@@ -16,9 +16,9 @@ export const collectionRouter = router({
         .query(async ({ input, ctx }) => {
             const targetUserId = input?.userId ?? ctx.user?.id;
             if (!targetUserId) {
-                return [];
+                return { entries: [], lastModified: Date.now() };
             }
-            return prisma.collectionEntry.findMany({
+            const entries = await prisma.collectionEntry.findMany({
                 where: { userId: targetUserId },
                 include: {
                     card: {
@@ -36,6 +36,12 @@ export const collectionRouter = router({
                 },
                 orderBy: { createdAt: 'desc' }
             });
+            const lastModified =
+                entries.length > 0
+                    ? Math.max(...entries.map((e) => e.createdAt.getTime()))
+                    : Date.now();
+
+            return { entries, lastModified };
         }),
     /**
      * Adds a new card to a *logged-in* user's collection.

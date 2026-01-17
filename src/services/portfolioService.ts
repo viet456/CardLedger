@@ -115,7 +115,7 @@ export async function getPortfolioValue(userId: string) {
             if (date < purchaseDate) continue;
 
             // Add Cost Basis
-            dailyCost += entry.purchasePrice.toNumber();
+            dailyCost += entry.purchasePrice;
 
             // Add Market Value (Using Forward Fill)
             // Use today's price if available, otherwise use the last known price.

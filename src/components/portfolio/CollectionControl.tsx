@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { useAuthSession } from '@/src/providers/SessionProvider';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/src/components/ui/tooltip';
+import { useCollectionStore } from '@/src/lib/store/collectionStore';
 
 interface CollectionControlProps {
     cardId: string;
@@ -27,10 +28,14 @@ export function CollectionControl({
     const router = useRouter();
     const utils = trpc.useUtils();
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isAdding, setIsAdding] = useState(false);
+    const [isRemoving, setIsRemoving] = useState(false);
     const pendingDeletesRef = useRef<Set<string>>(new Set());
 
-    const { data: collectionEntries, isLoading } = trpc.collection.getCollection.useQuery();
-    type CollectionEntryData = NonNullable<typeof collectionEntries>[number];
+    const collectionEntries = useCollectionStore((state) => state.entries);
+    const collectionStatus = useCollectionStore((state) => state.status);
+    const addEntry = useCollectionStore((state) => state.addEntry);
+    const removeEntry = useCollectionStore((state) => state.removeEntry);
 
     const myEntries = useMemo(() => {
         if (!collectionEntries) return [];
@@ -43,82 +48,7 @@ export function CollectionControl({
 
     const count = myEntries.length;
 
-    // CRUD mutations
-    const addMutation = trpc.collection.addToCollection.useMutation({
-        onMutate: async (newEntryVars) => {
-            await utils.collection.getCollection.cancel();
-            const previousCollection = utils.collection.getCollection.getData();
-            const optimisticId = `optimistic-${Date.now()}-${Math.random()}`;
-            // Create a temporary "Optimistic" entry
-            const optimisticEntry = {
-                id: optimisticId,
-                userId: session?.user?.id || 'temp',
-                cardId: newEntryVars.cardId,
-                purchasePrice: newEntryVars.purchasePrice,
-                condition: newEntryVars.condition,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-                card: { id: newEntryVars.cardId }
-            } as unknown as CollectionEntryData;
-
-            utils.collection.getCollection.setData(undefined, (old) => {
-                return old ? [optimisticEntry, ...old] : [optimisticEntry];
-            });
-
-            return { previousCollection, optimisticId };
-        },
-        onSuccess: (realEntry, vars, context) => {
-            utils.collection.getCollection.setData(undefined, (old) => {
-                if (!old) return [];
-                return old.map((entry) =>
-                    entry.id === context.optimisticId
-                        ? (realEntry as unknown as CollectionEntryData)
-                        : entry
-                );
-            });
-            toast.success('Added to collection');
-            router.refresh();
-        },
-        onError: (error, vars, context) => {
-            if (context?.previousCollection) {
-                utils.collection.getCollection.setData(undefined, context.previousCollection);
-            }
-            toast.error(`Failed to add: ${error.message}`);
-        }
-    });
-
-    const removeMutation = trpc.collection.removeFromCollection.useMutation({
-        onMutate: async ({ entryId }) => {
-            pendingDeletesRef.current.add(entryId);
-            await utils.collection.getCollection.cancel();
-            const previousCollection = utils.collection.getCollection.getData();
-
-            utils.collection.getCollection.setData(undefined, (old) => {
-                if (!old) return [];
-                return old.filter((entry) => entry.id !== entryId);
-            });
-
-            return { previousCollection };
-        },
-        onSuccess: (data, variables) => {
-            pendingDeletesRef.current.delete(variables.entryId);
-            toast.success('Removed from collection');
-            utils.collection.getCollection.invalidate();
-            router.refresh();
-        },
-        onError: (error, variables, context) => {
-            if (context?.previousCollection) {
-                utils.collection.getCollection.setData(undefined, context.previousCollection);
-            }
-            pendingDeletesRef.current.delete(variables.entryId);
-            toast.error(`Error: ${error.message}`);
-        },
-        onSettled: () => {
-            utils.collection.getCollection.invalidate();
-        }
-    });
-
-    const handleAdd = (e: React.MouseEvent) => {
+    const handleAdd = async (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
 
@@ -128,38 +58,65 @@ export function CollectionControl({
             return;
         }
 
-        addMutation.mutate({
-            cardId,
-            purchasePrice: currentPrice || 0,
-            condition: CardCondition.tcgNearMint
-        });
+        setIsAdding(true);
+        try {
+            await addEntry({
+                cardId,
+                purchasePrice: currentPrice || 0,
+                condition: CardCondition.tcgNearMint,
+                variantName: null
+            });
+            toast.success('Added to collection');
+        } catch (error) {
+            toast.error('Failed to add card');
+            console.error(error);
+        } finally {
+            setIsAdding(false);
+        }
     };
 
-    const handleRemove = (e: React.MouseEvent) => {
+    const handleRemove = async (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
 
         if (entryId) {
-            removeMutation.mutate({ entryId });
+            // Dashboard mode: remove specific entry
+            setIsRemoving(true);
+            try {
+                await removeEntry(entryId);
+                toast.success('Removed from collection');
+            } catch (error) {
+                toast.error('Failed to remove card');
+                console.error(error);
+            } finally {
+                setIsRemoving(false);
+            }
         } else {
+            // Browse mode: remove most recent entry (LIFO)
             if (count === 0) return;
-            // LIFO: remove the most recent entry
+
             const entryToRemove = myEntries.find(
                 (entry) => !pendingDeletesRef.current.has(entry.id)
             );
+
             if (entryToRemove) {
-                if (entryToRemove.id.startsWith('optimistic-')) {
-                    utils.collection.getCollection.setData(undefined, (old) => {
-                        return old?.filter((e) => e.id !== entryToRemove.id) || [];
-                    });
-                } else {
-                    removeMutation.mutate({ entryId: entryToRemove.id });
+                pendingDeletesRef.current.add(entryToRemove.id);
+                setIsRemoving(true);
+                try {
+                    await removeEntry(entryToRemove.id);
+                    toast.success('Removed from collection');
+                } catch (error) {
+                    toast.error('Failed to remove card');
+                    console.error(error);
+                } finally {
+                    pendingDeletesRef.current.delete(entryToRemove.id);
+                    setIsRemoving(false);
                 }
             }
         }
     };
 
-    const isInteracting = addMutation.isPending || removeMutation.isPending;
+    const isInteracting = isAdding || isRemoving;
 
     // Guest states
     if (!session) {
@@ -212,9 +169,9 @@ export function CollectionControl({
                                 size='icon'
                                 className='h-8 w-8 rounded-full bg-background text-primary opacity-80 shadow-md transition-all hover:scale-110 hover:opacity-100'
                                 onClick={handleRemove}
-                                disabled={removeMutation.isPending}
+                                disabled={isRemoving}
                             >
-                                {removeMutation.isPending ? (
+                                {isRemoving ? (
                                     <Loader2 className='h-4 w-4 animate-spin' />
                                 ) : (
                                     <Trash2 className='h-4 w-4' />
@@ -238,7 +195,7 @@ export function CollectionControl({
     }
 
     // Loading state
-    if (!collectionEntries && isLoading) {
+    if (collectionStatus === 'loading' || collectionStatus === 'idle') {
         return <div className='h-8 w-8 rounded-full bg-white/50 shadow-md backdrop-blur-sm' />;
     }
 

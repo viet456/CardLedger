@@ -351,7 +351,7 @@ model CollectionEntry {
     cardId String
     card   Card   @relation(fields: [cardId], references: [id], onDelete: Cascade)
 
-    purchasePrice Decimal       @db.Decimal(10, 2)
+    purchasePrice Float
     condition     CardCondition @default(tcgNearMint)
 
     // future card variant support, eg Holo, Foil
