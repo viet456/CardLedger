@@ -1,14 +1,10 @@
 import { auth } from '@/src/lib/auth';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { prisma } from '@/src/lib/prisma';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/src/components/ui/tabs';
-import { CollectionPageView } from './_components/CollectionPageView';
-import { mapPrismaCardToDenormalized } from '@/src/utils/cardMapper';
 import { getPortfolioValue } from '@/src/services/portfolioService';
-import { PortfolioView } from './_components/PortfolioView';
+import { DashboardClient } from './_components/DashboardClient';
 
-async function DashboardContent() {
+export default async function DashboardPage() {
     const session = await auth.api.getSession({
         headers: await headers()
     });
@@ -16,87 +12,7 @@ async function DashboardContent() {
     if (!session?.user) {
         redirect('/sign-in');
     }
-
-    const collectionEntries = await prisma.collectionEntry.findMany({
-        where: { userId: session.user.id },
-        include: {
-            card: {
-                include: {
-                    set: true,
-                    rarity: true,
-                    marketStats: true,
-                    artist: true,
-                    types: { include: { type: true } },
-                    subtypes: { include: { subtype: true } },
-                    weaknesses: { include: { type: true } },
-                    resistances: { include: { type: true } }
-                }
-            }
-        },
-        orderBy: { createdAt: 'desc' }
-    });
-
-    const serializedEntries = collectionEntries.map((entry) => ({
-        ...entry,
-        purchasePrice: entry.purchasePrice,
-        card: {
-            ...entry.card,
-            marketStats: entry.card.marketStats
-                ? {
-                      ...entry.card.marketStats,
-                      tcgNearMintLatest:
-                          entry.card.marketStats.tcgNearMintLatest?.toNumber() ?? null,
-                      tcgLightlyPlayedLatest:
-                          entry.card.marketStats.tcgLightlyPlayedLatest?.toNumber() ?? null,
-                      tcgModeratelyPlayedLatest:
-                          entry.card.marketStats.tcgModeratelyPlayedLatest?.toNumber() ?? null,
-                      tcgHeavilyPlayedLatest:
-                          entry.card.marketStats.tcgHeavilyPlayedLatest?.toNumber() ?? null,
-                      tcgDamagedLatest: entry.card.marketStats.tcgDamagedLatest?.toNumber() ?? null
-                  }
-                : null
-        }
-    }));
     const portfolioHistory = await getPortfolioValue(session.user.id);
 
-    const gridCards =
-        collectionEntries?.map((entry) => ({
-            ...mapPrismaCardToDenormalized(entry.card),
-            uniqueId: entry.id,
-            collectionStats: {
-                cost: entry.purchasePrice,
-                acquiredAt: entry.createdAt,
-                condition: entry.condition
-            }
-        })) || [];
-
-    return (
-        <main className='mx-auto mb-16 flex min-h-screen w-full flex-col p-4 text-foreground lg:p-8'>
-            <Tabs defaultValue='gallery' className='w-full'>
-                <div className='flex items-center justify-between'>
-                    <TabsList className='rounded-lg bg-muted p-1'>
-                        <TabsTrigger value='gallery'>Gallery View</TabsTrigger>
-                        <TabsTrigger value='portfolio'>Portfolio</TabsTrigger>
-                    </TabsList>
-                </div>
-                <TabsContent value='gallery' className='mt-6 flex-grow'>
-                    {gridCards.length === 0 ? (
-                        <div className='flex h-64 flex-col items-center justify-center rounded-md border border-dashed border-border'>
-                            <p>Your collection is empty.</p>
-                            <p>Go add some cards!</p>
-                        </div>
-                    ) : (
-                        <CollectionPageView cards={gridCards} />
-                    )}
-                </TabsContent>
-                <TabsContent value='portfolio' className='mt-6'>
-                    <PortfolioView history={portfolioHistory} entries={serializedEntries} />
-                </TabsContent>
-            </Tabs>
-        </main>
-    );
-}
-
-export default function DashboardPage() {
-    return <DashboardContent />;
+    return <DashboardClient portfolioHistory={portfolioHistory} />;
 }
