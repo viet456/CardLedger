@@ -48,8 +48,11 @@ export function CollectionManagerModal({
         refetch
     } = trpc.collection.getCollection.useQuery(undefined, {
         select: (data) => {
-            if (entryId) return data.filter((e) => e.id === entryId);
-            return data.filter((e) => e.cardId === cardId);
+            const allEntries = data.entries;
+            if (entryId) {
+                return allEntries.filter((e) => e.id === entryId);
+            }
+            return allEntries.filter((e) => e.cardId === cardId);
         },
         enabled: isOpen
     });
