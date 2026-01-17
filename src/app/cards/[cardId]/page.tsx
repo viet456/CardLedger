@@ -27,15 +27,39 @@ export async function generateMetadata({
 }
 
 export async function generateStaticParams() {
-    const cards = await prisma.card.findMany({
-        orderBy: { releaseDate: 'desc' },
-        take: 250,
+    const allCards = await prisma.card.findMany({
         select: {
-            id: true
-        }
+            id: true,
+            setId: true,
+            releaseDate: true,
+            number: true
+        },
+        // Sort by release date so our 'global' list is ready immediately
+        orderBy: [
+            {
+                releaseDate: 'desc'
+            },
+            {
+                number: 'asc'
+            }
+        ]
     });
-    return cards.map((card) => ({
-        cardId: card.id
+    // Generate 250 newest cards
+    const idsToGenerate = new Set<string>();
+    allCards.slice(0, 250).forEach((card) => {
+        idsToGenerate.add(card.id);
+    });
+
+    // Select first 12 cards from each set
+    const TARGET_NUMBERS = new Set(['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']);
+    for (const card of allCards) {
+        if (TARGET_NUMBERS.has(card.number)) {
+            idsToGenerate.add(card.id);
+        }
+    }
+
+    return Array.from(idsToGenerate).map((id) => ({
+        id: id
     }));
 }
 
