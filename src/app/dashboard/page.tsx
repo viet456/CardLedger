@@ -40,7 +40,7 @@ async function DashboardContent() {
 
     const serializedEntries = collectionEntries.map((entry) => ({
         ...entry,
-        purchasePrice: entry.purchasePrice.toNumber(),
+        purchasePrice: entry.purchasePrice,
         card: {
             ...entry.card,
             marketStats: entry.card.marketStats
@@ -66,7 +66,7 @@ async function DashboardContent() {
             ...mapPrismaCardToDenormalized(entry.card),
             uniqueId: entry.id,
             collectionStats: {
-                cost: entry.purchasePrice.toNumber(),
+                cost: entry.purchasePrice,
                 acquiredAt: entry.createdAt,
                 condition: entry.condition
             }

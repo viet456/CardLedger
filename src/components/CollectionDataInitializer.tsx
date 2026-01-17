@@ -1,22 +1,18 @@
 'use client';
 
-import { trpc } from '@/src/utils/trpc';
 import { useAuthSession } from '@/src/providers/SessionProvider';
 import { useEffect } from 'react';
+import { useCollectionStore } from '../lib/store/collectionStore';
 
 export function CollectionDataInitializer() {
     const { data: session } = useAuthSession();
-
-    // Prefetch collection ONLY if logged in
-    const { refetch } = trpc.collection.getCollection.useQuery(undefined, {
-        enabled: false // Don't run automatically on mount
-    });
+    const initialize = useCollectionStore((state) => state.initialize);
 
     useEffect(() => {
-        if (session?.user) {
-            refetch();
+        if (session?.user?.id) {
+            initialize(session.user.id);
         }
-    }, [session, refetch]);
+    }, [session?.user?.id, initialize]);
 
     return null;
 }
