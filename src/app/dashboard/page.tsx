@@ -5,8 +5,6 @@ import { prisma } from '@/src/lib/prisma';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/src/components/ui/tabs';
 import { CollectionPageView } from './_components/CollectionPageView';
 import { mapPrismaCardToDenormalized } from '@/src/utils/cardMapper';
-import { Suspense } from 'react';
-import { DashboardSkeleton } from './_components/DashboardSkeleton';
 import { getPortfolioValue } from '@/src/services/portfolioService';
 import { PortfolioView } from './_components/PortfolioView';
 
@@ -100,9 +98,5 @@ async function DashboardContent() {
 }
 
 export default function DashboardPage() {
-    return (
-        <Suspense fallback={<DashboardSkeleton />}>
-            <DashboardContent />
-        </Suspense>
-    );
+    return <DashboardContent />;
 }
