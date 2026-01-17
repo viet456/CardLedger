@@ -51,7 +51,7 @@ export const useCollectionStore = create<CollectionStoreState>()(
                 // Checks that cached user matches current user
                 const cachedUserId = get().userId;
                 if (cachedUserId && cachedUserId !== userId) {
-                    console.log('[CollectionStore]: User mismatch, clearing cache');
+                    //console.log('[CollectionStore]: User mismatch, clearing cache');
                     set({
                         userId,
                         entries: [],
@@ -74,13 +74,13 @@ export const useCollectionStore = create<CollectionStoreState>()(
                     // Compare server's lastModified with our cached version
                     const cachedTimestamp = get().lastSynced;
                     if (cachedTimestamp && cachedTimestamp >= serverTimestamp) {
-                        console.log('[CollectionStore]: ✅ Cache is up to date');
+                        //console.log('[CollectionStore]: ✅ Cache is up to date');
                         set({ status: 'ready_from_cache' });
                         return;
                     }
-                    console.log(
-                        `[CollectionStore]: ✅ Loaded ${serverEntries.length} entries from network`
-                    );
+                    // console.log(
+                    //     `[CollectionStore]: ✅ Loaded ${serverEntries.length} entries from network`
+                    // );
 
                     set({
                         userId,
@@ -90,11 +90,11 @@ export const useCollectionStore = create<CollectionStoreState>()(
                         status: 'ready_from_network'
                     });
                 } catch (error) {
-                    console.error('[CollectionStore]: ❌ Error during initialization:', error);
+                    //console.error('[CollectionStore]: ❌ Error during initialization:', error);
 
                     // If we have cached data, use it despite error
                     if (get().entries.length > 0) {
-                        console.log('[CollectionStore]: Using cached data after error');
+                        //console.log('[CollectionStore]: Using cached data after error');
                         set({ status: 'ready_from_cache' });
                     } else {
                         set({ status: 'error' });
@@ -132,10 +132,10 @@ export const useCollectionStore = create<CollectionStoreState>()(
                         entries: state.entries.map((e) => (e.id === tempId ? newEntry : e)),
                         lastSynced: Date.now()
                     }));
-                    console.log('[CollectionStore]: ✅ Entry added successfully');
+                    //console.log('[CollectionStore]: ✅ Entry added successfully');
                 } catch (error) {
                     // Rollback
-                    console.error('[CollectionStore]: ❌ Failed to add entry:', error);
+                    //console.error('[CollectionStore]: ❌ Failed to add entry:', error);
                     set((state) => ({
                         entries: state.entries.filter((e) => e.id !== tempId)
                     }));
@@ -157,11 +157,11 @@ export const useCollectionStore = create<CollectionStoreState>()(
                         ...updates
                     });
 
-                    console.log('[CollectionStore]: ✅ Entry updated successfully');
+                    //console.log('[CollectionStore]: ✅ Entry updated successfully');
                     set({ lastSynced: Date.now() });
                 } catch (error) {
                     // Rollback
-                    console.error('[CollectionStore]: ❌ Failed to update entry:', error);
+                    //console.error('[CollectionStore]: ❌ Failed to update entry:', error);
                     set({ entries: previousEntries });
                     throw error;
                 }
@@ -181,10 +181,10 @@ export const useCollectionStore = create<CollectionStoreState>()(
                     });
 
                     set({ lastSynced: Date.now() });
-                    console.log('[CollectionStore]: ✅ Entry removed successfully');
+                    //console.log('[CollectionStore]: ✅ Entry removed successfully');
                 } catch (error) {
                     // Rollback
-                    console.error('[CollectionStore]: ❌ Failed to remove entry:', error);
+                    //console.error('[CollectionStore]: ❌ Failed to remove entry:', error);
                     set({ entries: previousEntries });
                     throw error;
                 }
@@ -201,7 +201,7 @@ export const useCollectionStore = create<CollectionStoreState>()(
             }),
             onRehydrateStorage: () => (state) => {
                 if (state) {
-                    console.log('[CollectionStore]: Rehydrated from IndexedDB');
+                    //console.log('[CollectionStore]: Rehydrated from IndexedDB');
                     if (state.entries && state.entries.length > 0) {
                         useCollectionStore.setState({ status: 'ready_from_cache' });
                     }
