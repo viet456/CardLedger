@@ -1,19 +1,12 @@
 'use client';
-import { useSearchStore } from '@/src/lib/store/searchStore';
 import { NormalizedCard } from '@/src/shared-types/card-index';
 import { useMemo, useEffect } from 'react';
 import { SortableKey } from '../src/services/pokemonCardValidator';
 import { useCardStore } from '@/src/lib/store/cardStore';
 import { useShallow } from 'zustand/react/shallow';
+import { FilterState } from '../src/services/pokemonCardValidator';
 
 // For filtering /cards page with Zustand/IDB stores
-
-interface UseCardFiltersProps {
-    defaultSort?: {
-        sortBy: SortableKey;
-        sortOrder: 'asc' | 'desc';
-    };
-}
 
 function intersectSets(setA: Set<string>, setB: Set<string>): Set<string> {
     const intersection = new Set<string>();
@@ -33,15 +26,7 @@ function intersectSets(setA: Set<string>, setB: Set<string>): Set<string> {
     return intersection;
 }
 
-export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
-    const { filters, setFilters, replaceFilters } = useSearchStore(
-        useShallow((state) => ({
-            filters: state.filters,
-            setFilters: state.setFilters,
-            replaceFilters: state.replaceFilters
-        }))
-    );
-
+export function useCardFilters(filters: FilterState) {
     // Filter indexes from cardStore
     const {
         cardMap,
@@ -68,12 +53,6 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
             fuseInstance: state.fuseInstance
         }))
     );
-
-    useEffect(() => {
-        if (!filters.sortBy && defaultSort) {
-            setFilters(defaultSort);
-        }
-    }, [filters.sortBy, defaultSort, setFilters]);
 
     const filteredCards = useMemo(() => {
         if (!cardMap.size || !sets.length) return [];

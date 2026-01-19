@@ -3,10 +3,10 @@ import { SortableKey } from '@/src/services/pokemonCardValidator';
 import { CardFilterControls } from '@/src/components/search/CardFilterControls';
 import { SimpleCardGrid } from '@/src/components/cards/SimpleCardGrid';
 import { SetObject, FilterOptions } from '@/src/shared-types/card-index';
-import { useShallow } from 'zustand/react/shallow';
-import { useSearchStore } from '@/src/lib/store/searchStore';
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { DenormalizedCard } from '@/src/shared-types/card-index';
+import { useSearchParams } from 'next/navigation';
+import { FilterState, findCardsInputSchema } from '@/src/services/pokemonCardValidator';
 
 interface SetPageViewProps {
     setInfo: SetObject;
@@ -15,9 +15,7 @@ interface SetPageViewProps {
 }
 
 // Local card filtering hook for ~200 cards
-function useSetFilters(initialCards: DenormalizedCard[]) {
-    const { filters } = useSearchStore(useShallow((state) => ({ filters: state.filters })));
-
+function useSetFilters(initialCards: DenormalizedCard[], filters: FilterState) {
     const filteredAndSortedCards = useMemo(() => {
         // Apply Filters (on ~200 cards, instant)
         const filtered = initialCards.filter((card) => {
@@ -87,21 +85,20 @@ function useSetFilters(initialCards: DenormalizedCard[]) {
 }
 
 export function SetPageView({ setInfo, cards, filterOptions }: SetPageViewProps) {
-    const { replaceFilters } = useSearchStore();
+    const searchParams = useSearchParams();
 
-    useEffect(() => {
-        replaceFilters({
-            sortBy: 'num', // Set default sort for this page
-            sortOrder: 'asc'
-        });
+    const filters = useMemo(() => {
+        const paramsObj = Object.fromEntries(searchParams.entries());
+        const parsed = findCardsInputSchema.safeParse(paramsObj);
+        if (parsed.success) {
+            return parsed.data;
+        } else {
+            console.warn('Invalid URL filters:', parsed.error);
+            return {};
+        }
+    }, [searchParams]);
 
-        // On unmount, clear all filters
-        return () => {
-            replaceFilters({});
-        };
-    }, [replaceFilters]);
-
-    const { filteredAndSortedCards } = useSetFilters(cards);
+    const { filteredAndSortedCards } = useSetFilters(cards, filters);
 
     const sortOptions: { label: string; value: SortableKey }[] = [
         { label: 'Card Number', value: 'num' },
@@ -116,7 +113,12 @@ export function SetPageView({ setInfo, cards, filterOptions }: SetPageViewProps)
                 <h1 className='font-bold'>{setInfo.name}</h1>
                 <p className='text-muted-foreground'>Series: {setInfo.series}</p>
             </header>
-            <CardFilterControls filterOptions={filterOptions} sortOptions={sortOptions} />
+            <CardFilterControls
+                filterOptions={filterOptions}
+                sortOptions={sortOptions}
+                currentFilters={filters}
+                defaultSort='rD'
+            />
             <SimpleCardGrid cards={filteredAndSortedCards} />
         </div>
     );

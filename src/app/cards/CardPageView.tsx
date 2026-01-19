@@ -9,8 +9,8 @@ import { PokemonCardSkeleton } from '@/src/components/cards/PokemonCardSkeleton'
 import { useDenormalizedCards } from '@/hooks/useDenormalizedCards';
 import { useShallow } from 'zustand/react/shallow';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useSearchStore, FilterState } from '@/src/lib/store/searchStore';
-import { useEffect, useRef } from 'react';
+import { useMemo, useEffect } from 'react';
+import { FilterState, findCardsInputSchema } from '@/src/services/pokemonCardValidator';
 
 export default function CardPageView() {
     const isHydrated = useHasHydrated();
@@ -18,39 +18,16 @@ export default function CardPageView() {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
-    const { filters, replaceFilters } = useSearchStore(
-        useShallow((state) => ({
-            filters: state.filters,
-            replaceFilters: state.replaceFilters
-        }))
-    );
-    const isInitialMount = useRef(true);
-    const hasLoadedFromUrl = useRef(false);
-
-    useEffect(() => {
-        if (hasLoadedFromUrl.current) return;
-        hasLoadedFromUrl.current = true;
-        const params = new URLSearchParams(searchParams.toString());
-        const urlFilters: { [key: string]: string } = {};
-        for (const [key, value] of params.entries()) {
-            urlFilters[key] = value;
-        }
-        replaceFilters(urlFilters as Partial<FilterState>);
-    }, [replaceFilters, searchParams]);
-
-    useEffect(() => {
-        if (isInitialMount.current) {
-            isInitialMount.current = false;
-            return;
-        }
-        const params = new URLSearchParams();
-        Object.entries(filters).forEach(([key, value]) => {
-            if (value !== undefined && value !== null && value !== '') {
-                params.set(key, String(value));
-            }
-        });
-        router.replace(`${pathname}?${params.toString()}`);
-    }, [filters, pathname, router]);
+    const filters = useMemo(() => {
+        const paramsObj = Object.fromEntries(searchParams.entries());
+        const parsed = findCardsInputSchema.safeParse(paramsObj);
+        const data = parsed.success ? parsed.data : {};
+        return {
+            ...data,
+            sortBy: data.sortBy || 'rD',
+            sortOrder: data.sortOrder || 'desc'
+        };
+    }, [searchParams]);
 
     const { status, artists, rarities, sets, types, subtypes } = useCardStore(
         useShallow((state: CardStoreState) => ({
@@ -78,16 +55,20 @@ export default function CardPageView() {
         { label: 'Price', value: 'price' }
         //{ label: 'Card Number', value: 'num' }
     ];
-    const defaultSort = { sortBy: 'rD' as SortableKey, sortOrder: 'desc' as const };
     const isLoading = !isHydrated || !status.startsWith('ready');
 
-    const { filteredCards: normalizedFilteredCards } = useCardFilters({ defaultSort });
-    const { denormalizedAndSortedCards } = useDenormalizedCards(normalizedFilteredCards);
+    const { filteredCards: normalizedFilteredCards } = useCardFilters(filters);
+    const { denormalizedAndSortedCards } = useDenormalizedCards(normalizedFilteredCards, filters);
 
     return (
         <div className='flex w-full flex-grow flex-col'>
             {/* <CardDataInitializer /> */}
-            <CardFilterControls filterOptions={filterOptions} sortOptions={allCardsSortOptions} />
+            <CardFilterControls
+                filterOptions={filterOptions}
+                sortOptions={allCardsSortOptions}
+                currentFilters={filters}
+                defaultSort='rD'
+            />
             <div className='mt-2 min-h-screen flex-grow'>
                 {isLoading ? (
                     <div className='grid grid-cols-2 gap-4 px-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'>

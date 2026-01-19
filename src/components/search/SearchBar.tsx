@@ -1,13 +1,17 @@
 'use client';
 
-import { useSearchStore } from '@/src/lib/store/searchStore';
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { X } from 'lucide-react';
 
 export function SearchBar() {
-    const { filters, setFilters } = useSearchStore();
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+
+    const [value, setValue] = useState(searchParams.get('search') || '');
     const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -27,9 +31,7 @@ export function SearchBar() {
                 }
             }
         };
-
         document.addEventListener('keydown', handleKeyDown);
-
         return () => {
             document.removeEventListener('keydown', handleKeyDown);
         };
@@ -38,23 +40,42 @@ export function SearchBar() {
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape' && document.activeElement === inputRef.current) {
-                inputRef.current?.blur(); // Blur the input
+                inputRef.current?.blur();
             }
         };
-
         document.addEventListener('keydown', handleKeyDown);
-
-        // Cleanup the event listener on component unmount
-        return () => {
-            document.removeEventListener('keydown', handleKeyDown);
-        };
-    }, [setFilters]);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFilters({ search: e.target.value });
+        const newValue = e.target.value;
+        setValue(newValue);
+
+        const params = new URLSearchParams(searchParams.toString());
+        const hadSearch = searchParams.has('search');
+
+        if (newValue) {
+            params.set('search', newValue);
+            if (!hadSearch) {
+                params.set('sortBy', 'relevance');
+                params.set('sortOrder', 'desc');
+            }
+        } else {
+            params.delete('search');
+            if (params.get('sortBy') === 'relevance') {
+                params.delete('sortBy');
+                params.delete('sortOrder');
+            }
+        }
+
+        // use replace() to avoid cluttering history stack with every character
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     };
     const handleClear = () => {
-        setFilters({ search: '' });
+        setValue('');
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete('search');
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
         inputRef.current?.focus();
     };
 
@@ -65,10 +86,10 @@ export function SearchBar() {
                 ref={inputRef}
                 type='text'
                 placeholder='Search for cards...'
-                value={filters.search || ''}
+                value={value}
                 onChange={handleSearchChange}
             />
-            {filters.search && (
+            {value && (
                 <Button
                     variant={'ghost'}
                     size={'icon'}

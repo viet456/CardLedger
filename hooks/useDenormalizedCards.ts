@@ -4,13 +4,13 @@ import { useMemo } from 'react';
 import { NormalizedCard } from '@/src/shared-types/card-index';
 import { useCardStore } from '@/src/lib/store/cardStore';
 import { useMarketStore } from '@/src/lib/store/marketStore';
-import { useSearchStore } from '@/src/lib/store/searchStore';
 import { denormalizeAndSortCards } from '@/src/utils/cardUtils';
 import { useShallow } from 'zustand/react/shallow';
+import { FilterState } from '@/src/services/pokemonCardValidator';
 
 // Combines cards store with prices store
 
-export function useDenormalizedCards(normalizedCards: NormalizedCard[]) {
+export function useDenormalizedCards(normalizedCards: NormalizedCard[], filters: FilterState) {
     const lookups = useCardStore(
         useShallow((state) => ({
             rarities: state.rarities,
@@ -26,7 +26,6 @@ export function useDenormalizedCards(normalizedCards: NormalizedCard[]) {
     );
 
     const { prices } = useMarketStore();
-    const { filters } = useSearchStore();
 
     // Pass in smaller group of filtered cards, and then denormalize
     // - pass in price data and then we can sort over this small group

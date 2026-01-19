@@ -14,6 +14,7 @@ const sortableKeys = z.enum([
     'gain'
 ]);
 export type SortableKey = z.infer<typeof sortableKeys>;
+export type FilterState = z.infer<typeof findCardsInputSchema>;
 
 // the shape of card requests
 export const findCardsInputSchema = z.object({
@@ -23,11 +24,11 @@ export const findCardsInputSchema = z.object({
     sortOrder: z.enum(['asc', 'desc']).optional(),
     hp_gte: z.coerce.number().optional(), // Greater than or equal to
     hp_lte: z.coerce.number().optional(), // Less than or equal to
-    convertedRetreatCost_gte: z.number().optional(),
-    convertedRetreatCost_lte: z.number().optional(),
+    convertedRetreatCost_gte: z.coerce.number().optional(),
+    convertedRetreatCost_lte: z.coerce.number().optional(),
     number: z.string().optional(),
-    pokedexNumberSort: z.number().optional(),
-    releaseDate: z.date().optional(),
+    pokedexNumberSort: z.coerce.number().optional(),
+    releaseDate: z.coerce.date().optional(),
 
     // Filters from the Card model
     search: z.string().optional(),

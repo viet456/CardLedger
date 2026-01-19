@@ -1,7 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { useSearchStore, FilterState } from '@/src/lib/store/searchStore';
+import { FilterState } from '@/src/services/pokemonCardValidator';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { SearchBar } from './SearchBar';
 import { FilterOptions, SetObject } from '@/src/shared-types/card-index';
 import { SlidersHorizontal, X, RotateCcw } from 'lucide-react';
@@ -51,36 +52,56 @@ type SortOption = {
 interface CardFilterControlsProps {
     filterOptions: FilterOptions & { sets?: SetObject[] };
     sortOptions: SortOption[];
+    currentFilters: FilterState;
+    defaultSort?: SortableKey;
 }
 
-export function CardFilterControls({ filterOptions, sortOptions }: CardFilterControlsProps) {
-    const { filters, setFilters } = useSearchStore();
-    const [open, setOpen] = React.useState(false);
+export function CardFilterControls({
+    filterOptions,
+    sortOptions,
+    currentFilters,
+    defaultSort = 'rD'
+}: CardFilterControlsProps) {
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
 
+    const [open, setOpen] = React.useState(false);
     // SWITCH POINT: Large screens (768px+) get the Toolbar.
     // Smaller screens get the Drawer.
     const isDesktop = useMediaQuery('(min-width: 768px)');
 
-    const handleFilterChange = (key: keyof FilterState, value: string) => {
-        const finalValue = value === 'all' ? undefined : value;
-        setFilters({ [key]: finalValue });
+    const updateFilter = (key: string, value: string | undefined | null) => {
+        const currentValue = searchParams.get(key);
+        if (value === currentValue) return;
+        if (value == null && currentValue == null) return;
+
+        const params = new URLSearchParams(searchParams.toString());
+
+        if (value && value !== 'all') {
+            params.set(key, value);
+        } else {
+            params.delete(key);
+        }
+        router.push(`${pathname}?${params.toString()}`);
     };
 
     const handleClearFilters = () => {
-        setFilters({
-            setId: undefined,
-            type: undefined,
-            subtype: undefined,
-            rarity: undefined,
-            artist: undefined,
-            weakness: undefined,
-            resistance: undefined
-        });
+        // Just clear everything except sort params
+        const params = new URLSearchParams();
+
+        const sortBy = searchParams.get('sortBy');
+        const sortOrder = searchParams.get('sortOrder');
+
+        if (sortBy) params.set('sortBy', sortBy);
+        if (sortOrder) params.set('sortOrder', sortOrder);
+
+        router.push(`${pathname}?${params.toString()}`);
         setOpen(false);
     };
 
     const dynamicSortOptions = [...sortOptions];
-    if (filters.search) {
+    if (currentFilters.search) {
         dynamicSortOptions.unshift({ label: 'Relevance', value: 'relevance' as SortableKey });
     }
 
@@ -98,7 +119,7 @@ export function CardFilterControls({ filterOptions, sortOptions }: CardFilterCon
     const activeFilters = React.useMemo(() => {
         const active = [];
         for (const config of filterConfig) {
-            const currentValue = filters[config.key as keyof FilterState];
+            const currentValue = currentFilters[config.key as keyof FilterState];
             if (currentValue) {
                 let label = currentValue;
                 if (config.key === 'setId' && filterOptions.sets) {
@@ -114,7 +135,7 @@ export function CardFilterControls({ filterOptions, sortOptions }: CardFilterCon
             }
         }
         return active;
-    }, [filters, filterConfig, filterOptions.sets]);
+    }, [currentFilters, filterConfig, filterOptions.sets]);
 
     if (isDesktop === undefined) {
         return <CardFilterControlsSkeleton />;
@@ -131,10 +152,10 @@ export function CardFilterControls({ filterOptions, sortOptions }: CardFilterCon
                         {filter.label}
                     </label>
                     <Select
-                        value={(filters[filter.key as keyof typeof filters] || '').toString()}
-                        onValueChange={(val) =>
-                            handleFilterChange(filter.key as keyof FilterState, val)
-                        }
+                        value={(
+                            currentFilters[filter.key as keyof typeof currentFilters] || ''
+                        ).toString()}
+                        onValueChange={(val) => updateFilter(filter.key, val)}
                     >
                         <SelectTrigger id={`mobile-${filter.key}`} className='w-full bg-card'>
                             <SelectValue placeholder={`All ${filter.label}s`} />
@@ -174,10 +195,10 @@ export function CardFilterControls({ filterOptions, sortOptions }: CardFilterCon
             {filterConfig.map((filter) => (
                 <div key={filter.key} className='max-w-[240px] flex-grow basis-[150px]'>
                     <Select
-                        value={(filters[filter.key as keyof typeof filters] || '').toString()}
-                        onValueChange={(val) =>
-                            handleFilterChange(filter.key as keyof FilterState, val)
-                        }
+                        value={(
+                            currentFilters[filter.key as keyof typeof currentFilters] || ''
+                        ).toString()}
+                        onValueChange={(val) => updateFilter(filter.key, val)}
                     >
                         <SelectTrigger className='h-10 w-full border border-border bg-card text-sm'>
                             <SelectValue placeholder={filter.label} />
@@ -277,10 +298,8 @@ export function CardFilterControls({ filterOptions, sortOptions }: CardFilterCon
                 <div className='space-y-1'>
                     <label className='text-sm font-medium text-muted-foreground'>Sort By:</label>
                     <Select
-                        value={
-                            filters.search ? filters.sortBy || 'relevance' : filters.sortBy || ''
-                        }
-                        onValueChange={(val) => handleFilterChange('sortBy', val)}
+                        value={currentFilters.sortBy || defaultSort}
+                        onValueChange={(val) => updateFilter('sortBy', val)}
                     >
                         <SelectTrigger
                             aria-label='Sort by'
@@ -301,8 +320,8 @@ export function CardFilterControls({ filterOptions, sortOptions }: CardFilterCon
                 <div className='space-y-1'>
                     <label className='text-sm font-medium text-muted-foreground'>Order:</label>
                     <Select
-                        value={filters.sortOrder || ''}
-                        onValueChange={(val) => handleFilterChange('sortOrder', val)}
+                        value={currentFilters.sortOrder || 'desc'}
+                        onValueChange={(val) => updateFilter('sortOrder', val)}
                     >
                         <SelectTrigger
                             aria-label='Sort order'
@@ -326,7 +345,7 @@ export function CardFilterControls({ filterOptions, sortOptions }: CardFilterCon
                             key={filter.key}
                             variant='default'
                             className='hover:bg-destructive hover:text-destructive-foreground flex cursor-pointer items-center gap-1 border border-border bg-card px-3 py-1 text-sm font-normal text-foreground transition-colors'
-                            onClick={() => handleFilterChange(filter.key, 'all')}
+                            onClick={() => updateFilter(filter.key, null)}
                         >
                             <span className='font-semibold'>{filter.label}:</span>
                             {filter.displayValue}

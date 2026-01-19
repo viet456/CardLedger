@@ -12,7 +12,7 @@ import { useAuthSession } from '@/src/providers/SessionProvider';
 
 export const navItems = [
     { href: '/', label: 'Home' },
-    { href: '/dashboard', label: 'Dashboard' },
+    { href: '/dashboard?sortBy=price&sortOrder=desc', label: 'Dashboard' },
     { href: '/cards?sortBy=rD&sortOrder=desc', label: 'Cards' },
     { href: '/sets', label: 'Sets' },
     { href: '/about', label: 'About' }

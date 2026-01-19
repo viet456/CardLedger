@@ -1,11 +1,15 @@
 'use client';
 import { useEffect, useMemo } from 'react';
-import { useShallow } from 'zustand/react/shallow';
-import { useSearchStore } from '@/src/lib/store/searchStore';
+import { useRouter, usePathname } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { CardFilterControls } from '@/src/components/search/CardFilterControls';
 import { SimpleCardGrid } from '@/src/components/cards/SimpleCardGrid';
 import { DenormalizedCard, FilterOptions, SetObject } from '@/src/shared-types/card-index';
-import { SortableKey } from '@/src/services/pokemonCardValidator';
+import {
+    FilterState,
+    SortableKey,
+    findCardsInputSchema
+} from '@/src/services/pokemonCardValidator';
 // Modeled after /setId page view
 
 interface DashboardCard extends DenormalizedCard {
@@ -20,9 +24,7 @@ interface CollectionPageViewProps {
     cards: DashboardCard[];
 }
 
-function useCollectionFilters(initialCards: DashboardCard[]) {
-    const { filters } = useSearchStore(useShallow((state) => ({ filters: state.filters })));
-
+function useCollectionFilters(initialCards: DashboardCard[], filters: FilterState) {
     const filteredAndSortedCards = useMemo(() => {
         // Apply filters
         const filtered = initialCards.filter((card) => {
@@ -53,7 +55,7 @@ function useCollectionFilters(initialCards: DashboardCard[]) {
             return true;
         });
 
-        const sortBy = (filters.sortBy || 'acquired') as SortableKey;
+        const sortBy = (filters.sortBy || 'price') as SortableKey;
         const sortOrder = filters.sortOrder || 'desc';
 
         filtered.sort((a, b) => {
@@ -91,15 +93,21 @@ function useCollectionFilters(initialCards: DashboardCard[]) {
 }
 
 export function CollectionPageView({ cards }: CollectionPageViewProps) {
-    const { replaceFilters } = useSearchStore();
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
 
-    // Reset filters when entering dashboard
-    useEffect(() => {
-        replaceFilters({ sortBy: 'price', sortOrder: 'desc' });
-        return () => replaceFilters({});
-    }, [replaceFilters]);
-
-    const { filteredAndSortedCards } = useCollectionFilters(cards);
+    const filters = useMemo(() => {
+        const paramsObj = Object.fromEntries(searchParams.entries());
+        const parsed = findCardsInputSchema.safeParse(paramsObj);
+        const data = parsed.success ? parsed.data : {};
+        return {
+            ...data,
+            sortBy: data.sortBy || 'price',
+            sortOrder: data.sortOrder || 'desc'
+        };
+    }, [searchParams]);
+    const { filteredAndSortedCards } = useCollectionFilters(cards, filters);
 
     // Dynamic filter options for cards we own
     const filterOptions: FilterOptions = useMemo(() => {
@@ -147,7 +155,12 @@ export function CollectionPageView({ cards }: CollectionPageViewProps) {
         <div className='mb-12 flex flex-col gap-6'>
             <div className='rounded-xl border border-border bg-background text-card-foreground shadow-sm'>
                 <div className='border-b border-border p-6'>
-                    <CardFilterControls filterOptions={filterOptions} sortOptions={sortOptions} />
+                    <CardFilterControls
+                        filterOptions={filterOptions}
+                        sortOptions={sortOptions}
+                        currentFilters={filters}
+                        defaultSort='price'
+                    />{' '}
                 </div>
 
                 <div className='bg-muted/10 min-h-[500px] p-6'>

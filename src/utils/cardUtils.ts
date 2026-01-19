@@ -1,6 +1,6 @@
 'use client';
 import { DenormalizedCard, NormalizedCard, LookupTables } from '@/src/shared-types/card-index';
-import { FilterState } from '@/src/lib/store/searchStore';
+import { FilterState } from '@/src/services/pokemonCardValidator';
 import { SortableKey } from '@/src/services/pokemonCardValidator';
 
 type LookupsForDenorm = Omit<LookupTables, 'weaknesses' | 'resistances'>;
