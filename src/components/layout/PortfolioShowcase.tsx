@@ -58,9 +58,9 @@ export default function PortfolioShowcase() {
             {/* Animated background grid */}
             <div className='pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] opacity-20' />
 
-            <div className='relative z-10 flex h-full flex-1 flex-col gap-6 p-6'>
+            <div className='relative z-10 flex h-full flex-1 flex-col gap-6 py-6'>
                 {/* Header Stats */}
-                <div className='grid grid-cols-3 gap-3'>
+                <div className='grid grid-cols-3 gap-3 px-4 md:px-6'>
                     <div className='rounded-lg border border-border p-3 backdrop-blur-sm'>
                         <div className='mb-1 flex items-center gap-1.5 text-xs text-muted-foreground'>
                             <Wallet className='h-3.5 w-3.5' />
@@ -93,7 +93,7 @@ export default function PortfolioShowcase() {
                 </div>
 
                 {/* Chart Container - Now takes up all remaining space */}
-                <div className='flex min-h-0 flex-1 flex-col'>
+                <div className='flex min-h-0 flex-1 flex-col px-4 md:px-6'>
                     <PortfolioChart initialData={MOCK_PORTFOLIO_DATA} />
                 </div>
 
