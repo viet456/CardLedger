@@ -9,47 +9,72 @@ import { PokemonCardSkeleton } from '@/src/components/cards/PokemonCardSkeleton'
 import { useDenormalizedCards } from '@/hooks/useDenormalizedCards';
 import { useShallow } from 'zustand/react/shallow';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useSearchStore, FilterState } from '@/src/lib/store/searchStore';
+import { useSearchStore } from '@/src/lib/store/searchStore';
 import { useEffect, useRef } from 'react';
+import { findCardsInputSchema } from '@/src/services/pokemonCardValidator';
 
 export default function CardPageView() {
     const isHydrated = useHasHydrated();
-
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
+
     const { filters, replaceFilters } = useSearchStore(
         useShallow((state) => ({
             filters: state.filters,
             replaceFilters: state.replaceFilters
         }))
     );
-    const isInitialMount = useRef(true);
-    const hasLoadedFromUrl = useRef(false);
 
-    useEffect(() => {
-        if (hasLoadedFromUrl.current) return;
-        hasLoadedFromUrl.current = true;
-        const params = new URLSearchParams(searchParams.toString());
-        const urlFilters: { [key: string]: string } = {};
-        for (const [key, value] of params.entries()) {
-            urlFilters[key] = value;
-        }
-        replaceFilters(urlFilters as Partial<FilterState>);
-    }, [replaceFilters, searchParams]);
+    const isUpdatingUrl = useRef(false);
+    const isUpdatingStore = useRef(false);
 
+    // Sync URL -> Store (when URL changes externally, like FilterLinks)
     useEffect(() => {
-        if (isInitialMount.current) {
-            isInitialMount.current = false;
+        // Don't update store if we just updated the URL
+        if (isUpdatingUrl.current) {
+            isUpdatingUrl.current = false;
             return;
         }
+
+        isUpdatingStore.current = true;
+
+        const paramsObj = Object.fromEntries(searchParams.entries());
+        const parsed = findCardsInputSchema.safeParse(paramsObj);
+
+        if (parsed.success) {
+            const filtersWithDefaults = {
+                sortBy: parsed.data.sortBy || 'rD',
+                sortOrder: parsed.data.sortOrder || 'desc',
+                ...parsed.data
+            };
+            replaceFilters(filtersWithDefaults);
+        } else {
+            replaceFilters({ sortBy: 'rD', sortOrder: 'desc' });
+        }
+
+        setTimeout(() => {
+            isUpdatingStore.current = false;
+        }, 0);
+    }, [searchParams, replaceFilters]);
+
+    // Sync Store -> URL (when filters change from UI)
+    useEffect(() => {
+        // Don't update URL if we just updated the store
+        if (isUpdatingStore.current) {
+            return;
+        }
+
+        isUpdatingUrl.current = true;
+
         const params = new URLSearchParams();
         Object.entries(filters).forEach(([key, value]) => {
             if (value !== undefined && value !== null && value !== '') {
                 params.set(key, String(value));
             }
         });
-        router.replace(`${pathname}?${params.toString()}`);
+
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     }, [filters, pathname, router]);
 
     const { status, artists, rarities, sets, types, subtypes } = useCardStore(
@@ -62,6 +87,7 @@ export default function CardPageView() {
             subtypes: state.subtypes
         }))
     );
+
     const filterOptions = {
         rarities,
         types,
@@ -71,13 +97,14 @@ export default function CardPageView() {
         weaknesses: types,
         resistances: types
     };
+
     const allCardsSortOptions: { label: string; value: SortableKey }[] = [
         { label: 'Release Date', value: 'rD' },
         { label: 'Name', value: 'n' },
         { label: 'Pokedex Number', value: 'pS' },
         { label: 'Price', value: 'price' }
-        //{ label: 'Card Number', value: 'num' }
     ];
+
     const defaultSort = { sortBy: 'rD' as SortableKey, sortOrder: 'desc' as const };
     const isLoading = !isHydrated || !status.startsWith('ready');
 
@@ -86,7 +113,6 @@ export default function CardPageView() {
 
     return (
         <div className='flex w-full flex-grow flex-col'>
-            {/* <CardDataInitializer /> */}
             <CardFilterControls filterOptions={filterOptions} sortOptions={allCardsSortOptions} />
             <div className='mt-2 min-h-screen flex-grow'>
                 {isLoading ? (

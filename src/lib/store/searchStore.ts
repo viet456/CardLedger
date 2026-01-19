@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { z } from 'zod';
 import { findCardsInputSchema, SortableKey } from '@/src/services/pokemonCardValidator';
 
-// generate a filter-state type from Zod schema
 export type FilterState = z.infer<typeof findCardsInputSchema>;
 
 interface SearchStore {
@@ -12,25 +11,29 @@ interface SearchStore {
     replaceFilters: (newFilters: FilterState) => void;
 }
 
+const DEFAULT_SORT_BY = 'rD' as SortableKey;
+const DEFAULT_SORT_ORDER = 'desc' as const;
+
 export const useSearchStore = create<SearchStore>((set) => ({
-    filters: {},
+    filters: {
+        sortBy: DEFAULT_SORT_BY,
+        sortOrder: DEFAULT_SORT_ORDER
+    },
     previousSortBy: null,
     setFilters: (newFilters) =>
         set((state) => {
             const newState = { ...state.filters, ...newFilters };
             let newPreviousSortBy = state.previousSortBy;
+
             if (newFilters.hasOwnProperty('search')) {
                 // Set sorting to 'relevance' on search term
                 if (newFilters.search && !state.filters.search) {
-                    // Save the current sort
                     newPreviousSortBy = state.filters.sortBy || null;
                     newState.sortBy = 'relevance' as SortableKey;
                 }
-                // Default sorting to release date
+                // Restore previous sort when clearing search
                 if (!newFilters.search && state.filters.search) {
-                    // Restore sort
-                    newState.sortBy = state.previousSortBy || ('rD' as SortableKey);
-                    // Clear the saved sort
+                    newState.sortBy = state.previousSortBy || DEFAULT_SORT_BY;
                     newPreviousSortBy = null;
                 }
             }
@@ -39,7 +42,12 @@ export const useSearchStore = create<SearchStore>((set) => ({
         }),
     replaceFilters: (newFilters) =>
         set(() => ({
-            filters: newFilters,
+            filters: {
+                // Apply defaults for missing values
+                sortBy: newFilters.sortBy || DEFAULT_SORT_BY,
+                sortOrder: newFilters.sortOrder || DEFAULT_SORT_ORDER,
+                ...newFilters
+            },
             previousSortBy: null
         }))
 }));

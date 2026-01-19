@@ -10,13 +10,13 @@ interface FilterLinkProps {
 }
 
 export function FilterLink({ field, value, label }: FilterLinkProps) {
-    const replaceFilters = useSearchStore((state) => state.replaceFilters);
+    const setFilters = useSearchStore((state) => state.setFilters);
     const displayValue = label || value; // Use label if provided, else value
     return (
         <Link
             href={`/cards?${field}=${encodeURIComponent(value)}`}
             className='text-primary hover:underline'
-            onClick={() => replaceFilters({ [field]: value })}
+            onClick={() => setFilters({ [field]: value, search: undefined })}
         >
             {displayValue}
         </Link>
