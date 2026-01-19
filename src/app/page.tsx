@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 
 import { HeroAssetInspector } from '../components/layout/HeroAssetInspector';
+import PortfolioShowcase from '../components/layout/PortfolioShowcase';
+
 export const metadata: Metadata = {
     title: 'CardLedger: Your Pokémon TCG Collection Manager',
     description:
@@ -63,17 +65,21 @@ export default function Home() {
                             <Search className='h-6 w-6' />
                         </div>
                         <h2 className='text-3xl font-bold tracking-tight md:text-4xl'>
-                            Find any card, instantly.
+                            Every card in our database.
+                            <br />
+                            <span className='text-muted-foreground'>
+                                One click to your portfolio.
+                            </span>
                         </h2>
                         <p className='text-lg text-muted-foreground'>
-                            Our database is synced with the latest sets. Filter by artist, type,
-                            rarity, and more. If it exists, you can track it.
+                            20,000+ cards with live pricing. Search, filter, and instantly add to
+                            your collection. No manual entry, no spreadsheets—just click and track.
                         </p>
                         <ul className='grid gap-3'>
                             {[
-                                'Instant search results',
-                                'Granular filtering',
-                                'Artist & Set categorization'
+                                '20,000+ cards with live market data',
+                                'Instant add-to-collection from any card',
+                                'Advanced search and filtering by any attribute'
                             ].map((item) => (
                                 <li key={item} className='flex items-center gap-2'>
                                     <CheckCircle2 className='h-5 w-5 text-blue-600' />
@@ -83,17 +89,7 @@ export default function Home() {
                         </ul>
                     </div>
                     {/* Visual Placeholder: Search UI */}
-                    <div className='relative aspect-square overflow-hidden rounded-xl border border-border bg-background p-8 shadow-lg'>
-                        <div className='absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent' />
-                        <div className='flex flex-col gap-4'>
-                            <div className='bg-muted/20 h-10 w-full rounded-md border border-border' />
-                            <div className='bg-muted/20 h-4 w-2/3 rounded' />
-                            <div className='grid grid-cols-2 gap-4'>
-                                <div className='bg-muted/40 aspect-[3/4] rounded' />
-                                <div className='bg-muted/40 aspect-[3/4] rounded' />
-                            </div>
-                        </div>
-                    </div>
+                    <div className='relative aspect-square overflow-hidden rounded-xl border border-border bg-background p-8 shadow-lg'></div>
                 </div>
             </section>
 
@@ -134,8 +130,7 @@ export default function Home() {
 
                 {/* Visual Placeholder: Analytics Graph */}
                 <div className='relative aspect-square overflow-hidden rounded-xl border border-border bg-background p-8 shadow-lg md:order-first'>
-                    <div className='absolute inset-0 bg-gradient-to-tr from-purple-500/5 to-transparent' />
-                    <div className='flex h-full flex-col justify-end gap-2'></div>
+                    <PortfolioShowcase />
                 </div>
             </section>
 
