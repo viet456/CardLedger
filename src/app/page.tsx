@@ -45,7 +45,11 @@ export default function Home() {
                 </div>
 
                 <div className='flex flex-col gap-4 sm:flex-row'>
-                    <Button asChild variant={'secondary'} className='h-10 px-8 text-base'>
+                    <Button
+                        asChild
+                        variant={'secondary'}
+                        className='hover:bg-muted/80 h-10 border border-border bg-accent px-8 text-base text-accent-foreground hover:text-muted-foreground'
+                    >
                         <Link href='/cards'>
                             Search Database <Search className='ml-2 h-4 w-4' />
                         </Link>

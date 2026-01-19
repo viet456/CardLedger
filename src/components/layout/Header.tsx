@@ -19,11 +19,11 @@ export const navItems = [
 ];
 
 export function Header() {
-    const { data: session, isPending } = useAuthSession();
+    const { data: session } = useAuthSession();
     const user = session?.user;
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const pathname = usePathname();
-    // don't show headersearchbar on Cards page or setId pages
+
     const isCardsPage = pathname === '/cards';
     const isSetPage = pathname.startsWith('/sets/');
     const showHeaderSearch = !isCardsPage && !isSetPage;
@@ -42,10 +42,10 @@ export function Header() {
         return (
             <Link
                 href={href}
-                className={`${
-                    isActive ? 'font-semibold text-accent-foreground' : 'text-muted-foreground'
-                } transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground`}
                 onClick={() => isMobile && setIsMenuOpen(false)}
+                className={`text-base font-medium transition-colors hover:text-primary ${
+                    isActive ? 'text-foreground' : 'text-muted-foreground'
+                }`}
             >
                 {label}
             </Link>
@@ -53,43 +53,49 @@ export function Header() {
     };
 
     return (
-        <header className='sticky top-0 z-50 bg-card'>
-            <div className='flex h-16 w-full items-center justify-between px-4 text-xl text-primary'>
+        <header className='sticky top-0 z-50 w-full border-b border-border bg-card'>
+            <div className='container flex h-14 max-w-screen-2xl items-center justify-between px-4 md:px-8'>
                 {/* Logo + Desktop nav grouped */}
-                <div className='flex items-center gap-10 text-xl'>
-                    <Link href='/' className='text-3xl'>
+                <div className='flex items-center gap-8'>
+                    <Link
+                        href='/'
+                        className='mr-4 flex items-center gap-2 space-x-2 text-xl font-bold md:mr-2'
+                    >
                         CardLedger
                     </Link>
+
                     {/* Desktop navigation */}
-                    <nav className='hidden items-center gap-8 md:flex'>
+                    <nav className='hidden items-center gap-6 text-sm font-medium md:flex'>
                         {navItems.map((item) => (
                             <NavLink key={item.href} href={item.href} label={item.label} />
                         ))}
                     </nav>
                 </div>
+
                 {/* Desktop actions group */}
-                <div className='hidden items-center gap-2 md:flex'>
-                    <div className='max-w-md flex-grow'>
+                <div className='flex items-center gap-4'>
+                    <div className='hidden w-full max-w-sm items-center space-x-2 md:flex'>
                         {showHeaderSearch && (
                             <HeaderSearchBar onSuggestionClick={() => setIsMenuOpen(false)} />
                         )}
                     </div>
 
-                    {/* Logged out */}
-                    {!user && (
-                        <div className='flex'>
-                            <Button asChild>
+                    <div className='hidden items-center gap-2 md:flex'>
+                        {/* Logged out */}
+                        {!user && (
+                            <Button asChild variant='ghost' size='sm' className='text-sm'>
                                 <Link href='/sign-in'>Sign In</Link>
                             </Button>
-                        </div>
-                    )}
-                    {/* Logged in */}
-                    {user && <UserNav user={user} />}
-                    <ThemeToggle />
-                </div>
-                {/* Mobile navigation*/}
-                <div className='md:hidden'>
-                    <MobileNav />
+                        )}
+                        {/* Logged in */}
+                        {user && <UserNav user={user} />}
+                        <ThemeToggle />
+                    </div>
+
+                    {/* Mobile navigation toggle */}
+                    <div className='md:hidden'>
+                        <MobileNav />
+                    </div>
                 </div>
             </div>
         </header>

@@ -97,18 +97,21 @@ export function HeaderSearchBar({ onSuggestionClick }: HeaderSearchBarProps) {
                 onKeyDown={handleKeyDown}
                 onFocus={() => setIsFocused(true)}
                 autoComplete='off'
-                className='h-10 w-full rounded border-2 border-border bg-card p-2 text-card-foreground'
+                className='h-9 w-full rounded border border-border bg-card p-2 pr-10 text-card-foreground'
             />
             {inputValue && (
                 <Button
+                    variant='ghost'
+                    size='icon'
                     onClick={handleClear}
-                    className='absolute right-2 top-1/2 -translate-y-1/2 bg-card text-xl text-gray-400 hover:text-card-foreground md:text-base'
+                    className='absolute right-1 top-1/2 h-6 w-6 -translate-y-1/2 text-gray-400 hover:text-card-foreground'
                     aria-label='Clear search'
                 >
-                    ✕
+                    <X className='h-3 w-3' />
                 </Button>
             )}
-            {isLoading && <span className='absolute right-12 top-2 animate-spin'>🌀</span>}
+            {isLoading && <span className='absolute right-10 top-2 animate-spin'>🌀</span>}
+
             {isFocused && suggestions && suggestions.length > 0 && (
                 <ul
                     role='listbox'
@@ -137,7 +140,6 @@ export function HeaderSearchBar({ onSuggestionClick }: HeaderSearchBarProps) {
                         </li>
                     ))}
                     {suggestions && suggestions.length === 1 ? (
-                        // on one suggestion, suggest to go to card page
                         <li
                             onClick={() => handleSubmit(suggestions[0].name, suggestions[0].id)}
                             className='group flex cursor-pointer items-center justify-between border-t p-3 text-center text-xs font-semibold hover:bg-accent hover:text-accent-foreground md:text-sm'
@@ -150,14 +152,14 @@ export function HeaderSearchBar({ onSuggestionClick }: HeaderSearchBarProps) {
                             </kbd>
                         </li>
                     ) : (
-                        // on multiple suggestions, suggest to go to search page
                         <li
                             onClick={() => handleSubmit(inputValue || '')}
                             className='group m-0 flex cursor-pointer items-center justify-between border-t p-3 text-center text-xs font-semibold hover:bg-accent hover:text-accent-foreground md:text-sm'
                         >
                             <span>
                                 {' '}
-                                Search for 🔍 "<span className='font-bold'>{inputValue}</span>"{' '}
+                                Search for 🔍 &quot<span className='font-bold'>{inputValue}</span>
+                                &quot{' '}
                             </span>
                             <kbd className='ml-2 inline-flex items-center rounded border bg-accent px-2 py-1 font-sans text-xs text-accent-foreground group-hover:bg-accent-foreground group-hover:text-accent md:text-sm'>
                                 Enter ↵
