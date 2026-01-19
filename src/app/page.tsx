@@ -14,6 +14,7 @@ import {
 
 import { HeroAssetInspector } from '../components/layout/HeroAssetInspector';
 import PortfolioShowcase from '../components/layout/PortfolioShowcase';
+import DatabaseShowcase from '../components/layout/DatabaseShowcase';
 
 export const metadata: Metadata = {
     title: 'CardLedger: Your Pokémon TCG Collection Manager',
@@ -89,7 +90,9 @@ export default function Home() {
                         </ul>
                     </div>
                     {/* Visual Placeholder: Search UI */}
-                    <div className='relative aspect-square overflow-hidden rounded-xl border border-border bg-background p-8 shadow-lg'></div>
+                    <div className='relative aspect-square overflow-hidden rounded-xl border border-border bg-background shadow-lg'>
+                        <DatabaseShowcase />
+                    </div>
                 </div>
             </section>
 
@@ -129,7 +132,7 @@ export default function Home() {
                 </div>
 
                 {/* Visual Placeholder: Analytics Graph */}
-                <div className='relative aspect-square overflow-hidden rounded-xl border border-border bg-background p-8 shadow-lg md:order-first'>
+                <div className='relative aspect-square overflow-hidden rounded-xl border border-border bg-background shadow-lg md:order-first'>
                     <PortfolioShowcase />
                 </div>
             </section>

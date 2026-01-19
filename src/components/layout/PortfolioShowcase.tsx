@@ -54,14 +54,14 @@ export default function PortfolioShowcase() {
     const gainPercent = ((totalGain / currentCost) * 100).toFixed(1);
 
     return (
-        <div className='border-border/50 relative flex h-full min-h-[500px] w-full flex-col overflow-hidden rounded-xl border bg-gradient-to-br from-purple-500/5 via-blue-500/5 to-transparent'>
+        <div className='relative flex h-full min-h-[500px] w-full flex-col overflow-hidden rounded-xl bg-gradient-to-br from-purple-500/5 via-blue-500/5 to-transparent'>
             {/* Animated background grid */}
             <div className='pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] opacity-20' />
 
             <div className='relative z-10 flex h-full flex-1 flex-col gap-6 p-6'>
                 {/* Header Stats */}
                 <div className='grid grid-cols-3 gap-3'>
-                    <div className='bg-background/80 rounded-lg border border-border p-3 backdrop-blur-sm'>
+                    <div className='rounded-lg border border-border p-3 backdrop-blur-sm'>
                         <div className='mb-1 flex items-center gap-1.5 text-xs text-muted-foreground'>
                             <Wallet className='h-3.5 w-3.5' />
                             <span>Portfolio Value</span>
@@ -71,7 +71,7 @@ export default function PortfolioShowcase() {
                         </div>
                     </div>
 
-                    <div className='bg-background/80 rounded-lg border border-border p-3 backdrop-blur-sm'>
+                    <div className='rounded-lg border border-border p-3 backdrop-blur-sm'>
                         <div className='mb-1 flex items-center gap-1.5 text-xs text-muted-foreground'>
                             <Target className='h-3.5 w-3.5' />
                             <span>Cost Basis</span>
@@ -81,8 +81,8 @@ export default function PortfolioShowcase() {
                         </div>
                     </div>
 
-                    <div className='rounded-lg border border-emerald-500 bg-emerald-500/5 p-3 backdrop-blur-sm'>
-                        <div className='mb-1 flex items-center gap-1.5 text-xs text-emerald-600'>
+                    <div className='rounded-lg border border-border p-3 backdrop-blur-sm'>
+                        <div className='mb-1 flex items-center gap-1.5 text-xs'>
                             <TrendingUp className='h-3.5 w-3.5' />
                             <span>Total Gain</span>
                         </div>
@@ -98,7 +98,7 @@ export default function PortfolioShowcase() {
                 </div>
 
                 {/* Bottom indicator */}
-                <div className='border-border/50 mt-auto flex items-center justify-center gap-2 border-t pt-2 text-xs text-muted-foreground'>
+                <div className='mt-auto flex items-center justify-center gap-2 border-t border-border pt-2 text-xs text-muted-foreground'>
                     <div className='h-1.5 w-1.5 animate-pulse rounded-full bg-purple-500' />
                     <span>Live portfolio tracking • Daily price updates</span>
                 </div>
