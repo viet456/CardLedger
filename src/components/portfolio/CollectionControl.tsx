@@ -1,8 +1,7 @@
 'use client';
 import { useState, useMemo, useRef } from 'react';
-import { trpc } from '@/src/utils/trpc';
 import { Button } from '@/src/components/ui/button';
-import { Plus, Minus, Check, Loader2, Trash2, Pencil } from 'lucide-react';
+import { Plus, Minus, Loader2, Trash2, Pencil } from 'lucide-react';
 import { CollectionManagerModal } from './CollectionManagerModal';
 import { CardCondition } from '@prisma/client';
 import { toast } from 'sonner';
@@ -26,7 +25,6 @@ export function CollectionControl({
 }: CollectionControlProps) {
     const { data: session } = useAuthSession();
     const router = useRouter();
-    const utils = trpc.useUtils();
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
     const [isRemoving, setIsRemoving] = useState(false);
@@ -116,8 +114,6 @@ export function CollectionControl({
         }
     };
 
-    const isInteracting = isAdding || isRemoving;
-
     // Guest states
     if (!session) {
         return (
@@ -128,6 +124,7 @@ export function CollectionControl({
                         size='icon'
                         className='h-8 w-8 rounded-full bg-white/90 text-black shadow-md transition-all hover:scale-110 hover:bg-white'
                         onClick={handleAdd}
+                        aria-label='Sign in to add to collection'
                     >
                         <Plus className='h-4 w-4' />
                     </Button>
@@ -152,6 +149,7 @@ export function CollectionControl({
                                 size='icon'
                                 className='h-8 w-8 rounded-full bg-background text-primary opacity-80 shadow-md transition-all hover:scale-110 hover:opacity-100'
                                 onClick={() => setIsEditModalOpen(true)}
+                                aria-label={`Edit details for ${cardName}`}
                             >
                                 <Pencil className='h-4 w-4' />
                             </Button>
@@ -170,6 +168,7 @@ export function CollectionControl({
                                 className='h-8 w-8 rounded-full bg-background text-primary opacity-80 shadow-md transition-all hover:scale-110 hover:opacity-100'
                                 onClick={handleRemove}
                                 disabled={isRemoving}
+                                aria-label={`Remove ${cardName} from collection`}
                             >
                                 {isRemoving ? (
                                     <Loader2 className='h-4 w-4 animate-spin' />
@@ -188,7 +187,7 @@ export function CollectionControl({
                     onClose={() => setIsEditModalOpen(false)}
                     cardId={cardId}
                     cardName={cardName}
-                    entryId={entryId} // Pass entryId so modal only shows THIS card
+                    entryId={entryId}
                 />
             </>
         );
@@ -210,6 +209,7 @@ export function CollectionControl({
                         size={'icon'}
                         className='h-8 w-8 rounded-full bg-white/90 text-black shadow-md transition-all duration-300 hover:scale-110 hover:bg-white'
                         onClick={handleAdd}
+                        aria-label={`Add ${cardName} to collection`}
                     >
                         <Plus className='h-4 w-4' />
                     </Button>
@@ -235,6 +235,7 @@ export function CollectionControl({
                             size='icon'
                             className='h-6 w-6 rounded-full text-white hover:bg-white/20'
                             onClick={handleRemove}
+                            aria-label='Decrease quantity'
                         >
                             <Minus className='h-3 w-3' />
                         </Button>
@@ -255,6 +256,7 @@ export function CollectionControl({
                             size='icon'
                             className='h-6 w-6 rounded-full text-white hover:bg-white/20'
                             onClick={handleAdd}
+                            aria-label='Increase quantity'
                         >
                             <Plus className='h-3 w-3' />
                         </Button>
