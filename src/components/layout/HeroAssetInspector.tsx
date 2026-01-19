@@ -77,7 +77,7 @@ export function HeroAssetInspector() {
             </div>
 
             {/* THE LABEL */}
-            <div className='bg-muted/80 absolute bottom-10 left-1/2 z-20 hidden -translate-x-1/2 items-center gap-2 rounded-full border border-border px-3 py-1.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground shadow-sm backdrop-blur-md md:flex'>
+            <div className='bg-muted/80 absolute bottom-1 left-1/2 z-20 hidden -translate-x-1/2 items-center gap-2 rounded-full border border-border px-3 py-1.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground shadow-sm backdrop-blur-md md:flex'>
                 <MousePointer2 className='h-3.5 w-3.5' />
                 <span>Interactive Inspection Active</span>
             </div>
@@ -320,7 +320,6 @@ function SchematicCard({
                             src={`${R2_PUBLIC_URL}/${image}`}
                             alt={name}
                             fill
-                            sizes='512px'
                             className='object-cover'
                             preload={priority}
                             fetchPriority='high'
