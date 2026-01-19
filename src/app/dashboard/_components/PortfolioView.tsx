@@ -4,6 +4,7 @@ import { PortfolioChartPoint } from '@/src/services/portfolioService';
 import { CardCondition } from '@prisma/client';
 import { DataTable } from './DataTable';
 import { columns, PortfolioRow } from './Columns';
+import { Wallet, TrendingUp, TrendingDown, CircleDollarSign } from 'lucide-react'; // 1. Import Icons
 
 interface PortfolioViewProps {
     history: PortfolioChartPoint[];
@@ -17,6 +18,7 @@ interface SummaryCardProps {
     isProfit?: boolean;
     showSign?: boolean;
     suffix?: string;
+    icon?: React.ElementType;
 }
 
 function formatCondition(cond: string) {
@@ -29,16 +31,27 @@ function SummaryCard({
     isCurrency,
     isProfit,
     showSign,
-    suffix = ''
+    suffix = '',
+    icon: Icon
 }: SummaryCardProps) {
     const formatted = isCurrency
         ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
               Math.abs(value)
           )
-        : value.toFixed(2);
+        : Math.abs(value).toFixed(2);
 
-    const colorClass =
-        isProfit === undefined ? 'text-foreground' : isProfit ? 'text-emerald-500' : 'text-red-500';
+    let colorClass = 'text-foreground';
+    let iconClass = 'text-muted-foreground';
+    let sign = '';
+
+    if (isProfit !== undefined) {
+        colorClass = isProfit ? 'text-trend-up' : 'text-trend-down';
+        iconClass = isProfit ? 'text-trend-up' : 'text-trend-down';
+
+        if (showSign) {
+            sign = isProfit ? '▲ ' : '▼ ';
+        }
+    }
 
     return (
         <div
@@ -47,9 +60,13 @@ function SummaryCard({
             role='region'
             aria-label={`${label}: ${formatted}`}
         >
-            <div className='text-sm font-medium text-muted-foreground'>{label}</div>
+            <div className={`mb-2 flex items-center gap-2 text-sm font-medium ${iconClass}`}>
+                {Icon && <Icon className='h-4 w-4' />}
+                <span className='text-muted-foreground'>{label}</span>
+            </div>
+
             <div className={`text-2xl font-bold ${colorClass}`} aria-hidden='true'>
-                {showSign && isProfit !== undefined ? (isProfit ? '+' : '-') : ''}
+                <span className='mr-1 text-lg'>{sign}</span>
                 {formatted}
                 {suffix}
             </div>
@@ -58,12 +75,13 @@ function SummaryCard({
 }
 
 export function PortfolioView({ history, entries }: PortfolioViewProps) {
-    // Calculate Summary Stats
     const currentStats = history[history.length - 1] || { price: 0, costBasis: 0 };
     const totalValue = currentStats.price;
     const totalCost = currentStats.costBasis;
     const totalProfit = totalValue - totalCost;
     const profitPercent = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
+
+    const TrendIcon = profitPercent >= 0 ? TrendingUp : TrendingDown;
 
     const tableData: PortfolioRow[] = entries.map((entry) => {
         let currentPrice = 0;
@@ -113,13 +131,14 @@ export function PortfolioView({ history, entries }: PortfolioViewProps) {
         <div className='space-y-8'>
             {/* Summary Cards */}
             <div className='flex gap-4 overflow-x-auto pb-2 md:grid md:grid-cols-3 md:pb-0'>
-                <SummaryCard label='Total Value' value={totalValue} isCurrency />
+                <SummaryCard label='Total Value' value={totalValue} isCurrency icon={Wallet} />
                 <SummaryCard
                     label='Total Profit'
                     value={totalProfit}
                     isCurrency
                     isProfit={totalProfit >= 0}
                     showSign
+                    icon={CircleDollarSign}
                 />
                 <SummaryCard
                     label='All-Time Return'
@@ -127,6 +146,7 @@ export function PortfolioView({ history, entries }: PortfolioViewProps) {
                     suffix='%'
                     isProfit={profitPercent >= 0}
                     showSign
+                    icon={TrendIcon}
                 />
             </div>
 

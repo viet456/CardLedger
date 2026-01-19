@@ -166,7 +166,7 @@ export const columns: ColumnDef<PortfolioRow>[] = [
 
             return (
                 <div
-                    className={`flex flex-col items-end text-right ${isProfit ? 'text-emerald-500' : 'text-red-500'}`}
+                    className={`flex flex-col items-end text-right ${isProfit ? 'text-trend-up' : 'text-trend-down'}`}
                 >
                     <span className='text-base font-bold'>
                         {isProfit ? '+' : ''}

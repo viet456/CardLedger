@@ -1,8 +1,8 @@
 import { DenormalizedCard } from '@/src/shared-types/card-index';
 import Link from 'next/link';
 import Image from 'next/image';
-import { CollectionControl } from '../portfolio/CollectionControl';
 import { format } from 'date-fns';
+import { CollectionControl } from '../portfolio/CollectionControl';
 
 const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
 
@@ -17,7 +17,6 @@ interface PokemonCardProps {
     card: DashboardCard;
     priority?: boolean;
     entryId?: string;
-    // Optional collection stats if used outside of /dashboard or /cards or /setId/
     collectionStats?: {
         cost: number;
         acquiredAt: Date;
@@ -34,20 +33,42 @@ export function PokemonCard({
     const imageUrl = `${R2_PUBLIC_URL}/${card.img}`;
 
     const stats = propStats || card.collectionStats;
-
     const currentPrice = card.price || 0;
-    const gain = stats ? currentPrice - stats.cost : 0;
-    const isProfit = gain >= 0;
+
+    // --- FINANCIAL LOGIC ---
+    const cost = stats ? stats.cost : 0;
+    const gain = stats ? currentPrice - cost : 0;
+    const rawPercent = cost > 0 ? (gain / cost) * 100 : 0;
+
+    const displayPercent = Math.abs(rawPercent).toFixed(0);
+    const isNeutral = displayPercent === '0';
+
+    let trendBadgeClass = 'badge-trend-neutral'; // Default: Gray / Right Arrow
+    let trendTextClass = 'text-foreground';
+    let trendIcon = '→';
+
+    if (!isNeutral) {
+        if (rawPercent > 0) {
+            trendBadgeClass = 'badge-trend-up';
+            trendTextClass = 'text-trend-up';
+            trendIcon = '▲';
+        } else {
+            trendBadgeClass = 'badge-trend-down';
+            trendTextClass = 'text-trend-down';
+            trendIcon = '▼';
+        }
+    }
 
     const conditionLabel = stats?.condition.replace('tcg', '').replace(/([A-Z])[a-z]+/g, '$1');
+
     return (
         <div className='group relative flex w-full flex-col rounded-xl bg-card text-card-foreground transition-transform will-change-transform hover:scale-[1.02]'>
             <div className='absolute right-2 top-2 z-10 opacity-100 transition-opacity duration-200 lg:opacity-0 lg:focus-within:opacity-100 lg:group-hover:opacity-100'>
-                {' '}
                 <CollectionControl
                     cardId={card.id}
                     currentPrice={card.price}
                     entryId={entryId || (card as any).uniqueId}
+                    cardName={card.n}
                 />
             </div>
 
@@ -75,7 +96,6 @@ export function PokemonCard({
                         )}
                     </div>
                 ) : (
-                    // Placeholder for cards without images
                     <div className='flex aspect-[2.5/3.5] w-full flex-col items-center justify-center rounded-lg bg-muted'>
                         <p className='text-md text-muted-foreground'>No Image</p>
                     </div>
@@ -83,55 +103,45 @@ export function PokemonCard({
 
                 {/* --- INFO AREA --- */}
                 <div className='flex flex-col gap-1 p-3'>
-                    {/* Header: Name + Profit Badge */}
+                    {/* Header: Name + Trend Badge */}
                     <div className='flex items-start justify-between gap-2'>
                         <p className='truncate text-sm font-bold leading-snug'>{card.n}</p>
                         {stats && (
                             <span
-                                className={`shrink-0 rounded px-1.5 py-0.5 font-mono text-xs ${
-                                    isProfit
-                                        ? 'bg-emerald-500/10 text-emerald-500'
-                                        : 'bg-red-500/10 text-red-500'
-                                }`}
+                                className={`shrink-0 rounded px-1.5 py-0.5 font-mono text-xs font-semibold ${trendBadgeClass}`}
                             >
-                                {isProfit ? '▲' : '▼'}{' '}
-                                {Math.abs(stats.cost > 0 ? (gain / stats.cost) * 100 : 0).toFixed(
-                                    0
-                                )}
-                                %
+                                {trendIcon} {displayPercent}%
                             </span>
                         )}
                     </div>
 
                     {stats ? (
-                        // --- DASHBOARD MODE ---
-                        <div className='border-border/50 mt-2 flex flex-col gap-1 border-t pt-2'>
-                            {/* Row 1: Date */}
-                            <div className='flex justify-between text-xs uppercase tracking-wide text-muted-foreground'>
-                                <span>Acquired</span>
-                                <span>{format(new Date(stats.acquiredAt), 'MMM d, yy')}</span>
+                        // --- DASHBOARD MODE (Stacked Financials) ---
+                        <div className='border-border/50 mt-2 flex items-end justify-between border-t pt-2'>
+                            {/* Left: Metadata */}
+                            <div className='flex flex-col gap-0.5'>
+                                <span className='text-[10px] uppercase tracking-wider text-muted-foreground'>
+                                    Acquired
+                                </span>
+                                <span className='text-xs font-medium'>
+                                    {format(new Date(stats.acquiredAt), 'MMM d, yy')}
+                                </span>
                             </div>
 
-                            {/* Row 2: Cost vs Value Grid */}
-                            <div className='grid grid-cols-2 gap-2 text-xs'>
-                                <div>
-                                    <span className='block text-xs text-muted-foreground'>
-                                        Cost
-                                    </span>
-                                    <span className='font-medium text-foreground'>
-                                        ${stats.cost.toFixed(0)}
+                            {/* Right: Financial Cluster */}
+                            <div className='flex flex-col items-end gap-0.5'>
+                                {/* Value (Headline) */}
+                                <div className='flex items-baseline gap-1'>
+                                    <span className={`text-sm font-bold ${trendTextClass}`}>
+                                        ${currentPrice.toFixed(2)}
                                     </span>
                                 </div>
-                                <div className='text-right'>
-                                    <span className='block text-xs text-muted-foreground'>
-                                        Value
-                                    </span>
-                                    <span
-                                        className={`block text-sm font-bold ${
-                                            isProfit ? 'text-emerald-500' : 'text-red-500'
-                                        }`}
-                                    >
-                                        ${currentPrice.toFixed(0)}
+
+                                {/* Cost (Context) */}
+                                <div className='flex items-baseline gap-1'>
+                                    <span className='text-[10px] text-muted-foreground'>Cost:</span>
+                                    <span className='text-xs text-muted-foreground'>
+                                        ${cost.toFixed(2)}
                                     </span>
                                 </div>
                             </div>
@@ -145,7 +155,7 @@ export function PokemonCard({
                                     {card.num}/{card.set.printedTotal}
                                 </p>
                                 {card.price ? (
-                                    <p className='text-sm font-semibold text-green-500'>
+                                    <p className='text-trend-up text-sm font-semibold'>
                                         ${card.price.toFixed(2)}
                                     </p>
                                 ) : (

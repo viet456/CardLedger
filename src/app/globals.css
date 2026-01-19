@@ -97,3 +97,27 @@
         --ring: 0.6273 0.1703 259.51; /* blue-600 */
     }
 }
+
+@layer components {
+    /* BADGES (Background + Text) - Used for small percentage pills */
+    .badge-trend-up {
+        @apply bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400;
+    }
+
+    .badge-trend-down {
+        @apply bg-red-500/10 text-red-600 dark:bg-red-500/10 dark:text-red-400;
+    }
+
+    .badge-trend-neutral {
+        @apply bg-accent font-medium text-muted-foreground;
+    }
+
+    /* TEXT ONLY - Used for the main dollar amounts */
+    .text-trend-up {
+        @apply text-emerald-600 dark:text-emerald-400;
+    }
+
+    .text-trend-down {
+        @apply text-red-600 dark:text-red-400;
+    }
+}

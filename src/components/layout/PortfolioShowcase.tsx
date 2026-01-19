@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import { TrendingUp, Wallet, Target } from 'lucide-react';
 import { PortfolioChart } from '../portfolio/PortfolioChart';
 import { PortfolioChartPoint } from '@/src/services/portfolioService';
@@ -86,7 +85,7 @@ export default function PortfolioShowcase() {
                             <TrendingUp className='h-3.5 w-3.5' />
                             <span>Total Gain</span>
                         </div>
-                        <div className='font-mono text-xl font-bold text-emerald-600'>
+                        <div className='text-trend-up font-mono text-xl font-bold'>
                             +{gainPercent}%
                         </div>
                     </div>

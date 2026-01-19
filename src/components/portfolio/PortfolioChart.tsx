@@ -75,13 +75,17 @@ export function PortfolioChart({ initialData }: PortfolioChartProps) {
             const fg = `oklch(${style.getPropertyValue('--foreground').trim()})`;
             const border = `oklch(${style.getPropertyValue('--border').trim()})`;
 
+            const isDark = resolvedTheme === 'dark';
+            const profitColor = isDark ? '#34D399' : '#059669';
+            const lossColor = isDark ? '#F87171' : '#DC2626';
+
             const labels = filteredData.map((d) => d.date);
 
             // Determine Market Line Color (Green if Profit, Red if Loss)
             const currentVal = filteredData[filteredData.length - 1]?.price || 0;
             const currentCost = filteredData[filteredData.length - 1]?.costBasis || 0;
             const isProfit = currentVal >= currentCost;
-            const marketColor = isProfit ? '#10B981' : '#EF4444'; // Emerald vs Red
+            const marketColor = isProfit ? profitColor : lossColor;
 
             const datasets = [
                 {
@@ -89,8 +93,12 @@ export function PortfolioChart({ initialData }: PortfolioChartProps) {
                     data: filteredData.map((d) => d.price),
                     borderColor: marketColor,
                     backgroundColor: isProfit
-                        ? 'rgba(16, 185, 129, 0.1)'
-                        : 'rgba(239, 68, 68, 0.1)',
+                        ? isDark
+                            ? 'rgba(52, 211, 153, 0.1)'
+                            : 'rgba(5, 150, 105, 0.1)'
+                        : isDark
+                          ? 'rgba(248, 113, 113, 0.1)'
+                          : 'rgba(220, 38, 38, 0.1)',
                     fill: true,
                     tension: 0.2,
                     pointRadius: 0,
