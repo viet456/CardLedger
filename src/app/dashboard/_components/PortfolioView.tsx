@@ -42,7 +42,7 @@ function SummaryCard({
 
     return (
         <div
-            className='min-w-[240px] rounded-xl border bg-card p-6 shadow-sm'
+            className='min-w-[240px] rounded-xl border border-border bg-card p-6 shadow-sm'
             tabIndex={0}
             role='region'
             aria-label={`${label}: ${formatted}`}
@@ -131,7 +131,7 @@ export function PortfolioView({ history, entries }: PortfolioViewProps) {
             </div>
 
             {/* The Chart */}
-            <div className='rounded-xl border bg-card p-4 shadow-sm'>
+            <div className='rounded-xl border border-border bg-card p-4 shadow-sm'>
                 <h3 className='mb-6 text-lg font-semibold'>Performance History</h3>
                 {history.length > 0 ? (
                     <PortfolioChart initialData={history} />

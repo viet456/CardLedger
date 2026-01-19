@@ -38,7 +38,7 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
     });
 
     return (
-        <div className='rounded-md border bg-card'>
+        <div className='rounded-md border border-border bg-card'>
             <Table>
                 <TableHeader>
                     {table.getHeaderGroups().map((headerGroup) => (
