@@ -47,8 +47,8 @@ interface AssetCardProps {
 
 export function HeroAssetInspector() {
     return (
-        <div className='relative -mx-4 overflow-hidden sm:-mx-8 md:py-32'>
-            {/*  3D BACKGROUND LAYER */}
+        <div className='relative -mx-4 overflow-hidden sm:-mx-8 md:py-12'>
+            {/* 3D BACKGROUND LAYER */}
             <div className='pointer-events-none absolute -top-[12%] left-1/2 -z-10 w-[150%] max-w-none -translate-x-1/2 select-none bg-zinc-900 opacity-100'>
                 {' '}
                 <div
@@ -71,8 +71,7 @@ export function HeroAssetInspector() {
                         />
                     </div>
 
-                    {/* GRADIENT MASKS: These fade the edges so it blends into the page */}
-                    {/* Fade bottom to bg color) */}
+                    {/* GRADIENT MASKS */}
                     <div className='via-background/60 absolute inset-0 bg-gradient-to-b from-transparent to-background' />
                 </div>
             </div>
@@ -83,7 +82,6 @@ export function HeroAssetInspector() {
                 <span>Interactive Inspection Active</span>
             </div>
 
-            {/* MOBILE LABEL */}
             <div className='absolute right-8 top-2 flex items-center gap-1.5 md:hidden'>
                 <span className='text-[10px] font-medium uppercase tracking-widest text-white'>
                     Tap to inspect
@@ -283,6 +281,7 @@ export function HeroAssetInspector() {
         </div>
     );
 }
+
 function SchematicCard({
     image,
     name,
@@ -302,18 +301,13 @@ function SchematicCard({
                 className
             )}
         >
-            {/* IMAGE CONTAINER */}
             <Link
                 href={`/cards/${id}`}
                 className='group relative block h-[420px] w-full shrink-0 transition-transform duration-300'
-                prefetch={true} // Explicitly ensure prefetch is on
+                prefetch={true}
                 onClick={(e) => {
-                    // Check if the user is on mobile
                     if (window.innerWidth < 768) {
-                        // Check if the click originated from the Info HUD (which has data-clickable="true")
                         const isHudClick = (e.target as Element).closest('[data-clickable="true"]');
-
-                        // If they clicked the Image/Hotspots (NOT the HUD), stop navigation
                         if (!isHudClick) {
                             e.preventDefault();
                         }
@@ -335,7 +329,6 @@ function SchematicCard({
                         <div className='absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_100%)]' />
                     </div>
 
-                    {/* HOTSPOTS */}
                     <div className='absolute inset-0'>
                         {hotspots.map((spot) => (
                             <div
@@ -366,7 +359,6 @@ function SchematicCard({
                     </div>
                 </div>
 
-                {/* INFO HUD */}
                 <div
                     data-clickable='true'
                     className={cn(
@@ -374,7 +366,6 @@ function SchematicCard({
                         side === 'left' ? 'md:right-[105%] md:pr-2' : 'md:left-[105%] md:pl-2'
                     )}
                 >
-                    {/* Connector Line (Desktop) */}
                     <div
                         className={cn(
                             'absolute top-6 hidden h-px w-4 bg-card md:block',

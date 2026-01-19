@@ -54,7 +54,7 @@ export default function PortfolioShowcase() {
     const gainPercent = ((totalGain / currentCost) * 100).toFixed(1);
 
     return (
-        <div className='relative flex h-full min-h-[500px] w-full flex-col overflow-hidden rounded-xl bg-gradient-to-br from-purple-500/5 via-blue-500/5 to-transparent'>
+        <div className='relative flex h-full min-h-[450px] w-full flex-col overflow-hidden rounded-xl bg-gradient-to-br from-purple-500/5 via-blue-500/5 to-transparent'>
             {/* Animated background grid */}
             <div className='pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] opacity-20' />
 
@@ -92,7 +92,7 @@ export default function PortfolioShowcase() {
                     </div>
                 </div>
 
-                {/* Chart Container - Now takes up all remaining space */}
+                {/* Chart Container */}
                 <div className='flex min-h-0 flex-1 flex-col px-4 md:px-6'>
                     <PortfolioChart initialData={MOCK_PORTFOLIO_DATA} />
                 </div>

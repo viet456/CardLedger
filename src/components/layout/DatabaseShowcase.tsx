@@ -113,7 +113,7 @@ export default function DatabaseShowcase() {
     }, []);
 
     return (
-        <div className='relative flex h-full min-h-[400px] w-full flex-col gap-6 overflow-hidden bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-transparent p-6 md:min-h-[600px]'>
+        <div className='relative flex h-full min-h-[350px] w-full flex-col gap-6 overflow-hidden bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-transparent p-6 md:min-h-[500px]'>
             <div className='pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] opacity-20' />
 
             {/* Stats Header */}
@@ -125,7 +125,7 @@ export default function DatabaseShowcase() {
                     >
                         <stat.icon className='mx-auto mb-1 h-4 w-4 text-blue-500' />
                         <div className='font-mono text-lg font-bold'>{stat.value}</div>
-                        <div className='text-[10px] text-muted-foreground'>{stat.label}</div>
+                        <div className='text-xs text-muted-foreground'>{stat.label}</div>
                     </div>
                 ))}
             </div>
@@ -133,7 +133,6 @@ export default function DatabaseShowcase() {
             <div className='relative z-10 grid flex-1 gap-8 overflow-hidden md:grid-cols-2'>
                 {/* LEFT PANEL: The Infinite Card Stream */}
                 <div className='relative hidden h-[450px] overflow-hidden md:block'>
-                    {/* Mask fades top/bottom but leaves sides open */}
                     <div className='pointer-events-none absolute inset-0 z-20 [mask-image:linear-gradient(to_bottom,transparent_0%,black_15%,black_85%,transparent_100%)]' />
 
                     <div className='absolute inset-0 flex justify-center py-4'>
@@ -177,7 +176,7 @@ export default function DatabaseShowcase() {
                                     {section.items.map((item, j) => (
                                         <span
                                             key={j}
-                                            className='flex items-center gap-1.5 text-[11px] text-muted-foreground'
+                                            className='flex items-center gap-1.5 text-sm text-muted-foreground'
                                         >
                                             <span className='h-1 w-1 rounded-full bg-blue-500/40' />
                                             {item}
