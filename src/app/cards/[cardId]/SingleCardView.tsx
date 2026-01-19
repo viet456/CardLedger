@@ -4,8 +4,6 @@ import { DenormalizedCard, AbilityObject } from '@/src/shared-types/card-index';
 import { ChevronRight } from 'lucide-react';
 import { FilterLink } from './FilterLink';
 
-const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
-
 // A reusable component for displaying a key-value pair in the details grid
 const DetailItem = ({ label, children }: { label: string; children: React.ReactNode }) => (
     <div>
@@ -21,7 +19,6 @@ export function SingleCardView({
     card: DenormalizedCard;
     children: React.ReactNode;
 }) {
-    const imageUrl = `${R2_PUBLIC_URL}/${card.img}`;
     return (
         <main className='container mx-auto max-w-6xl p-4 sm:p-6 lg:p-8'>
             {/* Breadcrumb Navigation */}
@@ -43,7 +40,7 @@ export function SingleCardView({
                 <div className='md:col-span-1'>
                     {card.img ? (
                         <Image
-                            src={imageUrl}
+                            src={card.img}
                             alt={card.n}
                             width={500}
                             height={700}

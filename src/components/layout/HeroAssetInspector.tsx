@@ -20,8 +20,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 
-const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
-
 type Hotspot = {
     id: string;
     label: string;
@@ -317,7 +315,7 @@ function SchematicCard({
                 <div className='relative h-[420px] w-full shrink-0 rounded-2xl border border-border bg-background shadow-2xl transition-colors duration-300 hover:border-emerald-500/30'>
                     <div className='relative h-full w-full overflow-hidden rounded-2xl'>
                         <Image
-                            src={`${R2_PUBLIC_URL}/${image}`}
+                            src={image}
                             alt={name}
                             fill
                             className='object-cover'

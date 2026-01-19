@@ -4,7 +4,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { SetObject } from '@/src/shared-types/card-index';
 
-const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
 interface SetCardProps {
     set: SetObject;
     isPriority?: boolean;
@@ -22,7 +21,7 @@ export function SetCard({ set, isPriority = false }: SetCardProps) {
                 <div className='mb-2 flex items-center justify-center gap-2'>
                     {set.symbolImageKey && (
                         <Image
-                            src={`${R2_PUBLIC_URL}/${set.symbolImageKey}`}
+                            src={set.symbolImageKey}
                             alt={`${set.name} 'symbol'`}
                             width={30}
                             height={30}
@@ -43,7 +42,7 @@ export function SetCard({ set, isPriority = false }: SetCardProps) {
                 <div className='relative flex aspect-[2/1] w-full items-center justify-center'>
                     {set.logoImageKey ? (
                         <Image
-                            src={`${R2_PUBLIC_URL}/${set.logoImageKey}`}
+                            src={set.logoImageKey}
                             alt={set.name}
                             fill
                             className='object-contain transition-transform group-hover:scale-110'

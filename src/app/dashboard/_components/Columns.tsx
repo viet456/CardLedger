@@ -5,8 +5,6 @@ import { ArrowUpDown } from 'lucide-react';
 import { Button } from '@/src/components/ui/button';
 import Image from 'next/image';
 
-const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
-
 export type PortfolioRow = {
     id: string;
     cardId: string;
@@ -43,7 +41,7 @@ export const columns: ColumnDef<PortfolioRow>[] = [
                     <div className='relative aspect-[2.5/3.5] h-12 w-auto shrink-0 overflow-hidden rounded border bg-muted shadow-sm'>
                         {img && (
                             <Image
-                                src={`${R2_PUBLIC_URL}/${img}`}
+                                src={img}
                                 alt={row.original.name}
                                 fill
                                 className='object-cover'

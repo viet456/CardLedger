@@ -4,8 +4,6 @@ import Image from 'next/image';
 import { format } from 'date-fns';
 import { CollectionControl } from '../portfolio/CollectionControl';
 
-const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
-
 interface DashboardCard extends DenormalizedCard {
     collectionStats?: {
         cost: number;
@@ -30,8 +28,6 @@ export function PokemonCard({
     entryId,
     collectionStats: propStats
 }: PokemonCardProps) {
-    const imageUrl = `${R2_PUBLIC_URL}/${card.img}`;
-
     const stats = propStats || card.collectionStats;
     const currentPrice = card.price || 0;
 
@@ -80,7 +76,7 @@ export function PokemonCard({
                 {card.img ? (
                     <div className='relative aspect-[2.5/3.5] w-full'>
                         <Image
-                            src={imageUrl}
+                            src={card.img}
                             alt={card.n}
                             fill
                             className='object-cover'
