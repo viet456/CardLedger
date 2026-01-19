@@ -91,7 +91,7 @@ export default function DatabaseShowcase() {
     const scrollRef = useRef<HTMLDivElement>(null);
     const [scrollHeight, setScrollHeight] = useState(0);
 
-    const scrollerCards = [...SHOWCASE_CARDS, ...SHOWCASE_CARDS];
+    const scrollerCards = [...SHOWCASE_CARDS, ...SHOWCASE_CARDS, ...SHOWCASE_CARDS];
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -113,7 +113,7 @@ export default function DatabaseShowcase() {
     }, []);
 
     return (
-        <div className='relative flex h-full min-h-[600px] w-full flex-col gap-6 overflow-hidden bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-transparent p-6'>
+        <div className='relative flex h-full min-h-[400px] w-full flex-col gap-6 overflow-hidden bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-transparent p-6 md:min-h-[600px]'>
             <div className='pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] opacity-20' />
 
             {/* Stats Header */}
@@ -132,7 +132,7 @@ export default function DatabaseShowcase() {
 
             <div className='relative z-10 grid flex-1 gap-8 overflow-hidden md:grid-cols-2'>
                 {/* LEFT PANEL: The Infinite Card Stream */}
-                <div className='relative h-[450px] overflow-hidden'>
+                <div className='relative hidden h-[450px] overflow-hidden md:block'>
                     {/* Mask fades top/bottom but leaves sides open */}
                     <div className='pointer-events-none absolute inset-0 z-20 [mask-image:linear-gradient(to_bottom,transparent_0%,black_15%,black_85%,transparent_100%)]' />
 

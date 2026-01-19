@@ -90,7 +90,7 @@ export default function Home() {
                         </ul>
                     </div>
                     {/* Visual Placeholder: Search UI */}
-                    <div className='relative aspect-square overflow-hidden rounded-xl border border-border bg-background shadow-lg'>
+                    <div className='relative overflow-hidden rounded-xl border border-border bg-background shadow-lg'>
                         <DatabaseShowcase />
                     </div>
                 </div>
@@ -132,7 +132,7 @@ export default function Home() {
                 </div>
 
                 {/* Visual Placeholder: Analytics Graph */}
-                <div className='relative aspect-square overflow-hidden rounded-xl border border-border bg-background shadow-lg md:order-first'>
+                <div className='relative overflow-hidden rounded-xl border border-border bg-background shadow-lg md:order-first'>
                     <PortfolioShowcase />
                 </div>
             </section>
