@@ -139,7 +139,7 @@ export default function Home() {
                 </div>
             </section>
 
-            <section className='bg-muted/50 border-t border-border'>
+            <section className='border-t border-border'>
                 <div className='container mx-auto flex flex-col items-center gap-6 px-4 py-16 text-center'>
                     <h2 className='text-2xl font-bold tracking-tight md:text-4xl'>
                         Ready to organize your collection?

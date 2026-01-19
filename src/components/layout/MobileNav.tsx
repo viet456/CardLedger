@@ -172,7 +172,7 @@ export function MobileNav() {
                                 rel='noopener noreferrer'
                                 className='hover:text-primary hover:underline'
                             >
-                                Made by Viet Le, 2025
+                                Made by Viet Le, 2026
                             </a>
                         </div>
                     </SheetFooter>
