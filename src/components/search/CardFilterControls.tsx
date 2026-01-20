@@ -26,20 +26,17 @@ import {
 import { SortableKey } from '@/src/services/pokemonCardValidator';
 import { CardFilterControlsSkeleton } from './CardFilterControlsSkeleton';
 
-// --- Utility Hook ---
 function useMediaQuery(query: string) {
     const [value, setValue] = React.useState<boolean | undefined>(undefined);
-
     React.useEffect(() => {
         function onChange(event: MediaQueryListEvent) {
             setValue(event.matches);
         }
         const result = matchMedia(query);
         result.addEventListener('change', onChange);
-        setValue(result.matches); // Set initial value on mount
+        setValue(result.matches);
         return () => result.removeEventListener('change', onChange);
     }, [query]);
-
     return value;
 }
 
@@ -51,14 +48,16 @@ type SortOption = {
 interface CardFilterControlsProps {
     filterOptions: FilterOptions & { sets?: SetObject[] };
     sortOptions: SortOption[];
+    layout?: 'row' | 'sidebar';
 }
 
-export function CardFilterControls({ filterOptions, sortOptions }: CardFilterControlsProps) {
+export function CardFilterControls({
+    filterOptions,
+    sortOptions,
+    layout = 'row'
+}: CardFilterControlsProps) {
     const { filters, setFilters } = useSearchStore();
     const [open, setOpen] = React.useState(false);
-
-    // SWITCH POINT: Large screens (768px+) get the Toolbar.
-    // Smaller screens get the Drawer.
     const isDesktop = useMediaQuery('(min-width: 768px)');
 
     const handleFilterChange = (key: keyof FilterState, value: string) => {
@@ -74,7 +73,8 @@ export function CardFilterControls({ filterOptions, sortOptions }: CardFilterCon
             rarity: undefined,
             artist: undefined,
             weakness: undefined,
-            resistance: undefined
+            resistance: undefined,
+            search: ''
         });
         setOpen(false);
     };
@@ -93,8 +93,6 @@ export function CardFilterControls({ filterOptions, sortOptions }: CardFilterCon
         { label: 'Weakness', key: 'weakness', options: filterOptions.weaknesses || [] },
         { label: 'Resistance', key: 'resistance', options: filterOptions.resistances || [] }
     ].filter((filter) => filter.options && filter.options.length > 0);
-
-    // --- Active Filter Logic ---
     const activeFilters = React.useMemo(() => {
         const active = [];
         for (const config of filterConfig) {
@@ -105,7 +103,6 @@ export function CardFilterControls({ filterOptions, sortOptions }: CardFilterCon
                     const setObj = filterOptions.sets.find((s) => s.id === currentValue);
                     if (setObj) label = setObj.name;
                 }
-
                 active.push({
                     key: config.key as keyof FilterState,
                     label: config.label,
@@ -117,121 +114,157 @@ export function CardFilterControls({ filterOptions, sortOptions }: CardFilterCon
     }, [filters, filterConfig, filterOptions.sets]);
 
     if (isDesktop === undefined) {
-        return <CardFilterControlsSkeleton />;
+        return <CardFilterControlsSkeleton layout={layout} />;
     }
 
-    const MobileFilterContent = (
-        <div className='grid grid-cols-1 gap-2 px-4 sm:grid-cols-2'>
-            {filterConfig.map((filter) => (
-                <div key={filter.key} className='space-y-1'>
-                    <label
-                        htmlFor={`mobile-${filter.key}`}
-                        className='text-sm font-medium leading-none'
-                    >
-                        {filter.label}
-                    </label>
-                    <Select
-                        value={(filters[filter.key as keyof typeof filters] || '').toString()}
-                        onValueChange={(val) =>
-                            handleFilterChange(filter.key as keyof FilterState, val)
-                        }
-                    >
-                        <SelectTrigger id={`mobile-${filter.key}`} className='w-full bg-card'>
-                            <SelectValue placeholder={`All ${filter.label}s`} />
-                        </SelectTrigger>
-                        <SelectContent className='max-h-[20rem]'>
-                            <SelectItem value='all'>All {filter.label}s</SelectItem>
-                            {filter.options?.map((option, index) => {
-                                const isSetObject =
-                                    typeof option === 'object' && option !== null && 'id' in option;
-                                const value =
-                                    filter.key === 'setId' && isSetObject
-                                        ? (option as { id: string }).id
-                                        : isSetObject
-                                          ? (option as { name: string }).name
-                                          : (option as string);
-                                const label = isSetObject
-                                    ? (option as { id: string; name: string }).name
-                                    : (option as string);
-                                const key = isSetObject
-                                    ? (option as { id: string; name: string }).id
-                                    : `${label}-${index}`;
-                                return (
-                                    <SelectItem key={key} value={value}>
-                                        {label}
-                                    </SelectItem>
-                                );
-                            })}
-                        </SelectContent>
-                    </Select>
-                </div>
-            ))}
-        </div>
+    const renderSelect = (filter: (typeof filterConfig)[0], fullWidth = false) => (
+        <Select
+            key={filter.key}
+            value={(filters[filter.key as keyof typeof filters] || '').toString()}
+            onValueChange={(val) => handleFilterChange(filter.key as keyof FilterState, val)}
+        >
+            <SelectTrigger
+                className={`border-border bg-card text-sm ${fullWidth ? 'w-full' : 'h-10 w-full'}`}
+            >
+                <SelectValue placeholder={filter.label} className='truncate' />
+            </SelectTrigger>
+            <SelectContent className='max-h-[20rem]'>
+                <SelectItem value='all'>All {filter.label}s</SelectItem>
+                {filter.options?.map((option, index) => {
+                    const isSetObject =
+                        typeof option === 'object' && option !== null && 'id' in option;
+                    const value =
+                        filter.key === 'setId' && isSetObject
+                            ? (option as { id: string }).id
+                            : isSetObject
+                              ? (option as { name: string }).name
+                              : (option as string);
+                    const label = isSetObject
+                        ? (option as { id: string; name: string }).name
+                        : (option as string);
+                    const key = isSetObject
+                        ? (option as { id: string; name: string }).id
+                        : `${label}-${index}`;
+                    return (
+                        <SelectItem key={key} value={value}>
+                            {label}
+                        </SelectItem>
+                    );
+                })}
+            </SelectContent>
+        </Select>
     );
 
-    const DesktopToolbar = (
-        <div className='mt-2 flex flex-wrap gap-2'>
-            {filterConfig.map((filter) => (
-                <div key={filter.key} className='max-w-[240px] flex-grow basis-[150px]'>
-                    <Select
-                        value={(filters[filter.key as keyof typeof filters] || '').toString()}
-                        onValueChange={(val) =>
-                            handleFilterChange(filter.key as keyof FilterState, val)
-                        }
-                    >
-                        <SelectTrigger className='h-10 w-full border border-border bg-card text-sm'>
-                            <SelectValue placeholder={filter.label} />
-                        </SelectTrigger>
-                        <SelectContent className='max-h-[20rem]'>
-                            <SelectItem value='all'>All {filter.label}s</SelectItem>
-                            {filter.options?.map((option, index) => {
-                                const isSetObject =
-                                    typeof option === 'object' && option !== null && 'id' in option;
-                                const value =
-                                    filter.key === 'setId' && isSetObject
-                                        ? (option as { id: string }).id
-                                        : isSetObject
-                                          ? (option as { name: string }).name
-                                          : (option as string);
-                                const label = isSetObject
-                                    ? (option as { id: string; name: string }).name
-                                    : (option as string);
-                                const key = isSetObject
-                                    ? (option as { id: string; name: string }).id
-                                    : `${label}-${index}`;
-                                return (
-                                    <SelectItem key={key} value={value}>
-                                        {label}
-                                    </SelectItem>
-                                );
-                            })}
-                        </SelectContent>
-                    </Select>
-                </div>
-            ))}
+    // --- LAYOUTS ---
 
-            {/* Reset Button - Always visible on Desktop */}
+    const SidebarLayout = (
+        <div className='flex flex-col gap-3'>
+            {/* CHANGED: Removed h-full, flex-1, overflow-y-auto, pr-1. Simple vertical stack. */}
+
+            {/* Top Area */}
+            <div className='w-full shrink-0'>
+                <SearchBar />
+            </div>
+
+            {/* Sort Controls */}
+            <div className='grid min-w-0 shrink-0 grid-cols-[2fr_1fr] gap-2'>
+                <div className='col-span-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground'>
+                    Sort
+                </div>
+
+                <Select
+                    value={filters.search ? filters.sortBy || 'relevance' : filters.sortBy || ''}
+                    onValueChange={(val) => handleFilterChange('sortBy', val)}
+                >
+                    <SelectTrigger className='h-9 w-full border border-border bg-card'>
+                        <SelectValue placeholder='Sort By' className='truncate' />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {dynamicSortOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+
+                <Select
+                    value={filters.sortOrder || ''}
+                    onValueChange={(val) => handleFilterChange('sortOrder', val)}
+                >
+                    <SelectTrigger className='h-9 w-full border border-border bg-card'>
+                        <SelectValue placeholder='Order' className='truncate' />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value='asc'>Asc</SelectItem>
+                        <SelectItem value='desc'>Desc</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+
+            {/* Filter Stack */}
+            <div className='flex flex-col gap-3 pt-2'>
+                <div className='text-[10px] font-bold uppercase tracking-wider text-muted-foreground'>
+                    Filters
+                </div>
+                {filterConfig.map((filter) => (
+                    <div key={filter.key} className='w-full'>
+                        {renderSelect(filter, true)}
+                    </div>
+                ))}
+            </div>
+
+            {/* Bottom Button */}
             <Button
-                variant='secondary'
+                variant='outline'
                 onClick={handleClearFilters}
-                className='hover:text-destructive hover:bg-destructive/10 h-9 max-w-[140px] flex-grow basis-[100px] border border-border bg-card text-muted-foreground'
+                className='mt-2 h-9 w-full shrink-0'
             >
-                <RotateCcw className='mr-2 h-4 w-4' />
-                Reset
+                <RotateCcw className='mr-2 h-4 w-4' /> Clear All
             </Button>
         </div>
     );
 
+    const MobileDrawerContent = (
+        <div className='grid grid-cols-1 gap-2 px-4 sm:grid-cols-2'>
+            {filterConfig.map((filter) => (
+                <div key={filter.key} className='space-y-1'>
+                    <label className='text-sm font-medium leading-none'>{filter.label}</label>
+                    {renderSelect(filter, true)}
+                </div>
+            ))}
+        </div>
+    );
+
+    const DesktopRowLayout = (
+        <div className='mt-2 flex flex-wrap gap-2'>
+            {filterConfig.map((filter) => (
+                <div key={filter.key} className='max-w-[240px] flex-grow basis-[150px]'>
+                    {renderSelect(filter)}
+                </div>
+            ))}
+            <Button
+                variant='secondary'
+                onClick={handleClearFilters}
+                className='hover:bg-destructive/10 hover:text-destructive h-10 max-w-[140px] flex-grow basis-[100px] border border-border bg-card text-muted-foreground'
+            >
+                <RotateCcw className='mr-2 h-4 w-4' /> Reset
+            </Button>
+        </div>
+    );
+
+    if (layout === 'sidebar' && isDesktop) {
+        return SidebarLayout;
+    }
+
     return (
-        <div className='flex-shrink-0 px-4 pt-2'>
+        <div className='flex-shrink-0 pt-2 md:px-4'>
             <section aria-label='Search and filter'>
                 <div className='flex gap-2'>
-                    {/* Search Bar - Grows to fill space */}
                     <div className='flex-grow'>
                         <SearchBar />
                     </div>
 
-                    {/* MOBILE/TABLET TOGGLE */}
                     {!isDesktop && (
                         <Drawer open={open} onOpenChange={setOpen}>
                             <DrawerTrigger asChild>
@@ -239,9 +272,7 @@ export function CardFilterControls({ filterOptions, sortOptions }: CardFilterCon
                                     variant='secondary'
                                     className='h-12 flex-shrink-0 gap-2 bg-accent px-8 text-accent-foreground hover:bg-border'
                                 >
-                                    <SlidersHorizontal className='h-4 w-4' />
-                                    Filters
-                                    {/* Badges on Button (Mobile only) */}
+                                    <SlidersHorizontal className='h-4 w-4' /> Filters
                                     {activeFilters.length > 0 && (
                                         <Badge
                                             variant='default'
@@ -256,7 +287,7 @@ export function CardFilterControls({ filterOptions, sortOptions }: CardFilterCon
                                 <DrawerHeader className='pb-2 text-left'>
                                     <DrawerTitle>Filter Collection</DrawerTitle>
                                 </DrawerHeader>
-                                <div className='pb-0'>{MobileFilterContent}</div>
+                                <div className='pb-0'>{MobileDrawerContent}</div>
                                 <DrawerFooter>
                                     <Button variant='outline' onClick={handleClearFilters}>
                                         Reset
@@ -269,24 +300,20 @@ export function CardFilterControls({ filterOptions, sortOptions }: CardFilterCon
                         </Drawer>
                     )}
                 </div>
-                {isDesktop && DesktopToolbar}
+
+                {isDesktop && layout === 'row' && DesktopRowLayout}
             </section>
 
-            {/* Sort Controls */}
-            <div className='mb-2 grid grid-cols-2 gap-4' aria-label='Sort options'>
-                <div className='space-y-1'>
-                    <label className='text-sm font-medium text-muted-foreground'>Sort By:</label>
+            {(!isDesktop || layout === 'row') && (
+                <div className='mb-2 mt-2 grid min-w-0 grid-cols-2 gap-2'>
                     <Select
                         value={
                             filters.search ? filters.sortBy || 'relevance' : filters.sortBy || ''
                         }
                         onValueChange={(val) => handleFilterChange('sortBy', val)}
                     >
-                        <SelectTrigger
-                            aria-label='Sort by'
-                            className='border-input hover:bg-accent/50 w-full border border-border bg-card text-foreground'
-                        >
-                            <SelectValue placeholder='Sort By' />
+                        <SelectTrigger className='w-full border border-border bg-card'>
+                            <SelectValue placeholder='Sort By' className='truncate' />
                         </SelectTrigger>
                         <SelectContent>
                             {dynamicSortOptions.map((option) => (
@@ -296,19 +323,12 @@ export function CardFilterControls({ filterOptions, sortOptions }: CardFilterCon
                             ))}
                         </SelectContent>
                     </Select>
-                </div>
-
-                <div className='space-y-1'>
-                    <label className='text-sm font-medium text-muted-foreground'>Order:</label>
                     <Select
                         value={filters.sortOrder || ''}
                         onValueChange={(val) => handleFilterChange('sortOrder', val)}
                     >
-                        <SelectTrigger
-                            aria-label='Sort order'
-                            className='hover:bg-accent/50 w-full border border-border bg-card text-foreground'
-                        >
-                            <SelectValue placeholder='Order' />
+                        <SelectTrigger className='w-full border border-border bg-card'>
+                            <SelectValue placeholder='Order' className='truncate' />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value='asc'>Ascending</SelectItem>
@@ -316,31 +336,21 @@ export function CardFilterControls({ filterOptions, sortOptions }: CardFilterCon
                         </SelectContent>
                     </Select>
                 </div>
-            </div>
+            )}
 
-            {/* Active Filter Badges (MOBILE ONLY) */}
-            {activeFilters.length > 0 && !isDesktop && (
+            {activeFilters.length > 0 && (!isDesktop || layout === 'row') && (
                 <div className='mt-2 flex flex-wrap gap-2'>
                     {activeFilters.map((filter) => (
                         <Badge
                             key={filter.key}
                             variant='default'
-                            className='hover:bg-destructive hover:text-destructive-foreground flex cursor-pointer items-center gap-1 border border-border bg-card px-3 py-1 text-sm font-normal text-foreground transition-colors'
                             onClick={() => handleFilterChange(filter.key, 'all')}
+                            className='cursor-pointer gap-1'
                         >
-                            <span className='font-semibold'>{filter.label}:</span>
-                            {filter.displayValue}
-                            <X className='h-3 w-3' />
+                            <span className='font-semibold'>{filter.label}:</span>{' '}
+                            {filter.displayValue} <X className='h-3 w-3' />
                         </Badge>
                     ))}
-                    <Button
-                        variant='ghost'
-                        size='sm'
-                        className='hover:text-destructive hover:bg-destructive/10 h-7 px-3 text-xs text-muted-foreground underline transition-colors'
-                        onClick={handleClearFilters}
-                    >
-                        Clear All
-                    </Button>
                 </div>
             )}
         </div>

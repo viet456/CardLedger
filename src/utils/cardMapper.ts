@@ -42,6 +42,7 @@ export function mapPrismaCardToDenormalized(
         set = {
             id: card.set.id,
             name: card.set.name,
+            total: card.set.total,
             printedTotal: card.set.printedTotal,
             series: card.set.series,
             // SuperJSON guarantees this is a real Date object now
@@ -64,7 +65,7 @@ export function mapPrismaCardToDenormalized(
         img: card.imageKey,
         pS: card.pokedexNumberSort,
         cRC: card.convertedRetreatCost,
-        artist: card.artist?.name || null,
+        artist: card.artist?.name || '',
         rarity: card.rarity?.name || null,
         set: set,
         supertype: card.supertype,

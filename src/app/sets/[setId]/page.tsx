@@ -1,16 +1,9 @@
 import { prisma } from '@/src/lib/prisma';
 import { notFound } from 'next/navigation';
 import { SetPageView } from './SetPageView';
-import { DenormalizedCard, FilterOptions, SetObject } from '@/src/shared-types/card-index';
 import { Metadata } from 'next';
-import { mapPrismaCardToDenormalized } from '@/src/utils/cardMapper';
 import { getCachedSetData } from './data';
-
-interface SetPageData {
-    setInfo: SetObject;
-    cards: DenormalizedCard[];
-    filterOptions: FilterOptions;
-}
+import { FilterOptions } from '@/src/shared-types/card-index';
 
 export async function generateMetadata({
     params
@@ -50,7 +43,7 @@ export default async function SingleSetPage({ params }: { params: Promise<{ setI
     const data = await getCachedSetData(setId);
     if (!data) notFound();
 
-    const filterOptions = {
+    const filterOptions: FilterOptions = {
         artists: Array.from(
             new Set(data.cards.map((c) => c.artist).filter(Boolean))
         ).sort() as string[],
@@ -66,6 +59,5 @@ export default async function SingleSetPage({ params }: { params: Promise<{ setI
             new Set(data.cards.flatMap((c) => c.resistances.map((r) => r.type)))
         ).sort()
     };
-
     return <SetPageView setInfo={data.setInfo} cards={data.cards} filterOptions={filterOptions} />;
 }

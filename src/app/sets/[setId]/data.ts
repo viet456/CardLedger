@@ -37,6 +37,7 @@ export async function getCachedSetData(setId: string) {
     const setInfo: SetObject = {
         id: setWithCards.id,
         name: setWithCards.name,
+        total: setWithCards.total,
         printedTotal: setWithCards.printedTotal,
         logoImageKey: setWithCards.logoImageKey,
         symbolImageKey: setWithCards.symbolImageKey,
@@ -49,7 +50,6 @@ export async function getCachedSetData(setId: string) {
     const denormalizedCards = setWithCards.cards.map((card) =>
         mapPrismaCardToDenormalized(card, setInfo)
     );
-
     // Return the shape your page expects
     return {
         setInfo: setInfo,

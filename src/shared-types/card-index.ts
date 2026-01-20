@@ -32,6 +32,7 @@ export type SetPageProps = {
 export type SetObject = {
     id: string;
     name: string;
+    total: number;
     printedTotal: number;
     logoImageKey?: string | null;
     symbolImageKey?: string | null;
