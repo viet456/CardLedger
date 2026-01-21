@@ -151,7 +151,7 @@ export default function DatabaseShowcase() {
                                     data-card-index={i}
                                     className='transform cursor-pointer transition-transform duration-300 hover:z-10 hover:scale-105'
                                 >
-                                    <PokemonCard card={card} priority={i < 4} />
+                                    <PokemonCard card={card} priority={false} />
                                 </div>
                             ))}
                         </div>

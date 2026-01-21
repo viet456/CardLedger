@@ -60,8 +60,8 @@ export function HeroAssetInspector() {
                     <div className='relative h-full w-full rounded-xl border border-white/10 bg-zinc-900 shadow-2xl'>
                         <Image
                             src='/hero/dashboard-bg.avif'
-                            unoptimized
                             alt='CardLedger Interface'
+                            unoptimized
                             fill
                             className='object-cover'
                             fetchPriority='high'
