@@ -31,7 +31,7 @@ export function DashboardSkeleton() {
                     </div>
 
                     {/* Card Grid Placeholder - Contains Status/Count Text and the Grid */}
-                    <div className='bg-muted/10 min-h-[500px] p-6'>
+                    <div className='min-h-[500px] bg-muted/10 p-6'>
                         {/* Status/Count Text */}
                         <Skeleton className='mb-4 h-4 w-40' />
 

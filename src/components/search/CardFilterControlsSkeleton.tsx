@@ -1,3 +1,5 @@
+'use client';
+
 interface CardFilterControlsSkeletonProps {
     layout?: 'row' | 'sidebar';
 }
@@ -13,15 +15,16 @@ export function CardFilterControlsSkeleton({ layout = 'row' }: CardFilterControl
                 </div>
 
                 {/* Sort Controls (2fr 1fr split) */}
-                <div className='grid shrink-0 grid-cols-[2fr_1fr] gap-3'>
+                <div className='grid shrink-0 grid-cols-[2fr_1fr] gap-2 pt-1'>
                     <div className='col-span-2 h-2 w-10 rounded bg-muted' /> {/* Label "Sort" */}
                     <div className='h-9 w-full rounded-md bg-muted' />
                     <div className='h-9 w-full rounded-md bg-muted' />
                 </div>
 
                 {/* Filters Stack */}
-                <div className='flex flex-col gap-3 pt-2'>
+                <div className='flex flex-col gap-3 pt-2.5'>
                     <div className='h-2 w-12 rounded bg-muted' /> {/* Label "Filters" */}
+                    <div className='h-9 w-full rounded-md bg-muted' />
                     <div className='h-9 w-full rounded-md bg-muted' />
                     <div className='h-9 w-full rounded-md bg-muted' />
                     <div className='h-9 w-full rounded-md bg-muted' />

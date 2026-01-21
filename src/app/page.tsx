@@ -20,7 +20,7 @@ export default function Home() {
             {/* Hero Section */}
             <section className='container mx-auto flex flex-col items-center gap-6 px-4 py-12 text-center md:py-20'>
                 <div className='flex flex-col items-center gap-4'>
-                    <div className='bg-muted/50 inline-flex items-center rounded-full border border-border px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur-sm'>
+                    <div className='inline-flex items-center rounded-full border border-border bg-muted/50 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur-sm'>
                         <span className='mr-2 flex h-2 w-2 rounded-full bg-emerald-500 shadow-2xl'></span>
                         Daily Price Sync • Active
                     </div>
@@ -42,7 +42,7 @@ export default function Home() {
                     <Button
                         asChild
                         variant={'secondary'}
-                        className='hover:bg-muted/80 h-10 border border-border bg-accent px-6 text-sm font-medium text-accent-foreground hover:text-muted-foreground'
+                        className='h-10 border border-border bg-accent px-6 text-sm font-medium text-accent-foreground hover:bg-muted/80 hover:text-muted-foreground'
                     >
                         <Link href='/cards'>
                             Search Database <Search className='ml-2 h-4 w-4' />
@@ -58,7 +58,7 @@ export default function Home() {
             </section>
 
             {/* Features Section 1 */}
-            <section className='bg-muted/30 border-y border-border'>
+            <section className='border-y border-border bg-muted/30'>
                 <div className='container mx-auto grid gap-8 px-4 py-16 md:grid-cols-2 md:items-center md:gap-12'>
                     <div className='flex flex-col gap-5'>
                         <div className='flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600'>

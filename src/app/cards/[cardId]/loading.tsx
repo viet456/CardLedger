@@ -35,7 +35,7 @@ export default function Loading() {
                                 />
                             ))}
                         </div>
-                        <div className='bg-muted/30 h-[300px] w-full rounded-md' />
+                        <div className='h-[300px] w-full rounded-md bg-muted/30' />
                     </section>
 
                     {/* Details Section Skeleton */}

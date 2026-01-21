@@ -3,7 +3,7 @@ import { Globe, AtSign } from 'lucide-react';
 
 export function Footer() {
     return (
-        <footer className='bg-muted/30 border-t border-border pb-12 pt-10 text-muted-foreground'>
+        <footer className='border-t border-border bg-muted/30 pb-12 pt-10 text-muted-foreground'>
             <div className='container mx-auto px-4'>
                 <div className='grid gap-8 md:grid-cols-2 lg:grid-cols-4'>
                     {/* Brand Section */}

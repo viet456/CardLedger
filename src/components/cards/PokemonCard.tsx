@@ -113,7 +113,7 @@ export function PokemonCard({
 
                     {stats ? (
                         // --- DASHBOARD MODE (Stacked Financials) ---
-                        <div className='border-border/50 mt-2 flex items-end justify-between border-t pt-2'>
+                        <div className='mt-2 flex items-end justify-between border-t border-border/50 pt-2'>
                             {/* Left: Metadata */}
                             <div className='flex flex-col gap-0.5'>
                                 <span className='text-[10px] uppercase tracking-wider text-muted-foreground'>

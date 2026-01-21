@@ -150,7 +150,7 @@ export function CollectionPageView({ cards }: CollectionPageViewProps) {
                     <CardFilterControls filterOptions={filterOptions} sortOptions={sortOptions} />
                 </div>
 
-                <div className='bg-muted/10 min-h-[500px] p-6'>
+                <div className='min-h-[500px] bg-muted/10 p-6'>
                     <div className='mb-4 flex items-center justify-between'>
                         <p className='text-sm font-medium text-muted-foreground'>
                             Showing {filteredAndSortedCards.length} cards

@@ -82,7 +82,7 @@ export default async function SingleCardPage({ params }: { params: Promise<{ car
                             ))}
                         </div>
 
-                        <div className='bg-muted/30 flex h-[300px] w-full items-center justify-center rounded-md'>
+                        <div className='flex h-[300px] w-full items-center justify-center rounded-md bg-muted/30'>
                             <span className='text-sm text-muted-foreground'>Loading chart...</span>
                         </div>
                     </div>

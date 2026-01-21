@@ -88,7 +88,7 @@ export function CollectionManagerModal({
                                 {entries?.map((entry) => (
                                     <TableRow
                                         key={entry.id}
-                                        className='divide-border/50 flex flex-col divide-y border-b p-4 md:table-row md:divide-y-0 md:border-b'
+                                        className='flex flex-col divide-y divide-border/50 border-b p-4 md:table-row md:divide-y-0 md:border-b'
                                     >
                                         {/* Date */}
                                         <TableCell className='flex items-center justify-between border-none px-0 py-3 md:table-cell md:py-4 md:pl-2'>

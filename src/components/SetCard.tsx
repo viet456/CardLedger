@@ -14,7 +14,7 @@ export function SetCard({ set, isPriority = false }: SetCardProps) {
         <Link
             href={`/sets/${set.id}?sortBy=num&sortOrder=asc`}
             prefetch={null}
-            className='hover:bg-muted/50 group flex flex-col items-center justify-between rounded-lg border bg-card p-4 text-card-foreground transition-colors'
+            className='group flex flex-col items-center justify-between rounded-lg border bg-card p-4 text-card-foreground transition-colors hover:bg-muted/50'
         >
             {/* Header */}
             <div className='flex w-full flex-col items-center text-center'>
@@ -50,7 +50,7 @@ export function SetCard({ set, isPriority = false }: SetCardProps) {
                             loading={isPriority ? 'eager' : 'lazy'}
                         />
                     ) : (
-                        <div className='bg-muted/50 flex h-full w-full items-center justify-center rounded-sm text-xs text-muted-foreground'>
+                        <div className='flex h-full w-full items-center justify-center rounded-sm bg-muted/50 text-xs text-muted-foreground'>
                             No Logo
                         </div>
                     )}

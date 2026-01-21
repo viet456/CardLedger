@@ -171,7 +171,7 @@ export function SetPageView({ setInfo, cards, filterOptions }: SetPageViewProps)
             {/* --- SIDEBAR (Desktop Only) --- */}
             <aside
                 className={cn(
-                    'bg-card/50 hidden w-[280px] shrink-0 flex-col border-r border-border md:flex',
+                    'hidden w-[280px] shrink-0 flex-col border-r border-border bg-card/50 md:flex',
                     'sticky top-16 p-4'
                 )}
             >
@@ -222,7 +222,7 @@ export function SetPageView({ setInfo, cards, filterOptions }: SetPageViewProps)
                 {/* MOBILE HEADER */}
                 <div className='mx-4 mt-4 rounded-xl border border-border bg-card shadow-sm md:hidden'>
                     <div
-                        className='hover:bg-muted/50 flex cursor-pointer items-center justify-between p-4'
+                        className='flex cursor-pointer items-center justify-between p-4 hover:bg-muted/50'
                         onClick={() => setIsInfoExpanded(!isInfoExpanded)}
                     >
                         <div className='flex items-center gap-2'>

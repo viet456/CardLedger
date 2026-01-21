@@ -121,7 +121,7 @@ export default function DatabaseShowcase() {
                 {STATS.map((stat, i) => (
                     <div
                         key={i}
-                        className='bg-background/80 rounded-lg border border-border p-3 text-center backdrop-blur-sm'
+                        className='rounded-lg border border-border bg-background/80 p-3 text-center backdrop-blur-sm'
                     >
                         <stat.icon className='mx-auto mb-1 h-4 w-4 text-blue-500' />
                         <div className='font-mono text-lg font-bold'>{stat.value}</div>
@@ -164,7 +164,7 @@ export default function DatabaseShowcase() {
                         {DATA_POINTS.map((section, i) => (
                             <div
                                 key={i}
-                                className='bg-background/60 hover:bg-background/80 group rounded-lg border border-border p-4 backdrop-blur-sm transition-colors'
+                                className='group rounded-lg border border-border bg-background/60 p-4 backdrop-blur-sm transition-colors hover:bg-background/80'
                             >
                                 <div className='mb-2 flex items-center gap-3'>
                                     <div className='flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/10 transition-colors group-hover:bg-blue-500/20'>

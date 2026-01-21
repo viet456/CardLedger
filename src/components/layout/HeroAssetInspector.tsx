@@ -70,12 +70,12 @@ export function HeroAssetInspector() {
                     </div>
 
                     {/* GRADIENT MASKS */}
-                    <div className='via-background/60 absolute inset-0 bg-gradient-to-b from-transparent to-background' />
+                    <div className='absolute inset-0 bg-gradient-to-b from-transparent via-background/60 to-background' />
                 </div>
             </div>
 
             {/* THE LABEL */}
-            <div className='bg-muted/80 absolute bottom-1 left-1/2 z-20 hidden -translate-x-1/2 items-center gap-2 rounded-full border border-border px-3 py-1.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground shadow-sm backdrop-blur-md md:flex'>
+            <div className='absolute bottom-1 left-1/2 z-20 hidden -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-muted/80 px-3 py-1.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground shadow-sm backdrop-blur-md md:flex'>
                 <MousePointer2 className='h-3.5 w-3.5' />
                 <span>Interactive Inspection Active</span>
             </div>
@@ -84,7 +84,7 @@ export function HeroAssetInspector() {
                 <span className='text-[10px] font-medium uppercase tracking-widest text-white'>
                     Tap to inspect
                 </span>
-                <ScanFace className='text-muted-foreground/60 h-3 w-3' />
+                <ScanFace className='h-3 w-3 text-muted-foreground/60' />
             </div>
 
             {/* THE CARDS */}

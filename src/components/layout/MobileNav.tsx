@@ -97,7 +97,7 @@ export function MobileNav() {
                             />
                         ))}
                     </div>
-                    <SheetFooter className='bg-muted/20 mt-auto flex flex-col gap-4 border-t border-border p-6 sm:justify-start'>
+                    <SheetFooter className='mt-auto flex flex-col gap-4 border-t border-border bg-muted/20 p-6 sm:justify-start'>
                         {!isPending && session?.user ? (
                             // LOGGED IN
                             <div className='flex w-full flex-col gap-6 p-0'>
@@ -165,7 +165,7 @@ export function MobileNav() {
                             </div>
                         )}
 
-                        <div className='text-muted-foreground/50 text-center text-xs'>
+                        <div className='text-center text-xs text-muted-foreground/50'>
                             <a
                                 href='https://vietle.me'
                                 target='_blank'
