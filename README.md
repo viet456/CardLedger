@@ -1,6 +1,6 @@
 # CardLedger
 
-[![Live Demo](https://img.shields.io/badge/Live-Demo-blue?style=for-the-badge)](https://cardledger.vercel.app/)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-blue?style=for-the-badge)](https://cardledger.io/)
 
 CardLedger is a web application for cataloging and tracking Pokémon card collections. It features a custom data pipeline that sources, standardizes, and serves card data from a dedicated database, ensuring high performance and data consistency.
 
@@ -8,21 +8,20 @@ CardLedger is a web application for cataloging and tracking Pokémon card collec
 
 - **Custom Data Backend:** Card data and images are sourced via a custom ETL script, standardized, and served from a Neon PostgreSQL database and Cloudflare R2 bucket.
 - **User Accounts & Collections:** Full authentication system (Email + Social Login) allowing users to build and manage their personal card portfolios.
-- **Optimistic UI:** Instant feedback for collection actions using React Query and optimistic cache updates.
+- **Optimistic UI:** Instant feedback for collection actions using TRPC and optimistic cache updates.
 - **High Performance:** Hybrid architecture utilizing Next.js 16 Server Components, ISR caching, and client-side IndexedDB for browsing 20,000+ cards with zero latency.
-- **Security:** Protected routes via Middleware and bot protection via Cloudflare Turnstile.
-- **Upcoming - Investment Tracking:** Monitor the financial value and history of your cards.
+- **Investment Tracking:** Monitor the financial value and history of your cards.
 
 ## Tech Stack
 
 ### Application
 
-- **Framework:** Next.js 16 (App Router) / React 19
+- **Framework:** Next.js 16 (App Router) / React 19.2
 - **Language:** TypeScript
 - **Auth:** Better Auth (Google, Discord, Email/Pass)
 - **State/API:** tRPC, TanStack Query, Zustand
 - **Styling:** Tailwind CSS, Shadcn UI
-- **Deployment:** Vercel
+- **Deployment:** Vercel, Cloudflare R2, Neon
 
 ### Data Pipeline & Infrastructure
 
@@ -32,7 +31,7 @@ CardLedger is a web application for cataloging and tracking Pokémon card collec
 
 ## Project Goals
 
-This project serves as a portfolio piece to demonstrate full-stack development skills using a modern tech stack. The primary goals are to learn and implement features such as user authentication, database management, and designing a robust data pipeline, while building a practical and useful tool for TCG enthusiasts.
+This project serves as a portfolio piece to demonstrate my full-stack development skills using a modern tech stack. The primary goals are to learn and implement features such as user authentication, database management, and designing a robust data pipeline, while building a practical and useful tool for TCG enthusiasts.
 
 This project was started on September 15, 2025.
 
