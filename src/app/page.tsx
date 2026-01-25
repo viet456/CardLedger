@@ -2,7 +2,14 @@ import { Button } from '@/src/components/ui/button';
 import Link from 'next/link';
 import { Metadata } from 'next';
 import { HomeAuthButtons } from '../components/layout/HomeAuthButtons';
-import { BarChart3, CheckCircle2, Search, Zap, ChartNoAxesCombined } from 'lucide-react';
+import {
+    BarChart3,
+    CheckCircle2,
+    Search,
+    Zap,
+    ChartNoAxesCombined,
+    ArrowRight
+} from 'lucide-react';
 
 import { HeroAssetInspector } from '../components/layout/HeroAssetInspector';
 import PortfolioShowcase from '../components/layout/PortfolioShowcase';
@@ -20,10 +27,14 @@ export default function Home() {
             {/* Hero Section */}
             <section className='container mx-auto flex flex-col items-center gap-6 px-4 py-12 text-center md:py-20'>
                 <div className='flex flex-col items-center gap-4'>
-                    <div className='inline-flex items-center rounded-full border border-border bg-muted/50 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur-sm'>
-                        <span className='mr-2 flex h-2 w-2 rounded-full bg-emerald-500 shadow-2xl'></span>
-                        Daily Price Sync • Active
-                    </div>
+                    <Link
+                        href='/sets'
+                        className='group inline-flex items-center rounded-full border border-border bg-muted/50 px-3 py-1 text-sm font-medium text-muted-foreground backdrop-blur-sm transition-colors hover:bg-muted hover:text-foreground'
+                    >
+                        <span className='mr-2 flex h-2 w-2 rounded-full bg-blue-500'></span>
+                        Browse Expansion Sets
+                        <ArrowRight className='ml-1 h-3 w-3 transition-transform group-hover:translate-x-1' />
+                    </Link>
 
                     <h1 className='max-w-[800px] text-4xl font-extrabold tracking-tight md:text-5xl lg:text-6xl'>
                         The operating system <br />
