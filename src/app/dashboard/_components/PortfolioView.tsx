@@ -4,7 +4,7 @@ import { PortfolioChartPoint } from '@/src/services/portfolioService';
 import { CardCondition } from '@prisma/client';
 import { DataTable } from './DataTable';
 import { columns, PortfolioRow } from './Columns';
-import { Wallet, TrendingUp, TrendingDown, CircleDollarSign } from 'lucide-react'; // 1. Import Icons
+import { Wallet, TrendingUp, TrendingDown, CircleDollarSign } from 'lucide-react';
 
 interface PortfolioViewProps {
     history: PortfolioChartPoint[];

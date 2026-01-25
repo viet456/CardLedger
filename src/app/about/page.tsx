@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { Globe, AtSign, Github } from 'lucide-react';
 
 export const metadata: Metadata = {
     title: 'About | CardLedger',
@@ -16,6 +17,17 @@ export default function About() {
                     with the speed and interactivity of a native application. It serves as both a
                     functional TCG collection manager and a case study in building a
                     high-performance, type-safe, and scalable web application from the ground up.
+                </p>
+                <p>
+                    For a deeper dive into the architectural decisions,{' '}
+                    <a
+                        href='https://www.vietle.me/blog/cardledger-architecture'
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        className='hover:text-foreground hover:text-foreground/70'
+                    >
+                        read the full technical breakdown.
+                    </a>
                 </p>
 
                 <h2>The Backend & Data Foundation</h2>
@@ -124,15 +136,36 @@ export default function About() {
                     portfolio project, built from the ground up to demonstrate mastery of modern
                     application architecture, from database design to frontend optimization.
                 </p>
-                <p>
-                    <a href='https://vietle.me' target='_blank' rel='noopener noreferrer'>
-                        vietle.me
+                {/* Creator Section */}
+                <div className='flex flex-col gap-2'>
+                    <h3 className='font-semibold text-foreground'>Created By</h3>
+                    <a
+                        href='https://vietle.me'
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        className='flex items-center gap-2 text-sm hover:text-foreground/70 hover:underline'
+                    >
+                        <Globe className='h-4 w-4' /> Portfolio
                     </a>
-                    <br />
-                    <a href='https://x.com/vietle683' target='_blank' rel='noopener noreferrer'>
-                        @vietle683
+                    <a
+                        href='https://github.com/viet456'
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        className='flex items-center gap-2 text-sm hover:text-foreground/70 hover:underline'
+                    >
+                        <Github className='h-4 w-4' />
+                        Github
                     </a>
-                </p>
+                    <a
+                        href='https://x.com/vietle683'
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        className='flex items-center gap-2 text-sm hover:text-foreground/70 hover:underline'
+                    >
+                        <AtSign className='h-4 w-4' />
+                        vietle683
+                    </a>
+                </div>
             </article>
         </main>
     );

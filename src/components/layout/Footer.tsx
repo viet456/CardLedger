@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Globe, AtSign } from 'lucide-react';
+import { Globe, AtSign, Github } from 'lucide-react';
 
 export function Footer() {
     return (
@@ -60,6 +60,15 @@ export function Footer() {
                         >
                             <AtSign className='h-4 w-4' />
                             vietle683
+                        </a>
+                        <a
+                            href='https://github.com/viet456/CardLedger'
+                            target='_blank'
+                            rel='noopener noreferrer'
+                            className='flex items-center gap-2 text-sm hover:text-foreground hover:underline'
+                        >
+                            <Github className='h-4 w-4' />
+                            View on Github
                         </a>
                     </div>
                 </div>
