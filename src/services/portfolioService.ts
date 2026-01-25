@@ -69,7 +69,7 @@ export type PortfolioChartPoint = {
 };
 
 // tcgNearMint value
-export async function getPortfolioValue(userId: string) {
+export async function getPortfolioValue(userId: string): Promise<PortfolioChartPoint[]> {
     const collection = await prisma.collectionEntry.findMany({
         where: { userId },
         select: {
