@@ -3,8 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useSearchStore } from '@/src/lib/store/searchStore';
 import { useState, useEffect, useRef } from 'react';
-import { useDebounce } from '@/hooks/useDebounce';
-import { trpc } from '@/src/utils/trpc';
+import { useLocalSearch } from '@/hooks/useLocalSearch';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -19,9 +18,6 @@ export function HeaderSearchBar({ onSuggestionClick }: HeaderSearchBarProps) {
     const { setFilters } = useSearchStore();
 
     const [inputValue, setInputValue] = useState('');
-
-    const debouncedSearchTerm = useDebounce(inputValue, 300);
-
     const [isFocused, setIsFocused] = useState(false);
 
     const searchContainerRef = useRef<HTMLDivElement>(null);
@@ -43,12 +39,9 @@ export function HeaderSearchBar({ onSuggestionClick }: HeaderSearchBarProps) {
         };
     }, []);
 
-    const { data: suggestions, isLoading } = trpc.pokemonCard.getSuggestions.useQuery(
-        { search: debouncedSearchTerm || '' },
-        {
-            enabled: !!debouncedSearchTerm && debouncedSearchTerm.length > 1
-        }
-    );
+    const { suggestions, isReady } = useLocalSearch(inputValue);
+    const isLoading = !isReady && inputValue.length > 0;
+
     const handleSubmit = (searchTerm: string, cardId?: string) => {
         setIsFocused(false);
         onSuggestionClick();
@@ -84,11 +77,11 @@ export function HeaderSearchBar({ onSuggestionClick }: HeaderSearchBarProps) {
             <label htmlFor='header-search' className='sr-only'>
                 Search for Pokémon cards
             </label>
-            <input
+            <Input
                 id='header-search'
                 ref={inputRef}
                 type='text'
-                placeholder='Search for cards...'
+                placeholder={isReady ? 'Search for cards...' : 'Loading database...'}
                 value={inputValue || ''}
                 onChange={(e) => {
                     setInputValue(e.target.value);
@@ -97,7 +90,7 @@ export function HeaderSearchBar({ onSuggestionClick }: HeaderSearchBarProps) {
                 onKeyDown={handleKeyDown}
                 onFocus={() => setIsFocused(true)}
                 autoComplete='off'
-                className='h-9 w-full rounded border border-border bg-card p-2 pr-10 text-card-foreground'
+                className='h-9 w-full border border-border bg-card pr-10 text-card-foreground'
             />
             {inputValue && (
                 <Button
@@ -128,12 +121,12 @@ export function HeaderSearchBar({ onSuggestionClick }: HeaderSearchBarProps) {
                             <div className='flex flex-col'>
                                 <div className='text-sm font-bold md:text-base'>{card.name}</div>
                                 <div className='text-sm md:text-base'>
-                                    {card.number}/{card.printedTotal}
+                                    {card.number}/{card.set.printedTotal}
                                 </div>
                             </div>
                             <div className='flex flex-col items-end'>
                                 <div className='text-right text-sm md:text-base'>
-                                    {card.setName}
+                                    {card.set.name}
                                 </div>
                                 <div className='text-left text-xs md:text-sm'>{card.id}</div>
                             </div>
@@ -158,8 +151,8 @@ export function HeaderSearchBar({ onSuggestionClick }: HeaderSearchBarProps) {
                         >
                             <span>
                                 {' '}
-                                Search for 🔍 &quot<span className='font-bold'>{inputValue}</span>
-                                &quot{' '}
+                                Search for 🔍 &lsquo;<span className='font-bold'>{inputValue}</span>
+                                &rsquo;{' '}
                             </span>
                             <kbd className='ml-2 inline-flex items-center rounded border bg-accent px-2 py-1 font-sans text-xs text-accent-foreground group-hover:bg-accent-foreground group-hover:text-accent md:text-sm'>
                                 Enter ↵

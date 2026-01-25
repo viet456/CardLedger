@@ -3,7 +3,6 @@
 import { VirtuosoGrid, VirtuosoGridProps } from 'react-virtuoso';
 import { forwardRef, Ref, HTMLAttributes } from 'react';
 import { PokemonCard } from './PokemonCard';
-import { ClientPokemonCardType } from '@/src/types/data';
 import { DenormalizedCard } from '@/src/shared-types/card-index';
 
 interface CardGridProps {
@@ -35,7 +34,7 @@ const GridItem = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>((pro
     <div ref={ref} {...props} className='flex h-full w-full self-stretch' />
 ));
 GridItem.displayName = 'GridItem';
-const gridComponents: VirtuosoGridProps<ClientPokemonCardType, undefined>['components'] = {
+const gridComponents: VirtuosoGridProps<DenormalizedCard, undefined>['components'] = {
     List: GridList,
     Item: GridItem
 };
