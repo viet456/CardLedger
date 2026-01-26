@@ -84,7 +84,10 @@ export function MobileNav() {
                     </SheetHeader>
 
                     <div className='p-4'>
-                        <HeaderSearchBar onSuggestionClick={() => setIsMenuOpen(false)} />
+                        <HeaderSearchBar
+                            onSuggestionClick={() => setIsMenuOpen(false)}
+                            className='dark:bg-secondary'
+                        />
                     </div>
 
                     <div className='mt-4 flex flex-grow flex-col gap-6 p-8'>

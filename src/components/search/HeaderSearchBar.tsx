@@ -11,9 +11,10 @@ import { X } from 'lucide-react';
 
 interface HeaderSearchBarProps {
     onSuggestionClick: () => void;
+    className?: string;
 }
 
-export function HeaderSearchBar({ onSuggestionClick }: HeaderSearchBarProps) {
+export function HeaderSearchBar({ onSuggestionClick, className }: HeaderSearchBarProps) {
     const router = useRouter();
     const { setFilters } = useSearchStore();
 
@@ -90,7 +91,7 @@ export function HeaderSearchBar({ onSuggestionClick }: HeaderSearchBarProps) {
                 onKeyDown={handleKeyDown}
                 onFocus={() => setIsFocused(true)}
                 autoComplete='off'
-                className='h-9 w-full border border-border bg-card pr-10 text-card-foreground'
+                className={`h-9 w-full border border-border bg-card pr-10 ${className}`}
             />
             {inputValue && (
                 <Button

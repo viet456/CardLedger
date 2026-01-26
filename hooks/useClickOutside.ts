@@ -8,8 +8,6 @@ export function useClickOutside(
         const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
         const listener = (event: MouseEvent | TouchEvent) => {
-            // don't trigger on mobile
-            if (isTouch) return;
             if (!ref.current || ref.current.contains(event.target as Node)) {
                 return;
             }
