@@ -75,7 +75,7 @@ export function HeroAssetInspector() {
             </div>
 
             {/* THE LABEL */}
-            <div className='absolute bottom-1 left-1/2 z-20 hidden -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-muted/80 px-3 py-1.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground shadow-sm backdrop-blur-md md:flex'>
+            <div className='absolute bottom-1 left-1/2 z-20 hidden -translate-x-1/2 items-center gap-2 rounded-full border-2 border-border bg-muted px-3 py-1.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground shadow-lg backdrop-blur-md md:flex'>
                 <MousePointer2 className='h-3.5 w-3.5' />
                 <span>Interactive Inspection Active</span>
             </div>
@@ -346,10 +346,10 @@ function SchematicCard({
 
                                 <div className='pointer-events-none absolute -top-10 left-1/2 z-30 -translate-x-1/2 whitespace-nowrap opacity-0 transition-all duration-200 group-hover/spot:-translate-y-1 group-hover/spot:opacity-100'>
                                     <div className='flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-sm font-medium text-card-foreground shadow-xl backdrop-blur-md'>
-                                        <spot.icon className='h-3.5 w-3.5 text-emerald-400' />
+                                        <spot.icon className='h-3.5 w-3.5 text-emerald-600' />
                                         {spot.label}
                                     </div>
-                                    <div className='absolute -bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 border-b border-r border-emerald-500/30 bg-card' />
+                                    <div className='absolute -bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 border-b border-r border-emerald-600/30 bg-card' />
                                 </div>
                             </div>
                         ))}
@@ -398,7 +398,7 @@ function SchematicCard({
                             </p>
                         </div>
                         <div>
-                            <div className='flex items-center gap-1.5 text-xs font-bold text-emerald-600'>
+                            <div className='text-trend-up flex items-center gap-1.5 text-xs font-bold'>
                                 <TrendingUp className='h-3.5 w-3.5' />
                                 <span>{trend}</span>
                             </div>

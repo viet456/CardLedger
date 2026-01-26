@@ -14,7 +14,8 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 
 const inter = Inter({
     subsets: ['latin'],
-    variable: '--font-sans'
+    variable: '--font-sans',
+    display: 'swap'
 });
 
 export const metadata: Metadata = {

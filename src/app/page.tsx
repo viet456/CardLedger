@@ -29,9 +29,9 @@ export default function Home() {
                 <div className='flex flex-col items-center gap-4'>
                     <Link
                         href='/sets'
-                        className='group inline-flex items-center rounded-full border border-border bg-muted/50 px-3 py-1 text-sm font-medium text-muted-foreground backdrop-blur-sm transition-colors hover:bg-muted hover:text-foreground'
+                        className='group inline-flex items-center rounded-full border border-border bg-secondary px-3 py-1 text-sm font-medium text-secondary-foreground backdrop-blur-sm transition-all duration-150 hover:bg-muted/70'
                     >
-                        <span className='mr-2 flex h-2 w-2 rounded-full bg-blue-500'></span>
+                        {/* <span className='mr-2 flex h-2 w-2 rounded-full bg-blue-500'></span> */}
                         Browse Expansion Sets
                         <ArrowRight className='ml-1 h-3 w-3 transition-transform group-hover:translate-x-1' />
                     </Link>
@@ -126,7 +126,7 @@ export default function Home() {
                         <div className='flex gap-3 rounded-lg border border-border p-3'>
                             <Zap className='mt-0.5 h-4 w-4 text-yellow-500' />
                             <div>
-                                <h4 className='text-sm font-semibold'>Real-time Updates</h4>
+                                <h3 className='text-sm font-semibold'>Real-time Updates</h3>
                                 <p className='text-sm text-muted-foreground'>
                                     Market prices update every 24 hours.
                                 </p>
@@ -135,7 +135,7 @@ export default function Home() {
                         <div className='flex gap-3 rounded-lg border border-border p-3'>
                             <BarChart3 className='mt-0.5 h-4 w-4 shrink-0 text-purple-500' />
                             <div>
-                                <h4 className='text-sm font-semibold'>Portfolio Analytics</h4>
+                                <h3 className='text-sm font-semibold'>Portfolio Analytics</h3>
                                 <p className='text-sm text-muted-foreground'>
                                     Visualize your collection&apos;s total value over time.
                                 </p>
