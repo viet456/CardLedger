@@ -33,7 +33,7 @@ const IGNORED_TERMS = [
 
 async function getSets() {
     const dbSets = await prisma.set.findMany({
-        select: { id: true, tcgPlayerSetId: true, name: true }
+        select: { id: true, tcgPlayerNumericId: true, name: true }
     });
     return dbSets;
 }
@@ -179,14 +179,13 @@ async function main() {
 
     for (const set of dbSets) {
         if (completedSetIds.has(set.id)) continue;
-        if (!set.tcgPlayerSetId) {
-            console.log(`Skipping set ${set.name} (No TCGPlayer ID)`);
+        if (!set.tcgPlayerNumericId) {
+            console.log(`Skipping set ${set.name} (No Numeric TCGPlayer ID)`);
             continue;
         }
 
         console.log(`\nProcessing: ${set.name} (${set.id})...`);
-        const setPriceHistory = await getSetPriceHistory(set.tcgPlayerSetId, set.name);
-
+        const setPriceHistory = await getSetPriceHistory(String(set.tcgPlayerNumericId), set.name);
         if (!setPriceHistory || !setPriceHistory.data) {
             console.log(` -> Failed/Empty response. Skipping.`);
             continue;
@@ -232,10 +231,12 @@ async function main() {
         let skippedCount = 0;
         const skippedCards: Array<{ number: string; name: string; reason: string }> = [];
 
+        const processedCardIds = new Set<string>();
+
         for (const apiCard of validApiCards) {
             const isDebug = String(apiCard.cardNumber).includes(DEBUG_CARD_NUMBER);
 
-            // 2. NUMBER MATCHING
+            // NUMBER MATCHING
             const apiNumClean = String(apiCard.cardNumber).split('/')[0].replace(/^0+/, '');
 
             const myCard = dbCards.find((c) => {
@@ -276,6 +277,12 @@ async function main() {
                     console.log(`\n[DEBUG] ✅ MATCH SUCCESS: ${myCard.name} <=> ${apiCard.name}`);
             }
 
+            if (processedCardIds.has(myCard.id)) {
+                // console.log(`Skipping duplicate variant for ${myCard.name}`);
+                continue;
+            }
+            processedCardIds.add(myCard.id);
+
             const op = processAndWriteHistory(myCard.id, apiCard)
                 .then(() => {
                     processedCount++;
@@ -302,26 +309,8 @@ async function main() {
 
         console.log(`\n  ✅ Final Report: ${processedCount} Updated | ${skippedCount} Skipped`);
 
-        // Find which DB cards weren't matched
-        const processedCardIds = new Set<string>();
-        for (const apiCard of validApiCards) {
-            const apiNumClean = String(apiCard.cardNumber).split('/')[0].replace(/^0+/, '');
-            const myCard = dbCards.find((c) => {
-                const dbNumClean = c.number.split('/')[0].replace(/^0+/, '').trim();
-                return dbNumClean === apiNumClean;
-            });
-            if (myCard) {
-                const apiNameClean = apiCard.name.replace(/\s*\([^)]*\)\s*/g, '').trim();
-                const nApiName = normalizePokemonName(apiNameClean);
-                const nDbName = normalizePokemonName(myCard.name);
-                const namesMatch = nDbName.includes(nApiName) || nApiName.includes(nDbName);
-                if (namesMatch) {
-                    processedCardIds.add(myCard.id);
-                }
-            }
-        }
-
         const unmatchedDbCards = dbCards.filter((c) => !processedCardIds.has(c.id));
+
         if (unmatchedDbCards.length > 0) {
             console.log(`\n  🚨 UNMATCHED DB CARDS (${unmatchedDbCards.length}):`);
             for (const card of unmatchedDbCards) {

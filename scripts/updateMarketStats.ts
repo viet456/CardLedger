@@ -157,6 +157,8 @@ async function processBatch(apiCards: ApiCard[], dbCards: Pick<Card, 'id' | 'num
 
     // Create a generic number map
     const dbCardMap = new Map<string, (typeof dbCards)[0]>();
+    const processedCardIds = new Set<string>();
+
     for (const card of dbCards) {
         const normalizedDbNumber = card.number.split('/')[0].replace(/^0+/, '').trim();
         dbCardMap.set(normalizedDbNumber, card);
@@ -199,6 +201,12 @@ async function processBatch(apiCards: ApiCard[], dbCards: Pick<Card, 'id' | 'num
         }
 
         if (cardMatchIsValid) {
+            if (processedCardIds.has(myCard.id)) {
+                // console.log(`Skipping duplicate update for ${myCard.id} in same batch`);
+                continue;
+            }
+            processedCardIds.add(myCard.id);
+
             upsertPromises.push(
                 upsertCardMarketStats(myCard.id, apiCard).catch((error) => {
                     console.error(
@@ -220,7 +228,7 @@ async function main() {
     const dbSets = await prisma.set.findMany({
         select: {
             id: true,
-            tcgPlayerSetId: true,
+            tcgPlayerNumericId: true,
             name: true
         },
         orderBy: {
@@ -229,7 +237,7 @@ async function main() {
     });
 
     // Latest sets to always be updated
-    const highPrioritySets = dbSets.slice(0, 8);
+    const highPrioritySets = dbSets.slice(0, 12);
 
     // Starts day count from Jan 1 1970, Unix Epoch
     const msPerDay = 1000 * 60 * 60 * 24;
@@ -253,8 +261,8 @@ async function main() {
             console.warn('⚠️ Max runtime reached. Stopping set processing early.');
             break;
         }
-        if (!set.tcgPlayerSetId) {
-            console.log(`Skipping set ${set.name} (missing tcgPlayerSetId)`);
+        if (!set.tcgPlayerNumericId) {
+            console.log(`Skipping set ${set.name} (missing numeric tcgPlayerId)`);
             continue;
         }
         console.log(`Processing set: ${set.name} (${set.id})`);
@@ -278,7 +286,11 @@ async function main() {
             let pageData;
 
             try {
-                pageData = await getCardPage(set.tcgPlayerSetId, PAGE_SIZE, currentOffset);
+                pageData = await getCardPage(
+                    String(set.tcgPlayerNumericId),
+                    PAGE_SIZE,
+                    currentOffset
+                );
             } catch (error) {
                 if (axios.isAxiosError(error) && error.response?.status === 429) {
                     console.log(`- ⚠️ Got 429. Waiting 60 seconds to retry...`);
@@ -297,7 +309,7 @@ async function main() {
 
             const apiCards: ApiCard[] = pageData.data;
 
-            const waitTimeInSeconds = Math.ceil(PAGE_SIZE / 10) + 1;
+            const waitTimeInSeconds = Math.ceil(PAGE_SIZE / 10) + 5;
             const timerPromise = new Promise((resolve) =>
                 setTimeout(resolve, waitTimeInSeconds * 1000)
             );

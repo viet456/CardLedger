@@ -27,7 +27,8 @@ model Set {
     id             String   @id
     name           String
     series         String
-    tcgPlayerSetId String?  @unique
+    tcgPlayerSetId String?  @unique // Pricing API deprecated
+    tcgPlayerNumericId Int? @unique
     printedTotal   Int
     total          Int
     ptcgoCode      String?

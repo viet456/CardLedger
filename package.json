@@ -16,6 +16,8 @@
         "db:backfill-pokedex": "tsx scripts/backfillPokedexSort.ts",
         "db:backfill-release-date": "tsx scripts/backfillReleaseDate.ts",
         "db:backfill-tcg": "tsx scripts/backfillTcgPlayerSetIds.ts",
+        "db:clear-setid": "tsx scripts/clearSetIds.tsx",
+        "db:migrate-setid": "tsx scripts/migrateToNumericIds.ts",
         "db:backfill-price": "tsx scripts/backfillPriceHistory.ts",
         "db:update-market": "tsx scripts/updateMarketStats.ts",
         "db:sync": "pnpm run db:populate && pnpm run images:migrate",
