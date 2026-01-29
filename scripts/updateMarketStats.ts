@@ -78,26 +78,57 @@ async function getCardPage(setId: string, limit: number, offset: number) {
 }
 
 async function upsertCardMarketStats(myCardId: string, apiCard: ApiCard) {
-    const prices = apiCard.prices?.conditions;
-    const latestNearMintPrice = prices?.['Near Mint']?.price;
-    const latestLightlyPlayedPrice = prices?.['Lightly Played']?.price;
-    const latestModeratelyPlayedPrice = prices?.['Moderately Played']?.price;
-    const latestHeavilyPlayedPrice = prices?.['Heavily Played']?.price;
-    const latestDamagedPrice = prices?.['Damaged']?.price;
+    const prices = apiCard.prices;
+
+    // DEBUG
+    if (!prices) {
+        console.log(`❌ No prices object for ${myCardId}`);
+        console.log('Full apiCard:', JSON.stringify(apiCard, null, 2));
+        return;
+    }
+    const primaryPrinting = prices.primaryPrinting || Object.keys(prices.variants || {})[0];
+    const primaryVariant = prices.variants?.[primaryPrinting];
+    if (!primaryVariant) {
+        console.log(`⚠️ No variant data for ${myCardId}, skipping`);
+        return;
+    }
+
+    let latestNearMintPrice: number | undefined;
+    let latestLightlyPlayedPrice: number | undefined;
+    let latestModeratelyPlayedPrice: number | undefined;
+    let latestHeavilyPlayedPrice: number | undefined;
+    let latestDamagedPrice: number | undefined;
+
+    for (const [conditionKey, conditionData] of Object.entries(primaryVariant)) {
+        const price = (conditionData as any).price;
+
+        if (conditionKey.includes('Near Mint')) {
+            latestNearMintPrice = price;
+        } else if (conditionKey.includes('Lightly Played')) {
+            latestLightlyPlayedPrice = price;
+        } else if (conditionKey.includes('Moderately Played')) {
+            latestModeratelyPlayedPrice = price;
+        } else if (conditionKey.includes('Heavily Played')) {
+            latestHeavilyPlayedPrice = price;
+        } else if (conditionKey.includes('Damaged')) {
+            latestDamagedPrice = price;
+        }
+    }
 
     const tcgLastUpdatedAt = apiCard.prices?.lastUpdated;
     const validTcgUpdatedAt = tcgLastUpdatedAt ? new Date(tcgLastUpdatedAt) : undefined;
-    const priceDate = tcgLastUpdatedAt ? new Date(tcgLastUpdatedAt) : new Date();
-    priceDate.setHours(0, 0, 0, 0);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     const upsertMarketStats = prisma.marketStats.upsert({
         where: { cardId: myCardId },
         update: {
-            tcgNearMintLatest: latestNearMintPrice,
-            tcgLightlyPlayedLatest: latestLightlyPlayedPrice,
-            tcgModeratelyPlayedLatest: latestModeratelyPlayedPrice,
-            tcgHeavilyPlayedLatest: latestHeavilyPlayedPrice,
-            tcgDamagedLatest: latestDamagedPrice,
+            tcgNearMintLatest: latestNearMintPrice ?? null,
+            tcgLightlyPlayedLatest: latestLightlyPlayedPrice ?? null,
+            tcgModeratelyPlayedLatest: latestModeratelyPlayedPrice ?? null,
+            tcgHeavilyPlayedLatest: latestHeavilyPlayedPrice ?? null,
+            tcgDamagedLatest: latestDamagedPrice ?? null,
             tcgPlayerUpdatedAt: validTcgUpdatedAt
         },
         create: {
@@ -115,19 +146,19 @@ async function upsertCardMarketStats(myCardId: string, apiCard: ApiCard) {
         where: {
             cardId_timestamp: {
                 cardId: myCardId,
-                timestamp: priceDate
+                timestamp: today
             }
         },
         update: {
-            tcgNearMint: latestNearMintPrice,
-            tcgLightlyPlayed: latestLightlyPlayedPrice,
-            tcgModeratelyPlayed: latestModeratelyPlayedPrice,
-            tcgHeavilyPlayed: latestHeavilyPlayedPrice,
-            tcgDamaged: latestDamagedPrice
+            tcgNearMint: latestNearMintPrice ?? null,
+            tcgLightlyPlayed: latestLightlyPlayedPrice ?? null,
+            tcgModeratelyPlayed: latestModeratelyPlayedPrice ?? null,
+            tcgHeavilyPlayed: latestHeavilyPlayedPrice ?? null,
+            tcgDamaged: latestDamagedPrice ?? null
         },
         create: {
             cardId: myCardId,
-            timestamp: priceDate,
+            timestamp: today,
             tcgNearMint: latestNearMintPrice ?? null,
             tcgLightlyPlayed: latestLightlyPlayedPrice ?? null,
             tcgModeratelyPlayed: latestModeratelyPlayedPrice ?? null,
@@ -309,7 +340,7 @@ async function main() {
 
             const apiCards: ApiCard[] = pageData.data;
 
-            const waitTimeInSeconds = Math.ceil(PAGE_SIZE / 10) + 5;
+            const waitTimeInSeconds = Math.ceil(PAGE_SIZE / 10) + 4;
             const timerPromise = new Promise((resolve) =>
                 setTimeout(resolve, waitTimeInSeconds * 1000)
             );

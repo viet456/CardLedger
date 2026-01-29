@@ -121,27 +121,56 @@ async function processAndWriteHistory(myCardId: string, apiCard: ApiCard) {
         }
     }
 
-    const prices = apiCard.prices?.conditions;
-    const tcgLastUpdatedAt = apiCard.prices?.lastUpdated;
+    const prices = apiCard.prices;
+    const tcgLastUpdatedAt = prices?.lastUpdated;
     const validTcgUpdatedAt = tcgLastUpdatedAt ? new Date(tcgLastUpdatedAt) : undefined;
+
+    let latestNearMintPrice: number | null = null;
+    let latestLightlyPlayedPrice: number | null = null;
+    let latestModeratelyPlayedPrice: number | null = null;
+    let latestHeavilyPlayedPrice: number | null = null;
+    let latestDamagedPrice: number | null = null;
+
+    if (prices?.variants) {
+        const primaryPrinting = prices.primaryPrinting || Object.keys(prices.variants)[0];
+        const primaryVariant = prices.variants[primaryPrinting];
+
+        if (primaryVariant) {
+            for (const [conditionKey, conditionData] of Object.entries(primaryVariant)) {
+                const price = (conditionData as any).price;
+
+                if (conditionKey.includes('Near Mint')) {
+                    latestNearMintPrice = price ?? null;
+                } else if (conditionKey.includes('Lightly Played')) {
+                    latestLightlyPlayedPrice = price ?? null;
+                } else if (conditionKey.includes('Moderately Played')) {
+                    latestModeratelyPlayedPrice = price ?? null;
+                } else if (conditionKey.includes('Heavily Played')) {
+                    latestHeavilyPlayedPrice = price ?? null;
+                } else if (conditionKey.includes('Damaged')) {
+                    latestDamagedPrice = price ?? null;
+                }
+            }
+        }
+    }
 
     await prisma.marketStats.upsert({
         where: { cardId: myCardId },
         update: {
-            tcgNearMintLatest: prices?.['Near Mint']?.price,
-            tcgLightlyPlayedLatest: prices?.['Lightly Played']?.price ?? null,
-            tcgModeratelyPlayedLatest: prices?.['Moderately Played']?.price ?? null,
-            tcgHeavilyPlayedLatest: prices?.['Heavily Played']?.price ?? null,
-            tcgDamagedLatest: prices?.['Damaged']?.price ?? null,
+            tcgNearMintLatest: latestNearMintPrice,
+            tcgLightlyPlayedLatest: latestLightlyPlayedPrice,
+            tcgModeratelyPlayedLatest: latestModeratelyPlayedPrice,
+            tcgHeavilyPlayedLatest: latestHeavilyPlayedPrice,
+            tcgDamagedLatest: latestDamagedPrice,
             tcgPlayerUpdatedAt: validTcgUpdatedAt
         },
         create: {
             cardId: myCardId,
-            tcgNearMintLatest: prices?.['Near Mint']?.price,
-            tcgLightlyPlayedLatest: prices?.['Lightly Played']?.price ?? null,
-            tcgModeratelyPlayedLatest: prices?.['Moderately Played']?.price ?? null,
-            tcgHeavilyPlayedLatest: prices?.['Heavily Played']?.price ?? null,
-            tcgDamagedLatest: prices?.['Damaged']?.price ?? null,
+            tcgNearMintLatest: latestNearMintPrice,
+            tcgLightlyPlayedLatest: latestLightlyPlayedPrice,
+            tcgModeratelyPlayedLatest: latestModeratelyPlayedPrice,
+            tcgHeavilyPlayedLatest: latestHeavilyPlayedPrice,
+            tcgDamagedLatest: latestDamagedPrice,
             tcgPlayerUpdatedAt: validTcgUpdatedAt ?? new Date()
         }
     });
@@ -336,7 +365,7 @@ async function main() {
             console.log(` ⚠️ INCOMPLETE: ${set.name} still has missing cards.`);
         }
 
-        const waitTime = Math.ceil(validApiCards.length / 10) + 2;
+        const waitTime = Math.ceil(validApiCards.length / 10) + 4;
         console.log(` ⏳ Cooling down for ${waitTime}s...`);
         await new Promise((resolve) => setTimeout(resolve, waitTime * 1000));
     }

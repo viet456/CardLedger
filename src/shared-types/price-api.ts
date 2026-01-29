@@ -24,13 +24,26 @@ export type ApiCard = {
         conditions: { [key: string]: { history: ApiHistoryEntry[] } | undefined };
     };
     prices?: {
+        market?: number;
+        low?: number;
+        primaryPrinting?: string;
+        lastUpdated?: Date | string;
+        variants?: {
+            [printingType: string]: {
+                [conditionName: string]: {
+                    price?: number | null;
+                    listings?: number | null;
+                    priceString?: string;
+                    lastUpdated?: Date | string;
+                };
+            };
+        };
+        // OLD structure (keeping for backwards compatibility if needed)
         conditions?: {
             [key: string]: {
-                // "Near Mint", "Lightly Played", etc
                 price?: number | null;
             };
         };
-        lastUpdated?: Date | string;
     };
 };
 
