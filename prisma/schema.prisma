@@ -76,6 +76,16 @@ model Card {
     resistances          Resistance[]
     convertedRetreatCost Int?
 
+    regulationMark String?
+    description    String? @db.Text
+
+    // Card variants
+    hasNormal       Boolean @default(true)
+    hasHolo         Boolean @default(false)
+    hasReverse      Boolean @default(false)
+    hasFirstEdition Boolean @default(false)
+    hasWPromo       Boolean @default(false)
+
     rules            String[]
     ancientTraitName String?
     ancientTraitText String?
@@ -120,6 +130,7 @@ model Card {
     @@index([name, id])
     @@index([pokedexNumberSort, id])
     @@index([releaseDate, id])
+    @@index([regulationMark])
 }
 
 model MarketStats {
