@@ -23,10 +23,24 @@ enum CardCondition {
     tcgDamaged
 }
 
+model Series {
+  id        String   @id 
+  name      String   // "Sword & Shield"
+  logo      String?
+  sets      Set[]   
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Set {
     id             String   @id
     name           String
     series         String
+
+    seriesId       String?
+    seriesRef      Series? @relation(fields: [seriesId], references: [id])
+
     tcgPlayerSetId String?  @unique // Pricing API deprecated
     tcgPlayerNumericId Int? @unique
     printedTotal   Int
