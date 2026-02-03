@@ -65,6 +65,7 @@ async function generateCardIndex() {
                 select: {
                     id: true,
                     name: true,
+                    total: true,
                     printedTotal: true,
                     logoImageKey: true,
                     symbolImageKey: true,
@@ -130,6 +131,8 @@ async function generateCardIndex() {
         const rarityId = card.rarity ? getOrCreateId(rarityMap, rarities, card.rarity.name) : null;
         const setId = getOrCreateId(setMap, sets, {
             ...card.set,
+            total: card.set.total,
+            printedTotal: card.set.printedTotal,
             releaseDate: card.set.releaseDate.toISOString().split('T')[0]
         });
 
