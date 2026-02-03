@@ -212,12 +212,13 @@ async function syncSeriesAndSets() {
         const details = await tcgdex.fetch('series', s.id);
         if (!details) continue;
         for (const set of details.sets) {
+            const correctedName = set.name.replace("Macdonald's", "McDonald's");
             await prisma.set.upsert({
                 where: { id: set.id },
                 create: {
                     id: set.id,
                     tcgdexId: set.id,
-                    name: set.name,
+                    name: correctedName,
                     series: s.name,
                     seriesId: s.id,
                     printedTotal: set.cardCount.official,
@@ -227,7 +228,10 @@ async function syncSeriesAndSets() {
                         : new Date(),
                     updatedAt: new Date()
                 },
-                update: { total: set.cardCount.total }
+                update: {
+                    total: set.cardCount.total,
+                    name: correctedName
+                }
             });
         }
     }
