@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { SetObject } from '@/src/shared-types/card-index';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../components/ui/tooltip';
 
 interface SetCardProps {
     set: SetObject;
@@ -14,7 +15,7 @@ export function SetCard({ set, isPriority = false }: SetCardProps) {
         <Link
             href={`/sets/${set.id}?sortBy=num&sortOrder=asc`}
             prefetch={null}
-            className='group flex flex-col items-center justify-between rounded-lg border bg-card p-4 text-card-foreground transition-colors hover:bg-muted/50'
+            className='group flex flex-col items-center justify-between rounded-lg border bg-card p-4 text-card-foreground transition-colors hover:bg-accent'
         >
             {/* Header */}
             <div className='flex w-full flex-col items-center text-center'>
@@ -56,7 +57,23 @@ export function SetCard({ set, isPriority = false }: SetCardProps) {
                     )}
                 </div>
                 <div className='mt-2 flex flex-col items-center justify-center text-sm text-muted-foreground'>
-                    <p>{set.printedTotal} cards</p>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <p
+                                    className='cursor-help'
+                                    aria-label={`${set.total} total cards in set, numbered to ${set.printedTotal}`}
+                                >
+                                    {set.total}/{set.printedTotal} cards
+                                </p>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p className='text-xs'>
+                                    {set.total} total cards / {set.printedTotal} numbered
+                                </p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                     <p>{set.releaseDate}</p>
                 </div>
             </div>
