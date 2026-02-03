@@ -202,17 +202,44 @@ async function syncSeriesAndSets() {
     console.log('🔄 Syncing Series and Sets...');
     const seriesList = await tcgdex.fetch('series');
     if (!seriesList) return;
+
     for (const s of seriesList) {
         if (BLOCKED_SERIES.includes(s.id)) continue;
+
         await prisma.series.upsert({
             where: { id: s.id },
             create: { id: s.id, name: s.name, logo: s.logo },
             update: { name: s.name }
         });
+
         const details = await tcgdex.fetch('series', s.id);
         if (!details) continue;
+
         for (const set of details.sets) {
+            // 🛠️ Spelling Fix
             const correctedName = set.name.replace("Macdonald's", "McDonald's");
+
+            // --- Image Sync Logic ---
+            let logoImageKey: string | null = null;
+            let symbolImageKey: string | null = null;
+            let imagesUpdated = false; // Flag to trigger re-optimization if needed
+
+            if (set.logo) {
+                const key = `sets/${set.id}-logo.png`;
+                // Try to upload. If returns true, it means we uploaded a NEW file.
+                const uploaded = await uploadImageToR2(set.logo + '.png', key);
+                logoImageKey = key;
+                if (uploaded) imagesUpdated = true;
+            }
+
+            if (set.symbol) {
+                const key = `sets/${set.id}-symbol.png`;
+                const uploaded = await uploadImageToR2(set.symbol + '.png', key);
+                symbolImageKey = key;
+                if (uploaded) imagesUpdated = true;
+            }
+            // ------------------------
+
             await prisma.set.upsert({
                 where: { id: set.id },
                 create: {
@@ -226,11 +253,18 @@ async function syncSeriesAndSets() {
                     releaseDate: (set as any).releaseDate
                         ? new Date((set as any).releaseDate)
                         : new Date(),
-                    updatedAt: new Date()
+                    updatedAt: new Date(),
+                    logoImageKey,
+                    symbolImageKey,
+                    logoOptimized: false,
+                    symbolOptimized: false
                 },
                 update: {
                     total: set.cardCount.total,
-                    name: correctedName
+                    name: correctedName,
+                    ...(logoImageKey ? { logoImageKey } : {}),
+                    ...(symbolImageKey ? { symbolImageKey } : {}),
+                    ...(imagesUpdated ? { logoOptimized: false, symbolOptimized: false } : {})
                 }
             });
         }

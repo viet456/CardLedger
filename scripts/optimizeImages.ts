@@ -48,9 +48,13 @@ async function optimizeImage(image: ImageToOptimize): Promise<void> {
         const originalBuffer = await downloadFromR2(image.r2Key);
 
         // Only process sizes <= sourceWidth
-        const metadata = await sharp(originalBuffer).metadata();
-        const sourceWidth = metadata.width || 0;
-        const validSizes = ALL_SIZES.filter((size) => size <= sourceWidth);
+        // const metadata = await sharp(originalBuffer).metadata();
+        // const sourceWidth = metadata.width || 0;
+        // let validSizes = ALL_SIZES.filter((size) => size <= sourceWidth);
+        // if (validSizes.length === 0) {
+        //     validSizes = [ALL_SIZES[0]];
+        // }
+        const validSizes = ALL_SIZES;
 
         // Run resizes in parallel
         const variantPromises = validSizes.map(async (width) => {
