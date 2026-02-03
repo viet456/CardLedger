@@ -104,7 +104,7 @@ async function main() {
     const dbSets = await prisma.set.findMany();
 
     for (const dbSet of dbSets) {
-        // 1. Find the TCGDex Match
+        // Find the TCGDex Match
         const normalizedDbName = dbSet.name.toLowerCase().replace(/[^a-z0-9]/g, '');
         const match = apiSets?.find(
             (s) => s.name.toLowerCase().replace(/[^a-z0-9]/g, '') === normalizedDbName
@@ -206,9 +206,8 @@ async function main() {
                     });
 
                     for (const card of cards) {
-                        const parts = card.id.split('-');
-                        const numberPart = parts[parts.length - 1];
-                        const newCardId = `${targetId}-${numberPart}`;
+                        const cardFromSdk = await tcgdex.fetch('cards', card.id);
+                        const newCardId = cardFromSdk?.id || card.id;
 
                         if (newCardId === card.id) continue;
 
