@@ -4,6 +4,7 @@ import { VirtuosoGrid, VirtuosoGridProps } from 'react-virtuoso';
 import { forwardRef, Ref, HTMLAttributes } from 'react';
 import { PokemonCard } from './PokemonCard';
 import { DenormalizedCard } from '@/src/shared-types/card-index';
+import { useScrollStore } from '@/src/lib/store/scrollStore';
 
 interface CardGridProps {
     cards: DenormalizedCard[];
@@ -40,12 +41,17 @@ const gridComponents: VirtuosoGridProps<DenormalizedCard, undefined>['components
 };
 
 export function CardGrid({ cards, totalCount }: CardGridProps) {
+    const { scrollIndex, setScrollIndex } = useScrollStore();
     return (
         <VirtuosoGrid
             useWindowScroll
             overscan={1500}
             totalCount={totalCount}
             components={gridComponents}
+            initialTopMostItemIndex={scrollIndex}
+            rangeChanged={({ startIndex }) => {
+                setScrollIndex(startIndex);
+            }}
             itemContent={(index) => {
                 const card = cards[index];
                 if (!card) return null;
