@@ -1,8 +1,8 @@
 import { DenormalizedCard } from '@/src/shared-types/card-index';
-import Link from 'next/link';
 import Image from 'next/image';
 import { format } from 'date-fns';
 import { CollectionControl } from '../portfolio/CollectionControl';
+import { TransitionLink } from '@/src/components/ui/TransitionLink';
 
 interface DashboardCard extends DenormalizedCard {
     collectionStats?: {
@@ -28,6 +28,10 @@ export function PokemonCard({
     entryId,
     collectionStats: propStats
 }: PokemonCardProps) {
+    const cardHref = card.img
+        ? `/cards/${card.id}?preview=${encodeURIComponent(card.img)}`
+        : `/cards/${card.id}`;
+
     const stats = propStats || card.collectionStats;
     const currentPrice = card.price || 0;
 
@@ -68,11 +72,7 @@ export function PokemonCard({
                 />
             </div>
 
-            <Link
-                href={`/cards/${card.id}`}
-                prefetch={true}
-                className='flex h-full w-full flex-col'
-            >
+            <TransitionLink href={cardHref} prefetch={true} className='flex h-full w-full flex-col'>
                 {card.img ? (
                     <div className='relative aspect-[2.5/3.5] w-full'>
                         <Image
@@ -83,6 +83,10 @@ export function PokemonCard({
                             sizes='192px'
                             loading={priority ? 'eager' : 'lazy'}
                             fetchPriority={priority ? 'high' : 'auto'}
+                            style={{
+                                viewTransitionName: `card-image-${card.id}`,
+                                viewTransitionClass: 'card-expand'
+                            }}
                         />
                         {/* Overlay Badge for Condition */}
                         {stats && (
@@ -161,7 +165,7 @@ export function PokemonCard({
                         </>
                     )}
                 </div>
-            </Link>
+            </TransitionLink>
         </div>
     );
 }

@@ -24,32 +24,32 @@ enum CardCondition {
 }
 
 model Series {
-  id        String   @id 
-  name      String   // "Sword & Shield"
-  logo      String?
-  sets      Set[]   
+    id   String  @id
+    name String // "Sword & Shield"
+    logo String?
+    sets Set[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 }
 
 model Set {
-    id             String   @id
-    tcgdexId       String? @unique
-    name           String
-    series         String
+    id       String  @id
+    tcgdexId String? @unique
+    name     String
+    series   String
 
-    seriesId       String?
-    seriesRef      Series? @relation(fields: [seriesId], references: [id])
+    seriesId  String?
+    seriesRef Series? @relation(fields: [seriesId], references: [id])
 
-    tcgPlayerSetId String?  @unique // Pricing API deprecated
-    tcgPlayerNumericId Int? @unique
-    printedTotal   Int
-    total          Int
-    ptcgoCode      String?
-    releaseDate    DateTime
-    updatedAt      DateTime
-    cards          Card[]
+    tcgPlayerSetId     String?  @unique // Pricing API deprecated
+    tcgPlayerNumericId Int?     @unique
+    printedTotal       Int
+    total              Int
+    ptcgoCode          String?
+    releaseDate        DateTime
+    updatedAt          DateTime
+    cards              Card[]
 
     // Flattened legalities using the enum
     unlimited LegalityStatus?
@@ -104,7 +104,7 @@ model Card {
     rules            String[]
     ancientTraitName String?
     ancientTraitText String?
-    set              Set    @relation(fields: [setId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+    set              Set      @relation(fields: [setId], references: [id], onDelete: Restrict, onUpdate: Cascade)
     setId            String
 
     rarity   Rarity? @relation(fields: [rarityId], references: [id])
