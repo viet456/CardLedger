@@ -5,8 +5,7 @@ import { useMemo, useEffect } from 'react';
 import { SortableKey } from '../src/services/pokemonCardValidator';
 import { useCardStore } from '@/src/lib/store/cardStore';
 import { useShallow } from 'zustand/react/shallow';
-
-// For filtering /cards page with Zustand/IDB stores
+import Fuse from 'fuse.js';
 
 interface UseCardFiltersProps {
     defaultSort?: {
@@ -15,34 +14,36 @@ interface UseCardFiltersProps {
     };
 }
 
+// Fuse options: create new instance on each filter selection to increase search query speeds
+const fuseOptions = {
+    keys: [
+        { name: 'n', weight: 0.7 },
+        { name: 'id', weight: 0.3 }
+    ],
+    useExtendedSearch: true,
+    minMatchCharLength: 1,
+    threshold: 0.3,
+    ignoreLocation: true
+};
+
 function intersectSets(setA: Set<string>, setB: Set<string>): Set<string> {
     const intersection = new Set<string>();
-    if (setA.size < setB.size) {
-        for (const elem of setA) {
-            if (setB.has(elem)) {
-                intersection.add(elem);
-            }
-        }
-    } else {
-        for (const elem of setB) {
-            if (setA.has(elem)) {
-                intersection.add(elem);
-            }
-        }
+    const [smaller, larger] = setA.size < setB.size ? [setA, setB] : [setB, setA];
+    
+    for (const elem of smaller) {
+        if (larger.has(elem)) intersection.add(elem);
     }
     return intersection;
 }
 
 export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
-    const { filters, setFilters, replaceFilters } = useSearchStore(
+    const { filters, setFilters } = useSearchStore(
         useShallow((state) => ({
             filters: state.filters,
-            setFilters: state.setFilters,
-            replaceFilters: state.replaceFilters
+            setFilters: state.setFilters
         }))
     );
 
-    // Filter indexes from cardStore
     const {
         cardMap,
         rarityIndex,
@@ -52,8 +53,7 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
         artistIndex,
         weaknessIndex,
         resistanceIndex,
-        sets, // We need this for sorting
-        fuseInstance
+        globalFuseInstance
     } = useCardStore(
         useShallow((state) => ({
             cardMap: state.cardMap,
@@ -64,8 +64,7 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
             artistIndex: state.artistIndex,
             weaknessIndex: state.weaknessIndex,
             resistanceIndex: state.resistanceIndex,
-            sets: state.sets,
-            fuseInstance: state.fuseInstance
+            globalFuseInstance: state.fuseInstance
         }))
     );
 
@@ -75,92 +74,90 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
         }
     }, [filters.sortBy, defaultSort, setFilters]);
 
-    const filteredCards = useMemo(() => {
-        if (!cardMap.size || !sets.length) return [];
-        // filtering
-        let baseSet = new Set<string>(cardMap.keys());
+    // Efficient Set Intersection
+    const candidateCards = useMemo(() => {
+        if (!cardMap.size) return [];
+        //const startTime = performance.now();
 
-        // If search-term, sort by relevance
-        if (filters.search && fuseInstance) {
-            // id searching on cards/sets
+        const activeFilterSets: Set<string>[] = [];
+        if (filters.rarity) activeFilterSets.push(rarityIndex.get(filters.rarity) || new Set());
+        if (filters.setId) activeFilterSets.push(setIndex.get(filters.setId) || new Set());
+        if (filters.type) activeFilterSets.push(typeIndex.get(filters.type) || new Set());
+        if (filters.subtype) activeFilterSets.push(subtypeIndex.get(filters.subtype) || new Set());
+        if (filters.artist) activeFilterSets.push(artistIndex.get(filters.artist) || new Set());
+        if (filters.weakness) activeFilterSets.push(weaknessIndex.get(filters.weakness) || new Set());
+        if (filters.resistance) activeFilterSets.push(resistanceIndex.get(filters.resistance) || new Set());
+
+        let results: NormalizedCard[];
+
+        if (activeFilterSets.length === 0) {
+            results = Array.from(cardMap.values());
+        } else {
+            // Check smaller set against largest set for fewer comparisons
+            activeFilterSets.sort((a, b) => a.size - b.size);
+            let candidateSet = activeFilterSets[0];
+            for (let i = 1; i < activeFilterSets.length; i++) {
+                candidateSet = intersectSets(candidateSet, activeFilterSets[i]);
+            }
+
+            results = [];
+            for (const id of candidateSet) {
+                const card = cardMap.get(id);
+                if (card) results.push(card);
+            }
+        }
+
+        // const endTime = performance.now();
+        // console.log(`[CandidateCards] Count: ${results.length} | Time: ${(endTime - startTime).toFixed(2)}ms`);
+        return results;
+    }, [
+        cardMap, 
+        filters.rarity, 
+        filters.setId, 
+        filters.type, 
+        filters.subtype, 
+        filters.artist, 
+        filters.weakness, 
+        filters.resistance,
+        rarityIndex, setIndex, typeIndex, subtypeIndex, artistIndex, weaknessIndex, resistanceIndex
+    ]);
+
+    // Fuse Instance Selection
+    const searchFuse = useMemo(() => {
+        if (candidateCards.length === cardMap.size && globalFuseInstance) {
+            // console.log('[SearchFuse] Using Global Fuse Instance');
+            return globalFuseInstance;
+        }
+
+        if (candidateCards.length === 0) return null;
+
+        //const startTime = performance.now();
+        const fuse = new Fuse(candidateCards, fuseOptions);
+        //const endTime = performance.now();
+        //console.log(`[SearchFuse] Built Local Fuse (${candidateCards.length} items) | Time: ${(endTime - startTime).toFixed(2)}ms`);
+        
+        return fuse;
+    }, [candidateCards, cardMap.size, globalFuseInstance]);
+
+    const filteredCards = useMemo(() => {
+        //const startTime = performance.now();
+        if (!cardMap.size) return [];
+
+        if (filters.search && searchFuse) {
             let searchTerm = filters.search;
             const idRegex = /^[a-z0-9]+(-[a-zA-Z0-9]+)$/i;
-            if (idRegex.test(searchTerm)) {
-                searchTerm = `=${searchTerm}`;
-            }
-            const searchResults = fuseInstance.search(searchTerm);
-            const relevantAndFiltered: NormalizedCard[] = [];
+            if (idRegex.test(searchTerm)) searchTerm = `=${searchTerm}`;
 
-            const raritySet = filters.rarity ? rarityIndex.get(filters.rarity) : null;
-            const setSet = filters.setId ? setIndex.get(filters.setId) : null;
-            const typeSet = filters.type ? typeIndex.get(filters.type) : null;
-            const subtypeSet = filters.subtype ? typeIndex.get(filters.subtype) : null;
-            const artistSet = filters.artist ? typeIndex.get(filters.artist) : null;
-            const weaknessSet = filters.weakness ? weaknessIndex.get(filters.weakness) : null;
-            const resistanceSet = filters.resistance
-                ? resistanceIndex.get(filters.resistance)
-                : null;
-
-            for (const result of searchResults) {
-                const card = result.item;
-                if (raritySet && !raritySet.has(card.id)) continue;
-                if (setSet && !setSet.has(card.id)) continue;
-                if (typeSet && !typeSet.has(card.id)) continue;
-                if (subtypeSet && !subtypeSet.has(card.id)) continue;
-                if (artistSet && !artistSet.has(card.id)) continue;
-                if (weaknessSet && !weaknessSet.has(card.id)) continue;
-                if (resistanceSet && !resistanceSet.has(card.id)) continue;
-
-                relevantAndFiltered.push(card);
-            }
-            return relevantAndFiltered;
-        } else {
-            baseSet = new Set<string>(cardMap.keys());
-
-            if (filters.rarity) {
-                baseSet = intersectSets(baseSet, rarityIndex.get(filters.rarity) || new Set());
-            }
-            if (filters.setId) {
-                baseSet = intersectSets(baseSet, setIndex.get(filters.setId) || new Set());
-            }
-            if (filters.type) {
-                baseSet = intersectSets(baseSet, typeIndex.get(filters.type) || new Set());
-            }
-            if (filters.subtype) {
-                baseSet = intersectSets(baseSet, subtypeIndex.get(filters.subtype) || new Set());
-            }
-            if (filters.artist) {
-                baseSet = intersectSets(baseSet, artistIndex.get(filters.artist) || new Set());
-            }
-            if (filters.weakness) {
-                baseSet = intersectSets(baseSet, weaknessIndex.get(filters.weakness) || new Set());
-            }
-            if (filters.resistance) {
-                baseSet = intersectSets(
-                    baseSet,
-                    resistanceIndex.get(filters.resistance) || new Set()
-                );
-            }
-
-            const results: NormalizedCard[] = [];
-            for (const id of baseSet) {
-                results.push(cardMap.get(id)!);
-            }
+            const searchResults = searchFuse.search(searchTerm);
+            const results = searchResults.map(r => r.item);
+            
+            // const endTime = performance.now();
+            // console.log(`[Filter] Search "${filters.search}" | Time: ${(endTime - startTime).toFixed(2)}ms`);
             return results;
         }
-    }, [
-        filters,
-        cardMap,
-        rarityIndex,
-        setIndex,
-        typeIndex,
-        subtypeIndex,
-        artistIndex,
-        weaknessIndex,
-        resistanceIndex,
-        sets,
-        fuseInstance
-    ]);
+
+        return candidateCards;
+    }, [filters.search, searchFuse, candidateCards, cardMap.size]);
 
     return { filteredCards };
 }
