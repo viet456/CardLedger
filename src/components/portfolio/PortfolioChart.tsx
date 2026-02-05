@@ -33,14 +33,16 @@ export function PortfolioChart({ initialData }: PortfolioChartProps) {
         return 'All';
     });
 
-    const now = new Date();
-    const cutoffs = {
-        '1m': new Date(new Date().setMonth(now.getMonth() - 1)),
-        '3m': new Date(new Date().setMonth(now.getMonth() - 3)),
-        '6m': new Date(new Date().setMonth(now.getMonth() - 6)),
-        '1y': new Date(new Date().setFullYear(now.getFullYear() - 1)),
-        YTD: new Date(now.getFullYear(), 0, 1)
-    };
+    const cutoffs = useMemo(() => {
+        const now = new Date();
+        return {
+            '1m': new Date(new Date().setMonth(now.getMonth() - 1)),
+            '3m': new Date(new Date().setMonth(now.getMonth() - 3)),
+            '6m': new Date(new Date().setMonth(now.getMonth() - 6)),
+            '1y': new Date(new Date().setFullYear(now.getFullYear() - 1)),
+            YTD: new Date(now.getFullYear(), 0, 1)
+        };
+    }, []);
 
     const filteredData = useMemo(() => {
         let startDate = new Date();
@@ -64,7 +66,7 @@ export function PortfolioChart({ initialData }: PortfolioChartProps) {
                 return initialData;
         }
         return initialData.filter((d) => new Date(d.date) >= startDate);
-    }, [initialData, activeRange]);
+    }, [initialData, activeRange, cutoffs]);
 
     useEffect(() => {
         if (!resolvedTheme || !chartRef.current) return;

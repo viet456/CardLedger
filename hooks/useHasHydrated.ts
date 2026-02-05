@@ -11,15 +11,13 @@ interface PersistedStore {
 }
 
 function useStoreHydration(store: PersistedStore): boolean {
-    const [isHydrated, setIsHydrated] = useState(false);
+    const [isHydrated, setIsHydrated] = useState(() => store.persist.hasHydrated());
 
     useEffect(() => {
         // A function to subscribe to the hydration event
         const unsubHydrate = store.persist.onHydrate(() => setIsHydrated(false));
         // A function to subscribe to the finish hydration event
         const unsubFinishHydration = store.persist.onFinishHydration(() => setIsHydrated(true));
-
-        setIsHydrated(store.persist.hasHydrated());
 
         return () => {
             unsubHydrate();

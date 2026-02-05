@@ -38,7 +38,6 @@ jobs:
               run: pnpm tsx scripts/populate.ts
               env:
                   DATABASE_URL: ${{ secrets.DATABASE_URL }}
-                  POKEMONTCG_API_KEY: ${{ secrets.POKEMONTCG_API_KEY }}
                   R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
                   R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
                   CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
