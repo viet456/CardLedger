@@ -3,6 +3,8 @@ import Image from 'next/image';
 import { format } from 'date-fns';
 import { CollectionControl } from '../portfolio/CollectionControl';
 import { TransitionLink } from '@/src/components/ui/TransitionLink';
+import { ResilientImage } from './ResilientImage';
+import r2ImageLoader from '@/src/lib/loader';
 
 interface DashboardCard extends DenormalizedCard {
     collectionStats?: {
@@ -73,33 +75,28 @@ export function PokemonCard({
             </div>
 
             <TransitionLink href={cardHref} prefetch={true} className='flex h-full w-full flex-col'>
-                {card.img ? (
-                    <div className='relative aspect-[2.5/3.5] w-full'>
-                        <Image
-                            src={card.img}
-                            alt={card.n}
-                            fill
-                            className='object-cover'
-                            sizes='192px'
-                            loading={priority ? 'eager' : 'lazy'}
-                            fetchPriority={priority ? 'high' : 'auto'}
-                            style={{
-                                viewTransitionName: `card-image-${card.id}`,
-                                viewTransitionClass: 'card-expand'
-                            }}
-                        />
-                        {/* Overlay Badge for Condition */}
-                        {stats && (
-                            <div className='absolute bottom-0 left-0 rounded-tr-lg bg-black/70 px-2 py-1 text-xs font-bold text-white'>
-                                {conditionLabel}
-                            </div>
-                        )}
-                    </div>
-                ) : (
-                    <div className='flex aspect-[2.5/3.5] w-full flex-col items-center justify-center rounded-lg bg-muted'>
-                        <p className='text-md text-muted-foreground'>No Image</p>
-                    </div>
-                )}
+                <div className='relative aspect-[2.5/3.5] w-full'>
+                    <ResilientImage
+                        loader={r2ImageLoader}
+                        src={card.img}
+                        alt={card.n}
+                        fill
+                        sizes='192px'
+                        className='object-cover'
+                        loading={priority ? 'eager' : 'lazy'}
+                        fetchPriority={priority ? 'high' : 'auto'}
+                        style={{
+                            viewTransitionName: `card-image-${card.id}`,
+                            viewTransitionClass: 'card-expand'
+                        }}
+                    />
+                    {/* Overlay Badge for Condition */}
+                    {stats && (
+                        <div className='absolute bottom-0 left-0 rounded-tr-lg bg-black/70 px-2 py-1 text-xs font-bold text-white'>
+                            {conditionLabel}
+                        </div>
+                    )}
+                </div>
 
                 {/* --- INFO AREA --- */}
                 <div className='flex flex-col gap-1 p-3'>
