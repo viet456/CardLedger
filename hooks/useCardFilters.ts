@@ -29,7 +29,7 @@ const fuseOptions = {
 function intersectSets(setA: Set<string>, setB: Set<string>): Set<string> {
     const intersection = new Set<string>();
     const [smaller, larger] = setA.size < setB.size ? [setA, setB] : [setB, setA];
-    
+
     for (const elem of smaller) {
         if (larger.has(elem)) intersection.add(elem);
     }
@@ -85,8 +85,10 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
         if (filters.type) activeFilterSets.push(typeIndex.get(filters.type) || new Set());
         if (filters.subtype) activeFilterSets.push(subtypeIndex.get(filters.subtype) || new Set());
         if (filters.artist) activeFilterSets.push(artistIndex.get(filters.artist) || new Set());
-        if (filters.weakness) activeFilterSets.push(weaknessIndex.get(filters.weakness) || new Set());
-        if (filters.resistance) activeFilterSets.push(resistanceIndex.get(filters.resistance) || new Set());
+        if (filters.weakness)
+            activeFilterSets.push(weaknessIndex.get(filters.weakness) || new Set());
+        if (filters.resistance)
+            activeFilterSets.push(resistanceIndex.get(filters.resistance) || new Set());
 
         let results: NormalizedCard[];
 
@@ -111,15 +113,21 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
         // console.log(`[CandidateCards] Count: ${results.length} | Time: ${(endTime - startTime).toFixed(2)}ms`);
         return results;
     }, [
-        cardMap, 
-        filters.rarity, 
-        filters.setId, 
-        filters.type, 
-        filters.subtype, 
-        filters.artist, 
-        filters.weakness, 
+        cardMap,
+        filters.rarity,
+        filters.setId,
+        filters.type,
+        filters.subtype,
+        filters.artist,
+        filters.weakness,
         filters.resistance,
-        rarityIndex, setIndex, typeIndex, subtypeIndex, artistIndex, weaknessIndex, resistanceIndex
+        rarityIndex,
+        setIndex,
+        typeIndex,
+        subtypeIndex,
+        artistIndex,
+        weaknessIndex,
+        resistanceIndex
     ]);
 
     // Fuse Instance Selection
@@ -135,7 +143,7 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
         const fuse = new Fuse(candidateCards, fuseOptions);
         //const endTime = performance.now();
         //console.log(`[SearchFuse] Built Local Fuse (${candidateCards.length} items) | Time: ${(endTime - startTime).toFixed(2)}ms`);
-        
+
         return fuse;
     }, [candidateCards, cardMap.size, globalFuseInstance]);
 
@@ -149,8 +157,8 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
             if (idRegex.test(searchTerm)) searchTerm = `=${searchTerm}`;
 
             const searchResults = searchFuse.search(searchTerm);
-            const results = searchResults.map(r => r.item);
-            
+            const results = searchResults.map((r) => r.item);
+
             // const endTime = performance.now();
             // console.log(`[Filter] Search "${filters.search}" | Time: ${(endTime - startTime).toFixed(2)}ms`);
             return results;
