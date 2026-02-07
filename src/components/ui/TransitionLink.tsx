@@ -23,6 +23,13 @@ export function TransitionLink({ children, href, ...props }: TransitionLinkProps
             router.push(href.toString());
             return;
         }
+        
+        // Fallback to standard instant navigation for iOS/Mac Safari
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+        if (isSafari) {
+            router.push(href.toString());
+            return;
+        }
 
         document.startViewTransition(async () => {
             router.push(href.toString());

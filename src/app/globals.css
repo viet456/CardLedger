@@ -131,14 +131,7 @@
 
 ::view-transition-old(.card-expand),
 ::view-transition-new(.card-expand) {
-    animation: none !important;
-    opacity: 1 !important;
-    mix-blend-mode: normal !important;
     height: 100%;
     width: 100%;
     object-fit: cover;
-}
-
-::view-transition-new(.card-expand) {
-    opacity: 0 !important;
 }
