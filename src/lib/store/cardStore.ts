@@ -7,7 +7,7 @@ import {
     LookupTables,
     FullCardData
 } from '@/src/shared-types/card-index';
-import Fuse from 'fuse.js';
+import uFuzzy from '@leeoniya/ufuzzy';
 
 const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
 
@@ -43,19 +43,38 @@ export type CardStoreState = LookupTables & {
     weaknessIndex: IndexMap;
     resistanceIndex: IndexMap;
 
-    fuseInstance: Fuse<NormalizedCard> | null;
+    ufInstance: uFuzzy | null;
+    searchHaystack: string[];
 };
 
-const fuseOptions = {
-    // Search by card name ('n') and card ID ('id')
-    keys: [
-        { name: 'n', weight: 0.7 }, // Give name a higher weight
-        { name: 'id', weight: 0.3 }
-    ],
-    useExtendedSearch: true,
-    minMatchCharLength: 1,
-    threshold: 0.3,
-    ignoreLocation: true
+// Relevance sort: shortest matches first
+const customSort = (info: any, haystack: string[], needle: string) => {
+    const { idx, start } = info;
+    const order = new Array(idx.length);
+    for (let i = 0; i < idx.length; i++) order[i] = i;
+
+    order.sort((a, b) => {
+        // Prioritize starts-with (lower start index is better)
+        if (start[a] !== start[b]) {
+            return start[a] - start[b];
+        }
+        
+        // If start is tied, prioritize shortest string (closer to exact match)
+        const lenA = haystack[idx[a]].length;
+        const lenB = haystack[idx[b]].length;
+        
+        return lenA - lenB;
+    });
+
+    return order;
+};
+
+const ufOptions = {
+    // intraMode: 1 allows for partial matches inside words (crucial for IDs like 'sv1-001')
+    intraMode: 1,  
+    // Optimize for standard latin characters + numbers
+    intraChars: "[a-z0-9]", 
+    sort: customSort
 };
 
 // Helper function to build search indexes
@@ -71,6 +90,8 @@ function buildIndexes(fullData: FullCardData) {
 
     const { rarities, sets, types, subtypes, artists } = fullData;
 
+    const searchHaystack: string[] = [];
+
     const addToIndex = (index: IndexMap, key: string, cardId: string) => {
         if (!index.has(key)) {
             index.set(key, new Set());
@@ -79,6 +100,8 @@ function buildIndexes(fullData: FullCardData) {
     };
     for (const card of fullData.cards) {
         cardMap.set(card.id, card);
+        searchHaystack.push(`${card.n} ${card.id}`);
+
         if (card.r !== null) {
             addToIndex(rarityIndex, rarities[card.r], card.id);
         }
@@ -102,9 +125,9 @@ function buildIndexes(fullData: FullCardData) {
         }
     }
 
-    //console.log('[CardStore]: Building Fuse.js index...');
-    const fuseInstance = new Fuse(fullData.cards, fuseOptions);
-    ////console.log('[CardStore]: ✅ Fuse.js index built.');
+    //console.log('[CardStore]: Building uFuzzy index...');
+    const ufInstance = new uFuzzy(ufOptions);    
+    //console.log('[CardStore]: ✅ uFuzzy index built.');
 
     return {
         cardMap,
@@ -115,7 +138,8 @@ function buildIndexes(fullData: FullCardData) {
         artistIndex,
         weaknessIndex,
         resistanceIndex,
-        fuseInstance
+        ufInstance,
+        searchHaystack
     };
 }
 
@@ -152,7 +176,8 @@ export const useCardStore = create<CardStoreState>()(
             rules: [],
             weaknesses: [],
             resistances: [],
-            fuseInstance: null,
+            ufInstance: null,
+            searchHaystack: [],
             version: null,
             status: 'idle',
             cardMap: new Map(),
@@ -258,7 +283,8 @@ export const useCardStore = create<CardStoreState>()(
                     state.artistIndex = indexes.artistIndex;
                     state.weaknessIndex = indexes.weaknessIndex;
                     state.resistanceIndex = indexes.resistanceIndex;
-                    state.fuseInstance = indexes.fuseInstance;
+                    state.ufInstance = indexes.ufInstance;
+                    state.searchHaystack = indexes.searchHaystack;
                     //console.log('[CardStore]: ✅ Indexes built from rehydrated data.');
                 }
             }
