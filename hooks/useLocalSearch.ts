@@ -13,22 +13,34 @@ export interface SearchSuggestion {
 }
 
 export function useLocalSearch(query: string) {
-    const { fuseInstance, sets } = useCardStore(
+    const { ufInstance, searchHaystack, cards, sets } = useCardStore(
         useShallow((state) => ({
-            fuseInstance: state.fuseInstance,
+            ufInstance: state.ufInstance,
+            searchHaystack: state.searchHaystack,
+            cards: state.cards,
             sets: state.sets
         }))
     );
 
     const suggestions = useMemo(() => {
-        if (!query || query.length === 0 || !fuseInstance || sets.length === 0) {
+        if (!query || query.length === 0 || !ufInstance || searchHaystack.length === 0) {
             return [];
         }
 
-        const results = fuseInstance.search(query, { limit: 5 });
+        const [idxs, info, order] = ufInstance.search(searchHaystack, query);
+        const topResults: number[] = [];
+        if (order && info) {
+            for (let i = 0; i < Math.min(5, order.length); i++) {
+                topResults.push(info.idx[order[i]]);
+            }
+        } else if (idxs) {
+            for (let i = 0; i < Math.min(5, idxs.length); i++) {
+                topResults.push(idxs[i]);
+            }
+        }
 
-        return results.map((result) => {
-            const card = result.item;
+        return topResults.map((cardIndex) => {
+            const card = cards[cardIndex];
             const setInfo = sets[card.s];
 
             return {
@@ -41,10 +53,10 @@ export function useLocalSearch(query: string) {
                 }
             };
         });
-    }, [query, fuseInstance, sets]);
+    }, [query, ufInstance, searchHaystack, cards, sets]);
 
     return {
         suggestions,
-        isReady: !!fuseInstance && sets.length > 0
+        isReady: !!ufInstance && searchHaystack.length > 0
     };
 }

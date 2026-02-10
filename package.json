@@ -29,6 +29,7 @@
     "dependencies": {
         "@aws-sdk/client-s3": "^3.980.0",
         "@aws-sdk/lib-storage": "^3.980.0",
+        "@leeoniya/ufuzzy": "^1.0.19",
         "@marsidev/react-turnstile": "^1.4.1",
         "@neondatabase/serverless": "^1.0.2",
         "@prisma/client": "^6.19.2",
@@ -63,7 +64,6 @@
         "clsx": "^2.1.1",
         "date-fns": "^4.1.0",
         "dotenv": "^17.2.3",
-        "fuse.js": "^7.1.0",
         "idb-keyval": "^6.2.2",
         "install": "^0.13.0",
         "lodash-es": "^4.17.23",

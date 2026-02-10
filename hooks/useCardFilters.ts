@@ -5,7 +5,6 @@ import { useMemo, useEffect } from 'react';
 import { SortableKey } from '../src/services/pokemonCardValidator';
 import { useCardStore } from '@/src/lib/store/cardStore';
 import { useShallow } from 'zustand/react/shallow';
-import Fuse from 'fuse.js';
 
 interface UseCardFiltersProps {
     defaultSort?: {
@@ -13,18 +12,6 @@ interface UseCardFiltersProps {
         sortOrder: 'asc' | 'desc';
     };
 }
-
-// Fuse options: create new instance on each filter selection to increase search query speeds
-const fuseOptions = {
-    keys: [
-        { name: 'n', weight: 0.7 },
-        { name: 'id', weight: 0.3 }
-    ],
-    useExtendedSearch: true,
-    minMatchCharLength: 1,
-    threshold: 0.3,
-    ignoreLocation: true
-};
 
 function intersectSets(setA: Set<string>, setB: Set<string>): Set<string> {
     const intersection = new Set<string>();
@@ -45,6 +32,7 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
     );
 
     const {
+        cards,
         cardMap,
         rarityIndex,
         setIndex,
@@ -53,9 +41,11 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
         artistIndex,
         weaknessIndex,
         resistanceIndex,
-        globalFuseInstance
+        ufInstance,
+        searchHaystack
     } = useCardStore(
         useShallow((state) => ({
+            cards: state.cards,
             cardMap: state.cardMap,
             rarityIndex: state.rarityIndex,
             setIndex: state.setIndex,
@@ -64,7 +54,8 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
             artistIndex: state.artistIndex,
             weaknessIndex: state.weaknessIndex,
             resistanceIndex: state.resistanceIndex,
-            globalFuseInstance: state.fuseInstance
+            ufInstance: state.ufInstance,
+            searchHaystack: state.searchHaystack
         }))
     );
 
@@ -93,7 +84,7 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
         let results: NormalizedCard[];
 
         if (activeFilterSets.length === 0) {
-            results = Array.from(cardMap.values());
+            results = cards;
         } else {
             // Check smaller set against largest set for fewer comparisons
             activeFilterSets.sort((a, b) => a.size - b.size);
@@ -109,10 +100,11 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
             }
         }
 
-        // const endTime = performance.now();
-        // console.log(`[CandidateCards] Count: ${results.length} | Time: ${(endTime - startTime).toFixed(2)}ms`);
+        //const endTime = performance.now();
+        //console.log(`[CandidateCards] Count: ${results.length} | Time: ${(endTime - startTime).toFixed(2)}ms`);
         return results;
     }, [
+        cards,
         cardMap,
         filters.rarity,
         filters.setId,
@@ -130,42 +122,39 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
         resistanceIndex
     ]);
 
-    // Fuse Instance Selection
-    const searchFuse = useMemo(() => {
-        if (candidateCards.length === cardMap.size && globalFuseInstance) {
-            // console.log('[SearchFuse] Using Global Fuse Instance');
-            return globalFuseInstance;
-        }
-
-        if (candidateCards.length === 0) return null;
-
-        //const startTime = performance.now();
-        const fuse = new Fuse(candidateCards, fuseOptions);
-        //const endTime = performance.now();
-        //console.log(`[SearchFuse] Built Local Fuse (${candidateCards.length} items) | Time: ${(endTime - startTime).toFixed(2)}ms`);
-
-        return fuse;
-    }, [candidateCards, cardMap.size, globalFuseInstance]);
-
     const filteredCards = useMemo(() => {
+        if (!filters.search || !ufInstance || !searchHaystack.length) {
+            return candidateCards;
+        }
         //const startTime = performance.now();
-        if (!cardMap.size) return [];
+        const query = filters.search;
+        const [idxs, info, order] = ufInstance.search(searchHaystack, query);
+        let searchResults: NormalizedCard[] = [];
 
-        if (filters.search && searchFuse) {
-            let searchTerm = filters.search;
-            const idRegex = /^[a-z0-9]+(-[a-zA-Z0-9]+)$/i;
-            if (idRegex.test(searchTerm)) searchTerm = `=${searchTerm}`;
-
-            const searchResults = searchFuse.search(searchTerm);
-            const results = searchResults.map((r) => r.item);
-
-            // const endTime = performance.now();
-            // console.log(`[Filter] Search "${filters.search}" | Time: ${(endTime - startTime).toFixed(2)}ms`);
-            return results;
+        if (order && info) {
+            for (let i = 0; i < order.length; i++) {
+                const index = info.idx[order[i]];
+                searchResults.push(cards[index]);
+            }
+        } else if (idxs) {
+            // Otherwise just mapped indices
+            for (let i = 0; i < idxs.length; i++) {
+                searchResults.push(cards[idxs[i]]);
+            }
         }
 
-        return candidateCards;
-    }, [filters.search, searchFuse, candidateCards, cardMap.size]);
+        let finalResults = searchResults;
+        if (candidateCards.length !== cards.length) {
+            // Create a Set of allowed IDs for O(1) lookup
+            const allowedIds = new Set(candidateCards.map(c => c.id));
+            finalResults = searchResults.filter(c => allowedIds.has(c.id));
+        }
+
+        //const endTime = performance.now();
+        //console.log(`[uFuzzy Search] Query: "${query}" | Results: ${finalResults.length} | Time: ${(endTime - startTime).toFixed(2)}ms`);
+
+        return finalResults;
+        }, [filters.search, ufInstance, searchHaystack, candidateCards, cards]);
 
     return { filteredCards };
 }
