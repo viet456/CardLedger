@@ -1,5 +1,4 @@
 import { DenormalizedCard } from '@/src/shared-types/card-index';
-import Image from 'next/image';
 import { format } from 'date-fns';
 import { CollectionControl } from '../portfolio/CollectionControl';
 import { TransitionLink } from '@/src/components/ui/TransitionLink';
@@ -45,7 +44,7 @@ export function PokemonCard({
     const displayPercent = Math.abs(rawPercent).toFixed(0);
     const isNeutral = displayPercent === '0';
 
-    let trendBadgeClass = 'badge-trend-neutral'; // Default: Gray / Right Arrow
+    let trendBadgeClass = 'badge-trend-neutral';
     let trendTextClass = 'text-foreground';
     let trendIcon = '→';
 
@@ -75,6 +74,7 @@ export function PokemonCard({
             </div>
 
             <TransitionLink href={cardHref} prefetch={true} className='flex h-full w-full flex-col'>
+                {/* Image Area - Aspect Ratio is handled here */}
                 <div className='relative aspect-[2.5/3.5] w-full'>
                     <ResilientImage
                         loader={r2ImageLoader}
@@ -90,7 +90,6 @@ export function PokemonCard({
                             viewTransitionClass: 'card-expand'
                         }}
                     />
-                    {/* Overlay Badge for Condition */}
                     {stats && (
                         <div className='absolute bottom-0 left-0 rounded-tr-lg bg-black/70 px-2 py-1 text-xs font-bold text-white'>
                             {conditionLabel}
@@ -99,9 +98,11 @@ export function PokemonCard({
                 </div>
 
                 {/* --- INFO AREA --- */}
-                <div className='flex flex-col gap-1 p-3'>
+                {/* Enforce fixed height (h-[5.5rem] / 88px) to prevent layout shift */}
+                <div className='flex h-[5.5rem] flex-col gap-1 p-3'>
                     {/* Header: Name + Trend Badge */}
                     <div className='flex items-start justify-between gap-2'>
+                        {/* Name always truncates to 1 line */}
                         <p className='truncate text-sm font-bold leading-snug'>{card.n}</p>
                         {stats && (
                             <span
@@ -114,8 +115,8 @@ export function PokemonCard({
 
                     {stats ? (
                         // --- DASHBOARD MODE (Stacked Financials) ---
-                        <div className='mt-2 flex items-end justify-between border-t border-border/50 pt-2'>
-                            {/* Left: Metadata */}
+                        // mt-auto pushes this to the bottom of the 88px container
+                        <div className='mt-auto flex items-end justify-between border-t border-border/50 pt-2'>
                             <div className='flex flex-col gap-0.5'>
                                 <span className='text-[10px] uppercase tracking-wider text-muted-foreground'>
                                     Acquired
@@ -125,16 +126,12 @@ export function PokemonCard({
                                 </span>
                             </div>
 
-                            {/* Right: Financial Cluster */}
                             <div className='flex flex-col items-end gap-0.5'>
-                                {/* Value (Headline) */}
                                 <div className='flex items-baseline gap-1'>
                                     <span className={`text-sm font-bold ${trendTextClass}`}>
                                         ${currentPrice.toFixed(2)}
                                     </span>
                                 </div>
-
-                                {/* Cost (Context) */}
                                 <div className='flex items-baseline gap-1'>
                                     <span className='text-[10px] text-muted-foreground'>Cost:</span>
                                     <span className='text-xs text-muted-foreground'>
@@ -145,8 +142,12 @@ export function PokemonCard({
                         </div>
                     ) : (
                         // --- PUBLIC MODE (Standard Layout) ---
-                        <>
-                            <p className='text-xs text-muted-foreground'>{card.set.name}</p>
+                        <div className='flex flex-grow flex-col justify-between'>
+                            {/* Add truncate to set name so it never wraps to 2 lines */}
+                            <p className='truncate text-xs text-muted-foreground'>
+                                {card.set.name}
+                            </p>
+                            
                             <div className='mt-1 flex items-end justify-between'>
                                 <p className='text-xs text-muted-foreground'>
                                     {card.num}/{card.set.printedTotal}
@@ -159,7 +160,7 @@ export function PokemonCard({
                                     <p className='text-sm text-muted-foreground'>N/A</p>
                                 )}
                             </div>
-                        </>
+                        </div>
                     )}
                 </div>
             </TransitionLink>
