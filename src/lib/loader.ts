@@ -30,9 +30,9 @@ export default function r2ImageLoader({
         cleanPath = cleanPath.slice(1);
     }
 
-    // Strip the extension (eg .png, .jpg)
-    // This turns "cards/xy1-1.png" into "cards/xy1-1"
-    const pathWithoutExtension = cleanPath.replace(/\.[^/.]+$/, '');
+    // Only strips actual image extensions
+    // This allows IDs like "me02.5-001" to pass through unharmed
+    const pathWithoutExtension = cleanPath.replace(/\.(png|jpg|jpeg|webp|avif|gif)$/i, '');
 
     // Construct the final optimized URL
     // Result: https://assets.cardledger.io/optimized/cards/xy1-1/640.avif

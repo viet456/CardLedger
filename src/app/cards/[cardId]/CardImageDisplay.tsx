@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import r2ImageLoader from '@/src/lib/loader';
 
 const FALLBACK_IMAGE = '/images/card-placeholder.avif';
@@ -15,6 +15,16 @@ interface CardImageDisplayProps {
 export function CardImageDisplay({ img, name, id }: CardImageDisplayProps) {
     const [isHighResLoaded, setIsHighResLoaded] = useState(false);
     const [hasError, setHasError] = useState(false);
+
+    useEffect(() => {
+        // If we have the preview param, clean it up from the URL bar
+        // without refreshing the page
+        if (typeof window !== 'undefined' && window.location.search.includes('preview=')) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('preview');
+            window.history.replaceState({}, '', url);
+        }
+    }, []);
 
     if (!img || hasError) {
         return (
@@ -41,7 +51,6 @@ export function CardImageDisplay({ img, name, id }: CardImageDisplayProps) {
                 fill
                 sizes='192px'
                 className='object-cover'
-                // If this fails, flip the master switch
                 onError={() => setHasError(true)}
             />
 
