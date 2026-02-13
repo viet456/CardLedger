@@ -26,7 +26,16 @@ export async function getCachedSetData(setId: string) {
                             cost: { include: { type: true } }
                         }
                     },
-                    marketStats: true,
+                    marketStats: {
+                        select: {
+                            tcgNearMintLatest: true,
+                            tcgNormalLatest: true,
+                            tcgHoloLatest: true,
+                            tcgReverseLatest: true,
+                            tcgFirstEditionLatest: true,
+                            tcgPlayerUpdatedAt: true,
+                        }
+                    },
                     set: true
                 }
             }
@@ -46,11 +55,9 @@ export async function getCachedSetData(setId: string) {
         ptcgoCode: setWithCards.ptcgoCode
     };
 
-    // Transform the data (keeping your existing logic)
     const denormalizedCards = setWithCards.cards.map((card) =>
         mapPrismaCardToDenormalized(card, setInfo)
     );
-    // Return the shape your page expects
     return {
         setInfo: setInfo,
         cards: denormalizedCards

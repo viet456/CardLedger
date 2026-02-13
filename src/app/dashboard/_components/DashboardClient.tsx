@@ -48,7 +48,7 @@ export function DashboardClient() {
                 collectionStats: {
                     cost: Number(entry.purchasePrice), // Safe cast
                     acquiredAt: new Date(entry.createdAt),
-                    condition: entry.condition
+                    variant: entry.variant
                 }
             }));
     }, [entries]);
@@ -65,16 +65,10 @@ export function DashboardClient() {
                         ? {
                               ...entry.card.marketStats,
                               tcgNearMintLatest: toNum(entry.card.marketStats.tcgNearMintLatest),
-                              tcgLightlyPlayedLatest: toNum(
-                                  entry.card.marketStats.tcgLightlyPlayedLatest
-                              ),
-                              tcgModeratelyPlayedLatest: toNum(
-                                  entry.card.marketStats.tcgModeratelyPlayedLatest
-                              ),
-                              tcgHeavilyPlayedLatest: toNum(
-                                  entry.card.marketStats.tcgHeavilyPlayedLatest
-                              ),
-                              tcgDamagedLatest: toNum(entry.card.marketStats.tcgDamagedLatest)
+                              tcgNormalLatest: toNum(entry.card.marketStats.tcgNormalLatest),
+                              tcgHoloLatest: toNum(entry.card.marketStats.tcgHoloLatest),
+                              tcgReverseLatest: toNum(entry.card.marketStats.tcgReverseLatest),
+                              tcgFirstEditionLatest: toNum(entry.card.marketStats.tcgFirstEditionLatest),
                           }
                         : null
                 }

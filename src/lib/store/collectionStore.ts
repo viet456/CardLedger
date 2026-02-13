@@ -1,20 +1,31 @@
 import { create } from 'zustand/react';
 import { persist, PersistStorage, StorageValue } from 'zustand/middleware';
 import { get, set, del } from 'idb-keyval';
-import { CollectionEntry } from '@prisma/client';
+import { CollectionEntry, CardVariant } from '@prisma/client';
 import { trpcClient } from '@/src/utils/trpc';
+import { toast } from 'sonner';
+
+export type FrontendCollectionEntry = Omit<CollectionEntry, 'purchasePrice'> & {
+    purchasePrice: number;
+};
 
 type PersistedState = {
     userId: string | null;
-    entries: CollectionEntry[];
+    entries: FrontendCollectionEntry[];
     lastSynced: number | null; // Timestamp from server
     version: string | null; // Hash or timestamp
+};
+
+type CollectionEntryInput = {
+    cardId: string;
+    purchasePrice: number; // UI sends a number
+    variant?: CardVariant;
 };
 
 export type CollectionStoreState = PersistedState & {
     status: 'idle' | 'loading' | 'ready_from_cache' | 'ready_from_network' | 'error';
     initialize: (userId: string) => Promise<void>;
-    addEntry: (entry: Omit<CollectionEntry, 'id' | 'createdAt' | 'userId'>) => Promise<void>;
+    addEntry: (entry: CollectionEntryInput) => Promise<void>;    
     updateEntry: (entryId: string, updates: Partial<CollectionEntry>) => Promise<void>;
     removeEntry: (entryId: string) => Promise<void>;
 };
@@ -82,13 +93,19 @@ export const useCollectionStore = create<CollectionStoreState>()(
                     //     `[CollectionStore]: ✅ Loaded ${serverEntries.length} entries from network`
                     // );
 
+                    const mappedEntries: FrontendCollectionEntry[] = serverEntries.map(e => ({
+                        ...e,
+                        purchasePrice: Number(e.purchasePrice)
+                    }));
+
                     set({
                         userId,
-                        entries: serverEntries,
+                        entries: mappedEntries,
                         lastSynced: serverTimestamp,
                         version: `${serverTimestamp}`,
                         status: 'ready_from_network'
                     });
+
                 } catch (error) {
                     //console.error('[CollectionStore]: ❌ Error during initialization:', error);
 
@@ -107,12 +124,13 @@ export const useCollectionStore = create<CollectionStoreState>()(
                 if (!currentUserId) {
                     throw new Error('Cannot add entry: user not initialized');
                 }
-                const optimisticEntry = {
-                    ...entry,
+                const optimisticEntry: FrontendCollectionEntry = {
                     id: tempId,
-                    createdAt: new Date(),
                     userId: currentUserId,
-                    variantName: entry.variantName ?? null
+                    createdAt: new Date(),
+                    cardId: entry.cardId,
+                    purchasePrice: entry.purchasePrice, 
+                    variant: entry.variant || 'Normal',
                 };
 
                 // Optimistic update
@@ -123,13 +141,18 @@ export const useCollectionStore = create<CollectionStoreState>()(
                 try {
                     const newEntry = await trpcClient.collection.addToCollection.mutate({
                         cardId: entry.cardId,
-                        purchasePrice: entry.purchasePrice,
-                        condition: entry.condition
+                        purchasePrice: entry.purchasePrice, 
+                        variant: entry.variant || 'Normal'
                     });
+                    
+                    const mappedNewEntry: FrontendCollectionEntry = {
+                        ...newEntry,
+                        purchasePrice: Number(newEntry.purchasePrice)
+                    };
 
                     // Replace temp(ui) entry with real entry from server
                     set((state) => ({
-                        entries: state.entries.map((e) => (e.id === tempId ? newEntry : e)),
+                        entries: state.entries.map((e) => (e.id === tempId ? mappedNewEntry : e)),
                         lastSynced: Date.now()
                     }));
                     //console.log('[CollectionStore]: ✅ Entry added successfully');
@@ -145,23 +168,36 @@ export const useCollectionStore = create<CollectionStoreState>()(
 
             updateEntry: async (entryId, updates) => {
                 const previousEntries = get().entries;
+                const cleanUpdates = {
+                    ...updates,
+                    purchasePrice: updates.purchasePrice !== undefined 
+                        ? Number(updates.purchasePrice) 
+                        : undefined
+                };
 
                 // Optimistic update
-                set((state) => ({
-                    entries: state.entries.map((e) => (e.id === entryId ? { ...e, ...updates } : e))
+                set((state: CollectionStoreState) => ({
+                    entries: state.entries.map((e) => {
+                        if (e.id === entryId) {
+                            return { ...e, ...cleanUpdates } as FrontendCollectionEntry;
+                        }
+                        return e;
+                    })
                 }));
 
                 try {
+                    const { purchasePrice, variant, createdAt } = cleanUpdates;
+
                     await trpcClient.collection.updateEntry.mutate({
                         entryId,
-                        ...updates
+                        purchasePrice,
+                        variant,
+                        createdAt
                     });
 
-                    //console.log('[CollectionStore]: ✅ Entry updated successfully');
                     set({ lastSynced: Date.now() });
                 } catch (error) {
-                    // Rollback
-                    //console.error('[CollectionStore]: ❌ Failed to update entry:', error);
+                    toast.error('Failed to update entry');
                     set({ entries: previousEntries });
                     throw error;
                 }

@@ -1,10 +1,10 @@
 export type PriceHistoryDataPoint = {
     timestamp: Date | string;
     tcgNearMint: number | null;
-    tcgLightlyPlayed: number | null;
-    tcgModeratelyPlayed: number | null;
-    tcgHeavilyPlayed: number | null;
-    tcgDamaged: number | null;
+    tcgNormal: number | null;
+    tcgHolo: number | null;
+    tcgReverse: number | null;
+    tcgFirstEdition: number | null;
 };
 
 export type MarketStats = {
@@ -20,6 +20,15 @@ export type ApiHistoryEntry = {
 export type ApiCard = {
     cardNumber: string | number;
     name: string;
+    printingsAvailable?: string[];
+    variants?: {
+        [variantName: string]: {
+            printing: string;
+            marketPrice: number | null;
+            lowPrice: number | null;
+            conditionUsed?: string; // "Near Mint"
+        };
+    };
     priceHistory: {
         conditions: { [key: string]: { history: ApiHistoryEntry[] } | undefined };
     };
@@ -38,12 +47,6 @@ export type ApiCard = {
                 };
             };
         };
-        // OLD structure (keeping for backwards compatibility if needed)
-        conditions?: {
-            [key: string]: {
-                price?: number | null;
-            };
-        };
     };
 };
 
@@ -51,42 +54,23 @@ export type PriceHistoryDbRow = {
     cardId: string;
     timestamp: Date;
     tcgNearMint?: number | null;
-    tcgLightlyPlayed?: number | null;
-    tcgModeratelyPlayed?: number | null;
-    tcgHeavilyPlayed?: number | null;
-    tcgDamaged?: number | null;
-    tcgNearMintVolume?: number | null;
-    tcgLightlyPlayedVolume?: number | null;
-    tcgModeratelyPlayedVolume?: number | null;
-    tcgHeavilyPlayedVolume?: number | null;
-    tcgDamagedVolume?: number | null;
+    tcgNormal?: number | null;
+    tcgHolo?: number | null;
+    tcgReverse?: number | null;
+    tcgFirstEdition?: number | null;
 };
 
 export type MarketKey =
     | 'tcgNearMint'
-    | 'tcgLightlyPlayed'
-    | 'tcgModeratelyPlayed'
-    | 'tcgHeavilyPlayed'
-    | 'tcgDamaged';
-export type VolumeKey =
-    | 'tcgNearMintVolume'
-    | 'tcgLightlyPlayedVolume'
-    | 'tcgModeratelyPlayedVolume'
-    | 'tcgHeavilyPlayedVolume'
-    | 'tcgDamagedVolume';
+    | 'tcgNormal'
+    | 'tcgHolo'
+    | 'tcgReverse'
+    | 'tcgFirstEdition';
 
 export const conditionsMarketMap: { [key: string]: MarketKey } = {
     'Near Mint': 'tcgNearMint',
-    'Lightly Played': 'tcgLightlyPlayed',
-    'Moderately Played': 'tcgModeratelyPlayed',
-    'Heavily Played': 'tcgHeavilyPlayed',
-    Damaged: 'tcgDamaged'
-};
-
-export const conditionsVolumeMap: { [key: string]: VolumeKey } = {
-    'Near Mint': 'tcgNearMintVolume',
-    'Lightly Played': 'tcgLightlyPlayedVolume',
-    'Moderately Played': 'tcgModeratelyPlayedVolume',
-    'Heavily Played': 'tcgHeavilyPlayedVolume',
-    Damaged: 'tcgDamagedVolume'
+    'Normal': 'tcgNormal',
+    'Holofoil': 'tcgHolo',
+    'Reverse Holofoil': 'tcgReverse',
+    'First Edition': 'tcgFirstEdition'
 };

@@ -78,41 +78,29 @@ async function getCardPage(setId: string, limit: number, offset: number) {
 }
 
 async function upsertCardMarketStats(myCardId: string, apiCard: ApiCard) {
+    const printings = apiCard.printingsAvailable || [];
+    const variantsData = apiCard.variants || {};
     const prices = apiCard.prices;
-
-    // DEBUG
-    if (!prices) {
-        console.log(`❌ No prices object for ${myCardId}`);
-        console.log('Full apiCard:', JSON.stringify(apiCard, null, 2));
-        return;
-    }
-    const primaryPrinting = prices.primaryPrinting || Object.keys(prices.variants || {})[0];
-    const primaryVariant = prices.variants?.[primaryPrinting];
-    if (!primaryVariant) {
-        console.log(`⚠️ No variant data for ${myCardId}, skipping`);
-        return;
-    }
-
-    let latestNearMintPrice: number | undefined;
-    let latestLightlyPlayedPrice: number | undefined;
-    let latestModeratelyPlayedPrice: number | undefined;
-    let latestHeavilyPlayedPrice: number | undefined;
-    let latestDamagedPrice: number | undefined;
-
-    for (const [conditionKey, conditionData] of Object.entries(primaryVariant)) {
-        const price = (conditionData as any).price;
-
-        if (conditionKey.includes('Near Mint')) {
-            latestNearMintPrice = price;
-        } else if (conditionKey.includes('Lightly Played')) {
-            latestLightlyPlayedPrice = price;
-        } else if (conditionKey.includes('Moderately Played')) {
-            latestModeratelyPlayedPrice = price;
-        } else if (conditionKey.includes('Heavily Played')) {
-            latestHeavilyPlayedPrice = price;
-        } else if (conditionKey.includes('Damaged')) {
-            latestDamagedPrice = price;
+    const getVariantPrice = (keysToCheck: string[]) => {
+        for (const key of keysToCheck) {
+            const data = variantsData[key];
+            if (data && data.marketPrice != null) {
+                return data.marketPrice;
+            }
         }
+        return null;
+    };
+    const pNormal = getVariantPrice(["Normal"]);
+    const pHolo = getVariantPrice(["Holofoil"]);
+    const pReverse = getVariantPrice(["Reverse Holofoil", "Reverse"]);
+    const p1stEd = getVariantPrice(["1st Edition", "1st Edition Holofoil"]);
+
+    let basePrice: number | null = null;
+    const primaryKey = apiCard.prices?.primaryPrinting;
+    if (primaryKey && variantsData[primaryKey]) {
+        basePrice = variantsData[primaryKey].marketPrice;
+    } else {
+        basePrice = pNormal ?? pHolo ?? pReverse ?? p1stEd;
     }
 
     const tcgLastUpdatedAt = apiCard.prices?.lastUpdated;
@@ -124,20 +112,20 @@ async function upsertCardMarketStats(myCardId: string, apiCard: ApiCard) {
     const upsertMarketStats = prisma.marketStats.upsert({
         where: { cardId: myCardId },
         update: {
-            tcgNearMintLatest: latestNearMintPrice ?? null,
-            tcgLightlyPlayedLatest: latestLightlyPlayedPrice ?? null,
-            tcgModeratelyPlayedLatest: latestModeratelyPlayedPrice ?? null,
-            tcgHeavilyPlayedLatest: latestHeavilyPlayedPrice ?? null,
-            tcgDamagedLatest: latestDamagedPrice ?? null,
+            tcgNearMintLatest: basePrice, // Display price
+            tcgNormalLatest: pNormal,
+            tcgHoloLatest: pHolo,
+            tcgReverseLatest: pReverse,
+            tcgFirstEditionLatest: p1stEd,
             tcgPlayerUpdatedAt: validTcgUpdatedAt
         },
         create: {
             cardId: myCardId,
-            tcgNearMintLatest: latestNearMintPrice,
-            tcgLightlyPlayedLatest: latestLightlyPlayedPrice,
-            tcgModeratelyPlayedLatest: latestModeratelyPlayedPrice,
-            tcgHeavilyPlayedLatest: latestHeavilyPlayedPrice,
-            tcgDamagedLatest: latestDamagedPrice,
+            tcgNearMintLatest: basePrice,
+            tcgNormalLatest: pNormal,
+            tcgHoloLatest: pHolo,
+            tcgReverseLatest: pReverse,
+            tcgFirstEditionLatest: p1stEd,
             tcgPlayerUpdatedAt: validTcgUpdatedAt ?? new Date()
         }
     });
@@ -150,20 +138,20 @@ async function upsertCardMarketStats(myCardId: string, apiCard: ApiCard) {
             }
         },
         update: {
-            tcgNearMint: latestNearMintPrice ?? null,
-            tcgLightlyPlayed: latestLightlyPlayedPrice ?? null,
-            tcgModeratelyPlayed: latestModeratelyPlayedPrice ?? null,
-            tcgHeavilyPlayed: latestHeavilyPlayedPrice ?? null,
-            tcgDamaged: latestDamagedPrice ?? null
+            tcgNearMint: basePrice,
+            tcgNormal: pNormal,
+            tcgHolo: pHolo,
+            tcgReverse: pReverse,
+            tcgFirstEdition: p1stEd,
         },
         create: {
             cardId: myCardId,
             timestamp: today,
-            tcgNearMint: latestNearMintPrice ?? null,
-            tcgLightlyPlayed: latestLightlyPlayedPrice ?? null,
-            tcgModeratelyPlayed: latestModeratelyPlayedPrice ?? null,
-            tcgHeavilyPlayed: latestHeavilyPlayedPrice ?? null,
-            tcgDamaged: latestDamagedPrice
+            tcgNearMint: basePrice,
+            tcgNormal: pNormal,
+            tcgHolo: pHolo,
+            tcgReverse: pReverse,
+            tcgFirstEdition: p1stEd,
         }
     });
 
@@ -268,7 +256,7 @@ async function main() {
     });
 
     // Latest sets to always be updated
-    const highPrioritySets = dbSets.slice(0, 12);
+    const highPrioritySets = dbSets.slice(0, 16);
 
     // Starts day count from Jan 1 1970, Unix Epoch
     const msPerDay = 1000 * 60 * 60 * 24;
@@ -278,12 +266,12 @@ async function main() {
     const alternatingSets = dbSets.filter((_, index) => {
         return (index % 2 === 0) === isEvenDay;
     });
-    const setsToProcessMap = new Map(alternatingSets.map((set) => [set.id, set]));
 
-    for (const set of highPrioritySets) {
-        setsToProcessMap.set(set.id, set);
-    }
-    const setsToProcess = Array.from(setsToProcessMap.values());
+    const desiredSetIds = new Set([
+        ...highPrioritySets.map(s => s.id),
+        ...alternatingSets.map(s => s.id)
+    ]);
+    const setsToProcess = dbSets.filter(set => desiredSetIds.has(set.id));
 
     console.log(`Starting daily MarketStats update for ${setsToProcess.length} sets...`);
 

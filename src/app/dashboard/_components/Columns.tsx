@@ -11,7 +11,7 @@ export type PortfolioRow = {
     name: string;
     setName: string;
     image: string | null;
-    condition: string;
+    variant: string;
     purchasedAt: string;
     purchasePrice: number;
     currentPrice: number;
@@ -62,7 +62,7 @@ export const columns: ColumnDef<PortfolioRow>[] = [
         }
     },
     {
-        accessorKey: 'condition',
+        accessorKey: 'variant',
         header: ({ column }) => (
             <div className=''>
                 <Button
@@ -70,7 +70,7 @@ export const columns: ColumnDef<PortfolioRow>[] = [
                     onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
                     className='hover:bg-transparent'
                 >
-                    Condition
+                    Variant
                     <ArrowUpDown className='ml-2 h-4 w-4' />
                 </Button>
             </div>
@@ -78,7 +78,7 @@ export const columns: ColumnDef<PortfolioRow>[] = [
         cell: ({ row }) => (
             <div className='flex items-center'>
                 <span className='rounded-md border bg-muted px-2 py-1 text-sm font-medium'>
-                    {row.original.condition}
+                    {row.original.variant}
                 </span>
             </div>
         )

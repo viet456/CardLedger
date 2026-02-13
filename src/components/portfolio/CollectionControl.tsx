@@ -3,7 +3,7 @@ import { useState, useMemo, useRef } from 'react';
 import { Button } from '@/src/components/ui/button';
 import { Plus, Minus, Loader2, Trash2, Pencil } from 'lucide-react';
 import { CollectionManagerModal } from './CollectionManagerModal';
-import { CardCondition } from '@prisma/client';
+import { CardVariant } from '@prisma/client';
 import { toast } from 'sonner';
 import { useAuthSession } from '@/src/providers/SessionProvider';
 import { useRouter } from 'next/navigation';
@@ -61,8 +61,9 @@ export function CollectionControl({
             await addEntry({
                 cardId,
                 purchasePrice: currentPrice || 0,
-                condition: CardCondition.tcgNearMint,
-                variantName: null
+                // Default variant, to be edited later in modal
+                // Should be refactored to the card's primary variant
+                variant: CardVariant.Normal,
             });
             toast.success('Added to collection');
         } catch (error) {

@@ -83,43 +83,39 @@ export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
             const labels = filteredData.map((d) => d.timestamp);
             const datasets = [
                 {
-                    label: 'Near Mint',
-                    data: filteredData.map((d) => d.tcgNearMint),
+                    label: 'Normal',
+                    data: filteredData.map((d) => d.tcgNormal),
                     borderColor: '#10B981', // Green
                     tension: 0.1,
                     spanGaps: true
                 },
                 {
-                    label: 'Lightly Played',
-                    data: filteredData.map((d) => d.tcgLightlyPlayed),
+                    label: 'Raw',
+                    data: filteredData.map((d) => d.tcgNearMint),
+                    borderColor: '#fc4e60', // Red
+                    tension: 0.1,
+                    spanGaps: true
+                },
+                {
+                    label: 'Holofoil',
+                    data: filteredData.map((d) => d.tcgHolo),
                     borderColor: '#6366F1', // Indigo
                     tension: 0.1,
-                    hidden: true, // Hide by default
                     spanGaps: true
                 },
                 {
-                    label: 'Moderately Played',
-                    data: filteredData.map((d) => d.tcgModeratelyPlayed),
+                    label: 'Reverse Holofoil',
+                    data: filteredData.map((d) => d.tcgReverse),
                     borderColor: '#F59E0B', // Amber
                     tension: 0.1,
-                    hidden: true
                 },
                 {
-                    label: 'Heavily Played',
-                    data: filteredData.map((d) => d.tcgHeavilyPlayed),
+                    label: 'First Edition',
+                    data: filteredData.map((d) => d.tcgFirstEdition),
                     borderColor: '#EF4444', // Red
                     tension: 0.1,
-                    hidden: true,
                     spanGaps: true
                 },
-                {
-                    label: 'Damaged',
-                    data: filteredData.map((d) => d.tcgDamaged),
-                    borderColor: '#71717A', // Zinc
-                    tension: 0.1,
-                    hidden: true,
-                    spanGaps: true
-                }
                 // only add datasets with data
             ].filter((d) => d.data.some((val) => val !== null));
 
