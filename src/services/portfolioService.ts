@@ -1,32 +1,36 @@
 import { prisma } from '../lib/prisma';
 import { cacheTag, cacheLife } from 'next/cache';
-import { CardCondition } from '@prisma/client';
+import { CardVariant } from '@prisma/client';
 
 type PriceRow = {
     cardId: string;
     timestamp: string;
-    tcgNearMint: number;
-    tcgLightlyPlayed: number;
-    tcgModeratelyPlayed: number;
-    tcgHeavilyPlayed: number;
-    tcgDamaged: number;
+    tcgNearMint: number | null; // Base Price
+    tcgNormal: number | null;
+    tcgHolo: number | null;
+    tcgReverse: number | null;
+    tcgFirstEdition: number | null;
 };
 
-function getPriceForCondition(row: PriceRow, condition: CardCondition) {
-    switch (condition) {
-        case 'tcgNearMint':
-            return row.tcgNearMint;
-        case 'tcgLightlyPlayed':
-            return row.tcgLightlyPlayed;
-        case 'tcgModeratelyPlayed':
-            return row.tcgModeratelyPlayed;
-        case 'tcgHeavilyPlayed':
-            return row.tcgHeavilyPlayed;
-        case 'tcgDamaged':
-            return row.tcgDamaged;
-        default:
-            return row.tcgNearMint;
+function getPriceForVariant(row: PriceRow, variant: CardVariant) {
+    let specificPrice: number | null = null;
+
+    switch (variant) {
+        case 'Normal':
+            specificPrice = row.tcgNormal;
+            break;
+        case 'Holo':
+            specificPrice = row.tcgHolo;
+            break;
+        case 'Reverse':
+            specificPrice = row.tcgReverse;
+            break;
+        case 'FirstEdition':
+            specificPrice = row.tcgFirstEdition;
+            break;
     }
+    // Fall back to tcgNearMint price value
+    return specificPrice ?? row.tcgNearMint ?? 0;
 }
 
 // Complete price history of crds
@@ -44,21 +48,21 @@ export async function getCachedBulkPriceHistory(cardIds: string[]) {
             cardId: true,
             timestamp: true,
             tcgNearMint: true,
-            tcgLightlyPlayed: true,
-            tcgModeratelyPlayed: true,
-            tcgHeavilyPlayed: true,
-            tcgDamaged: true
+            tcgNormal: true,
+            tcgHolo: true,
+            tcgReverse: true,
+            tcgFirstEdition: true
         }
     });
 
     return history.map((row) => ({
         cardId: row.cardId,
         timestamp: row.timestamp.toISOString().split('T')[0],
-        tcgNearMint: row.tcgNearMint?.toNumber() ?? 0,
-        tcgLightlyPlayed: row.tcgLightlyPlayed?.toNumber() ?? 0,
-        tcgModeratelyPlayed: row.tcgModeratelyPlayed?.toNumber() ?? 0,
-        tcgHeavilyPlayed: row.tcgHeavilyPlayed?.toNumber() ?? 0,
-        tcgDamaged: row.tcgDamaged?.toNumber() ?? 0
+        tcgNearMint: row.tcgNearMint?.toNumber() ?? null,
+        tcgNormal: row.tcgNormal?.toNumber() ?? null,
+        tcgHolo: row.tcgHolo?.toNumber() ?? null,
+        tcgReverse: row.tcgReverse?.toNumber() ?? null,
+        tcgFirstEdition: row.tcgFirstEdition?.toNumber() ?? null
     }));
 }
 
@@ -76,7 +80,7 @@ export async function getPortfolioValue(userId: string): Promise<PortfolioChartP
             cardId: true,
             createdAt: true,
             purchasePrice: true,
-            condition: true
+            variant: true
         }
     });
     if (collection.length === 0) return [];
@@ -107,7 +111,7 @@ export async function getPortfolioValue(userId: string): Promise<PortfolioChartP
 
             if (todaysPriceRow) {
                 // We have fresh data today, update the cache.
-                const price = getPriceForCondition(todaysPriceRow, entry.condition);
+                const price = getPriceForVariant(todaysPriceRow, entry.variant);
                 lastKnownPrices.set(entry.cardId, price);
             }
 
@@ -115,7 +119,7 @@ export async function getPortfolioValue(userId: string): Promise<PortfolioChartP
             if (date < purchaseDate) continue;
 
             // Add Cost Basis
-            dailyCost += entry.purchasePrice;
+            dailyCost += Number(entry.purchasePrice);
 
             // Add Market Value (Using Forward Fill)
             // Use today's price if available, otherwise use the last known price.

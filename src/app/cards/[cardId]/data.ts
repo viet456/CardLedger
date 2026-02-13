@@ -13,20 +13,20 @@ export async function getCachedPriceHistory(cardId: string): Promise<PriceHistor
         select: {
             timestamp: true,
             tcgNearMint: true,
-            tcgLightlyPlayed: true,
-            tcgModeratelyPlayed: true,
-            tcgHeavilyPlayed: true,
-            tcgDamaged: true
+            tcgNormal: true,
+            tcgHolo: true,
+            tcgReverse: true,
+            tcgFirstEdition: true,
         }
     });
     return history.map((row) => ({
         ...row,
         timestamp: row.timestamp.toISOString().split('T')[0],
         tcgNearMint: row.tcgNearMint?.toNumber() ?? null,
-        tcgLightlyPlayed: row.tcgLightlyPlayed?.toNumber() ?? null,
-        tcgModeratelyPlayed: row.tcgModeratelyPlayed?.toNumber() ?? null,
-        tcgHeavilyPlayed: row.tcgHeavilyPlayed?.toNumber() ?? null,
-        tcgDamaged: row.tcgDamaged?.toNumber() ?? null
+        tcgNormal: row.tcgNormal?.toNumber() ?? null,
+        tcgHolo: row.tcgHolo?.toNumber() ?? null,
+        tcgReverse: row.tcgReverse?.toNumber() ?? null,
+        tcgFirstEdition: row.tcgFirstEdition?.toNumber() ?? null
     }));
 }
 
@@ -49,7 +49,16 @@ async function getCardDataRaw(cardId: string): Promise<DenormalizedCard | null> 
                     }
                 }
             },
-            marketStats: true
+            marketStats: {
+                select: {
+                    tcgNearMintLatest: true,
+                    tcgNormalLatest: true,
+                    tcgHoloLatest: true,
+                    tcgReverseLatest: true,
+                    tcgFirstEditionLatest: true,
+                    tcgPlayerUpdatedAt: true
+                }
+            }
         }
     });
     if (!rawCard) return null;

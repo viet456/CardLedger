@@ -155,6 +155,8 @@ async function processCard(cardRef: any, dbSet: any, cardsWithImages: Set<string
             return { name, text: ab.effect || '', type: ab.type || 'Ability' };
         });
 
+        const variants = card.variants || {};
+        
         await prisma.card.upsert({
             where: { id: card.id },
             create: {
@@ -184,10 +186,18 @@ async function processCard(cardRef: any, dbSet: any, cardsWithImages: Set<string
                 attacks: { create: attacksCreate },
                 abilities: { create: abilitiesCreate },
                 artistId,
-                rarityId
+                rarityId,
+                hasNormal: variants.normal ?? false,
+                hasHolo: variants.holo ?? false,
+                hasReverse: variants.reverse ?? false,
+                hasFirstEdition: variants.firstEdition ?? false,
             },
             update: {
                 hp: card.hp ? parseInt(String(card.hp)) : null,
+                hasNormal: variants.normal ?? false,
+                hasHolo: variants.holo ?? false,
+                hasReverse: variants.reverse ?? false,
+                hasFirstEdition: variants.firstEdition ?? false,
                 ...(imageKey ? { imageKey } : {}),
                 ...(imageUploaded ? { imagesOptimized: false } : {})
             }
@@ -282,9 +292,13 @@ async function syncCards() {
         });
         const completed = new Set(existing.map((c) => c.id));
         const setDetails = await tcgdex.fetch('sets', dbSet.tcgdexId!);
-        if (!setDetails) continue;
+        if (!setDetails || !setDetails.cards) {
+            console.log(`  ⚠️  ${dbSet.name} has no cards data on TCGdex. Skipping.`);
+            continue;
+        }
 
-        const toProcess = setDetails.cards.filter((c) => !completed.has(c.id));
+      const toProcess = setDetails.cards.filter((c) => !completed.has(c.id));
+        // const toProcess = setDetails.cards;
         if (toProcess.length === 0) {
             console.log(`  ✅ ${dbSet.name} is 100% complete. Moving on...`);
             continue;

@@ -1,4 +1,5 @@
 import { DenormalizedCard, SetObject, AbilityObject } from '@/src/shared-types/card-index';
+import { Decimal } from '@prisma/client/runtime/library';
 import {
     Card,
     Set as PrismaSet,
@@ -13,20 +14,20 @@ import {
 
 export type PrismaCardWithRelations = Card & {
     set: PrismaSet;
-
-    marketStats?:
-        | {
-              [Key in keyof MarketStats]: MarketStats[Key] | string | number;
-          }
-        | null;
+    marketStats?: {
+        tcgNearMintLatest?: Decimal | number | null;
+        tcgNormalLatest?: Decimal | number | null;
+        tcgHoloLatest?: Decimal | number | null;
+        tcgReverseLatest?: Decimal | number | null;
+        tcgFirstEditionLatest?: Decimal | number | null;
+        tcgPlayerUpdatedAt?: Date | null;
+    } | null;
     rarity?: Rarity | null;
     artist?: Artist | null;
-
     types: { type: Type }[];
     subtypes: { subtype: Subtype }[];
     weaknesses: { type: Type; value: string | null }[];
     resistances: { type: Type; value: string | null }[];
-
     abilities?: Ability[];
     attacks?: (Attack & { cost: { type: Type }[] })[];
 };

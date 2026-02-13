@@ -4,12 +4,13 @@ import { CollectionControl } from '../portfolio/CollectionControl';
 import { TransitionLink } from '@/src/components/ui/TransitionLink';
 import { ResilientImage } from './ResilientImage';
 import r2ImageLoader from '@/src/lib/loader';
+import { useMemo } from 'react';
 
 interface DashboardCard extends DenormalizedCard {
     collectionStats?: {
         cost: number;
         acquiredAt: Date;
-        condition: string;
+        variant: string;
     };
 }
 interface PokemonCardProps {
@@ -19,7 +20,7 @@ interface PokemonCardProps {
     collectionStats?: {
         cost: number;
         acquiredAt: Date;
-        condition: string;
+        variant: string;
     };
 }
 
@@ -60,7 +61,17 @@ export function PokemonCard({
         }
     }
 
-    const conditionLabel = stats?.condition.replace('tcg', '').replace(/([A-Z])[a-z]+/g, '$1');
+
+    const variantLabel = useMemo(() => {
+        if (!stats?.variant) return '';
+        const labels: Record<string, string> = {
+            'Normal': 'Normal',
+            'Holo': 'Holo',
+            'Reverse': 'Reverse',
+            'FirstEdition': '1st Ed'
+        };
+        return labels[stats.variant] || stats.variant;
+    }, [stats?.variant]);
 
     return (
         <div className='group relative flex w-full flex-col rounded-xl bg-card text-card-foreground transition-transform will-change-transform hover:scale-[1.02]'>
@@ -92,7 +103,7 @@ export function PokemonCard({
                     />
                     {stats && (
                         <div className='absolute bottom-0 left-0 rounded-tr-lg bg-black/70 px-2 py-1 text-xs font-bold text-white'>
-                            {conditionLabel}
+                            {variantLabel}
                         </div>
                     )}
                 </div>

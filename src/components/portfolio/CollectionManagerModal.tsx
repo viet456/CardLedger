@@ -16,7 +16,7 @@ import {
 } from '@/src/components/ui/table';
 import { trpc } from '@/src/utils/trpc';
 import { Loader2, Trash2, Save } from 'lucide-react';
-import { EditableConditionSelect } from './EditableConditionSelect';
+import { EditableVariantSelect } from './EditableVariantSelect';
 import { EditablePriceInput } from './EditablePriceInput';
 import { EditableDate } from './EditableDate';
 import { SafeDeleteButton } from './SafeDeleteButton';
@@ -79,7 +79,7 @@ export function CollectionManagerModal({
                             <TableHeader className='hidden md:table-header-group'>
                                 <TableRow>
                                     <TableHead className='w-[30%]'>Acquired</TableHead>
-                                    <TableHead className='w-[30%]'>Condition</TableHead>
+                                    <TableHead className='w-[30%]'>Variant</TableHead>
                                     <TableHead className='w-[20%]'>Price Paid</TableHead>
                                     <TableHead className='w-[20%]'>Actions</TableHead>
                                 </TableRow>
@@ -95,12 +95,12 @@ export function CollectionManagerModal({
                                             <MobileLabel>Acquired</MobileLabel>
                                             <EditableDate id={entry.id} date={entry.createdAt} />
                                         </TableCell>
-                                        {/* Condition */}
+                                        {/* Variant */}
                                         <TableCell className='flex items-center justify-between border-none px-0 py-3 md:table-cell md:py-4 md:pl-2'>
-                                            <MobileLabel>Condition</MobileLabel>
-                                            <EditableConditionSelect
+                                            <MobileLabel>Variant</MobileLabel>
+                                            <EditableVariantSelect
                                                 id={entry.id}
-                                                initialCondition={entry.condition}
+                                                initialVariant={entry.variant}
                                             />
                                         </TableCell>
                                         {/* Price */}

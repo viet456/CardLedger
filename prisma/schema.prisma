@@ -15,12 +15,11 @@ enum LegalityStatus {
     Banned
 }
 
-enum CardCondition {
-    tcgNearMint
-    tcgLightlyPlayed
-    tcgModeratelyPlayed
-    tcgHeavilyPlayed
-    tcgDamaged
+enum CardVariant {
+    Normal
+    Holo
+    Reverse
+    FirstEdition
 }
 
 model Series {
@@ -151,28 +150,13 @@ model Card {
 model MarketStats {
     id     Int    @id @default(autoincrement())
     card   Card   @relation(fields: [cardId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-    cardId String @unique
+    cardId String @unique   
 
-    // TCGplayer prices
     tcgNearMintLatest         Decimal? @db.Decimal(10, 2)
-    tcgLightlyPlayedLatest    Decimal? @db.Decimal(10, 2)
-    tcgModeratelyPlayedLatest Decimal? @db.Decimal(10, 2)
-    tcgHeavilyPlayedLatest    Decimal? @db.Decimal(10, 2)
-    tcgDamagedLatest          Decimal? @db.Decimal(10, 2)
-
-    // TCGplayer maket trends
-    tcgNearMintTrend         String?
-    tcgLightlyPlayedTrend    String?
-    tcgModeratelyPlayedTrend String?
-    tcgHeavilyPlayedTrend    String?
-    tcgDamagedTrend          String?
-
-    // TCGplayer listings count
-    tcgNearMintListings         Int?
-    tcgLightlyPlayedListings    Int?
-    tcgModeratelyPlayedListings Int?
-    tcgHeavilyPlayedListings    Int?
-    tcgDamagedListings          Int?
+    tcgNormalLatest        Decimal? @db.Decimal(10, 2)
+    tcgReverseLatest       Decimal? @db.Decimal(10, 2)
+    tcgHoloLatest          Decimal? @db.Decimal(10, 2)
+    tcgFirstEditionLatest  Decimal? @db.Decimal(10, 2)
 
     tcgPlayerUpdatedAt DateTime?
 }
@@ -183,16 +167,10 @@ model PriceHistory {
 
     // TCGplayer prices
     tcgNearMint         Decimal? @db.Decimal(10, 2)
-    tcgLightlyPlayed    Decimal? @db.Decimal(10, 2)
-    tcgModeratelyPlayed Decimal? @db.Decimal(10, 2)
-    tcgHeavilyPlayed    Decimal? @db.Decimal(10, 2)
-    tcgDamaged          Decimal? @db.Decimal(10, 2)
-
-    tcgNearMintVolume         Int?
-    tcgLightlyPlayedVolume    Int?
-    tcgModeratelyPlayedVolume Int?
-    tcgHeavilyPlayedVolume    Int?
-    tcgDamagedVolume          Int?
+    tcgNormal         Decimal? @db.Decimal(10, 2)
+    tcgReverse          Decimal? @db.Decimal(10, 2)
+    tcgHolo             Decimal? @db.Decimal(10, 2)
+    tcgFirstEdition     Decimal? @db.Decimal(10, 2)
 
     cardId String
     card   Card   @relation(fields: [cardId], references: [id], onDelete: Cascade, onUpdate: Cascade)
@@ -378,11 +356,9 @@ model CollectionEntry {
     cardId String
     card   Card   @relation(fields: [cardId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-    purchasePrice Float
-    condition     CardCondition @default(tcgNearMint)
+    purchasePrice Decimal      @db.Decimal(10, 2)
 
-    // future card variant support, eg Holo, Foil
-    variantName String?
+    variant       CardVariant  @default(Normal)
 
     @@index([userId])
     @@index([cardId])

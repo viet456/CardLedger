@@ -12,7 +12,7 @@ interface DashboardCard extends DenormalizedCard {
     collectionStats?: {
         cost: number;
         acquiredAt: Date;
-        condition: string;
+        variant: string;
     };
 }
 

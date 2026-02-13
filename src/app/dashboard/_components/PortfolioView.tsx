@@ -1,7 +1,7 @@
 'use client';
 import { PortfolioChart } from '@/src/components/portfolio/PortfolioChart';
 import { PortfolioChartPoint } from '@/src/services/portfolioService';
-import { CardCondition } from '@prisma/client';
+import { CardVariant } from '@prisma/client';
 import { DataTable } from './DataTable';
 import { columns, PortfolioRow } from './Columns';
 import { Wallet, TrendingUp, TrendingDown, CircleDollarSign } from 'lucide-react';
@@ -21,8 +21,11 @@ interface SummaryCardProps {
     icon?: React.ElementType;
 }
 
-function formatCondition(cond: string) {
-    return cond.replace('tcg', '').replace(/([A-Z])[a-z]+/g, '$1');
+function formatVariant(variant: string) {
+    // Cleaner display for variants
+    if (variant === 'FirstEdition') return '1st Ed';
+    if (variant === 'Reverse') return 'Reverse';
+    return variant;
 }
 
 function SummaryCard({
@@ -87,21 +90,18 @@ export function PortfolioView({ history, entries }: PortfolioViewProps) {
         let currentPrice = 0;
         const stats = entry.card.marketStats;
         if (stats) {
-            switch (entry.condition) {
-                case CardCondition.tcgNearMint:
-                    currentPrice = stats.tcgNearMintLatest ?? 0;
+            switch (entry.variant) {
+                case CardVariant.Normal:
+                    currentPrice = stats.tcgNormalLatest ?? stats.tcgNearMintLatest ?? 0;
                     break;
-                case CardCondition.tcgLightlyPlayed:
-                    currentPrice = stats.tcgLightlyPlayedLatest ?? 0;
+                case CardVariant.Holo:
+                    currentPrice = stats.tcgHoloLatest ?? stats.tcgNearMintLatest ?? 0;
                     break;
-                case CardCondition.tcgModeratelyPlayed:
-                    currentPrice = stats.tcgModeratelyPlayedLatest ?? 0;
+                case CardVariant.Reverse:
+                    currentPrice = stats.tcgReverseLatest ?? stats.tcgNearMintLatest ?? 0;
                     break;
-                case CardCondition.tcgHeavilyPlayed:
-                    currentPrice = stats.tcgHeavilyPlayedLatest ?? 0;
-                    break;
-                case CardCondition.tcgDamaged:
-                    currentPrice = stats.tcgDamagedLatest ?? 0;
+                case CardVariant.FirstEdition:
+                    currentPrice = stats.tcgFirstEditionLatest ?? stats.tcgNearMintLatest ?? 0;
                     break;
                 default:
                     currentPrice = stats.tcgNearMintLatest ?? 0;
@@ -118,7 +118,7 @@ export function PortfolioView({ history, entries }: PortfolioViewProps) {
             name: entry.card.name,
             setName: entry.card.set.name,
             image: entry.card.imageKey,
-            condition: formatCondition(entry.condition),
+            variant: formatVariant(entry.variant || 'Normal'),
             purchasedAt: entry.createdAt.toString(),
             purchasePrice: cost,
             currentPrice: Number(currentPrice),

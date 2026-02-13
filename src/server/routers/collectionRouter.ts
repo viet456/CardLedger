@@ -1,10 +1,8 @@
 import { publicProcedure, router, protectedProcedure } from '../trpc';
 import { z } from 'zod';
 import { prisma } from '@/src/lib/prisma';
-import { CardCondition } from '@prisma/client';
+import { CardVariant } from '@prisma/client';
 import { getPortfolioValue } from '@/src/services/portfolioService';
-
-const CardConditionValues = Object.values(CardCondition) as [string, ...string[]];
 
 export const collectionRouter = router({
     /**
@@ -25,7 +23,16 @@ export const collectionRouter = router({
                         include: {
                             set: true,
                             rarity: true,
-                            marketStats: true,
+                            marketStats: {
+                                select: {
+                                    tcgNearMintLatest: true,
+                                    tcgNormalLatest: true,
+                                    tcgHoloLatest: true,
+                                    tcgReverseLatest: true,
+                                    tcgFirstEditionLatest: true,
+                                    tcgPlayerUpdatedAt: true,
+                                }
+                            },
                             artist: true,
                             types: { include: { type: true } },
                             subtypes: { include: { subtype: true } },
@@ -41,7 +48,14 @@ export const collectionRouter = router({
                     ? Math.max(...entries.map((e) => e.createdAt.getTime()))
                     : Date.now();
 
-            return { entries, lastModified };
+            return {
+                entries: entries.map((entry) => ({
+                    ...entry,
+                    purchasePrice: Number(entry.purchasePrice),
+                    variant: entry.variant || CardVariant.Normal
+                })),
+                lastModified,
+            };
         }),
     /**
      * Adds a new card to a *logged-in* user's collection.
@@ -52,19 +66,18 @@ export const collectionRouter = router({
             z.object({
                 cardId: z.string(),
                 purchasePrice: z.number(),
-                condition: z.enum(CardConditionValues)
+                variant: z.nativeEnum(CardVariant)
             })
         )
         .mutation(async ({ input, ctx }) => {
-            const { cardId, purchasePrice, condition } = input;
+            const { cardId, purchasePrice, variant } = input;
             const userId = ctx.user.id;
             const newEntry = await prisma.collectionEntry.create({
                 data: {
                     userId,
                     cardId,
                     purchasePrice,
-                    condition: condition as CardCondition
-                    //variantName
+                    variant: variant
                 },
                 include: {
                     card: {
@@ -81,7 +94,10 @@ export const collectionRouter = router({
                     }
                 }
             });
-            return newEntry;
+            return {
+                ...newEntry,
+                purchasePrice: Number(newEntry.purchasePrice), 
+            };
         }),
     /**
      * Updates an existing entry in the logged-in user's collection.
@@ -92,7 +108,7 @@ export const collectionRouter = router({
             z.object({
                 entryId: z.string(), // The ID of the CollectionEntry
                 purchasePrice: z.number().optional(),
-                condition: z.enum(CardConditionValues).optional(),
+                variant: z.nativeEnum(CardVariant).optional(),
                 createdAt: z.date().optional()
             })
         )
@@ -102,9 +118,6 @@ export const collectionRouter = router({
                 where: { id: entryId, userId: ctx.user.id },
                 data: {
                     ...dataToUpdate,
-                    condition: dataToUpdate.condition
-                        ? (dataToUpdate.condition as CardCondition)
-                        : undefined,
                     createdAt: input.createdAt
                 }
             });
