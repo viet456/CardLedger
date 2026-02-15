@@ -5,10 +5,27 @@ import { CardVariant } from '@prisma/client';
 import { DataTable } from './DataTable';
 import { columns, PortfolioRow } from './Columns';
 import { Wallet, TrendingUp, TrendingDown, CircleDollarSign } from 'lucide-react';
+import { CardPrices } from '@/src/shared-types/price-api';
+
+interface PortfolioEntry {
+    id: string;
+    cardId: string;
+    purchasePrice: number;
+    createdAt: Date | string;
+    variant: CardVariant | null; // 'Normal' | 'Holo' | 'Reverse' | 'FirstEdition'
+    card: {
+        name: string;
+        imageKey: string; 
+        set: {
+            name: string;
+        };
+        variants: CardPrices | null; 
+    };
+}
 
 interface PortfolioViewProps {
     history: PortfolioChartPoint[];
-    entries: any[];
+    entries: PortfolioEntry[];
 }
 
 interface SummaryCardProps {
@@ -88,27 +105,20 @@ export function PortfolioView({ history, entries }: PortfolioViewProps) {
 
     const tableData: PortfolioRow[] = entries.map((entry) => {
         let currentPrice = 0;
-        const stats = entry.card.marketStats;
-        if (stats) {
-            switch (entry.variant) {
-                case CardVariant.Normal:
-                    currentPrice = stats.tcgNormalLatest ?? stats.tcgNearMintLatest ?? 0;
-                    break;
-                case CardVariant.Holo:
-                    currentPrice = stats.tcgHoloLatest ?? stats.tcgNearMintLatest ?? 0;
-                    break;
-                case CardVariant.Reverse:
-                    currentPrice = stats.tcgReverseLatest ?? stats.tcgNearMintLatest ?? 0;
-                    break;
-                case CardVariant.FirstEdition:
-                    currentPrice = stats.tcgFirstEditionLatest ?? stats.tcgNearMintLatest ?? 0;
-                    break;
-                default:
-                    currentPrice = stats.tcgNearMintLatest ?? 0;
-            }
+        const variants = entry.card.variants;
+        const variantType = entry.variant || CardVariant.Normal;
+
+        if (variants) {
+            // Map the variant enum directly to the price key
+            // e.g. 'Holo' -> 'tcgHolo'
+            const priceKey = `tcg${variantType}` as keyof CardPrices;
+            const specificPrice = variants[priceKey];
+
+            // Use specific price, fallback to NearMint, fallback to 0
+            currentPrice = specificPrice ?? variants.tcgNearMint ?? 0;
         }
 
-        const cost = Number(entry.purchasePrice);
+        const cost = entry.purchasePrice;
         const gain = Number(currentPrice) - cost;
         const percent = cost > 0 ? (gain / cost) * 100 : 0;
 
@@ -118,8 +128,8 @@ export function PortfolioView({ history, entries }: PortfolioViewProps) {
             name: entry.card.name,
             setName: entry.card.set.name,
             image: entry.card.imageKey,
-            variant: formatVariant(entry.variant || 'Normal'),
-            purchasedAt: entry.createdAt.toString(),
+            variant: formatVariant(variantType),
+            purchasedAt: new Date(entry.createdAt).toLocaleDateString(),
             purchasePrice: cost,
             currentPrice: Number(currentPrice),
             gain: gain,

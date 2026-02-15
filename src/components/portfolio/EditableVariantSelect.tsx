@@ -7,10 +7,12 @@ import { useState } from 'react';
 
 export function EditableVariantSelect({
     id,
-    initialVariant
+    initialVariant,
+    validVariants,
 }: {
     id: string;
-    initialVariant: CardVariant
+    initialVariant: CardVariant,
+    validVariants: CardVariant[];
 }) {
     const updateEntry = useCollectionStore((state) => state.updateEntry);
     const [val, setVal] = useState(initialVariant);
@@ -35,7 +37,7 @@ export function EditableVariantSelect({
                 <SelectValue />
             </SelectTrigger>
             <SelectContent>
-                {Object.values(CardVariant).map((v) => (
+                {validVariants.map((v) => (
                     <SelectItem key={v} value={v}>
                         {v === 'FirstEdition' ? '1st Edition' : v === 'Reverse' ? 'Reverse Holo' : v}
                     </SelectItem>

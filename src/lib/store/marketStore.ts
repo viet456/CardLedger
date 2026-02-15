@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { persist, PersistStorage, StorageValue } from 'zustand/middleware';
 import { get, set, del } from 'idb-keyval';
-import { MarketStats } from '@/src/shared-types/price-api';
 import { PointerFile } from '@/src/shared-types/card-index';
+import { MarketStats } from '@/src/shared-types/price-api';
 
 const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
 

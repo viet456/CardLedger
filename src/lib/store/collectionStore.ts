@@ -28,6 +28,7 @@ export type CollectionStoreState = PersistedState & {
     addEntry: (entry: CollectionEntryInput) => Promise<void>;    
     updateEntry: (entryId: string, updates: Partial<CollectionEntry>) => Promise<void>;
     removeEntry: (entryId: string) => Promise<void>;
+    setEntries: (entries: FrontendCollectionEntry[]) => void;
 };
 
 const indexedDbStorage: PersistStorage<PersistedState> = {
@@ -52,6 +53,13 @@ export const useCollectionStore = create<CollectionStoreState>()(
             lastSynced: null,
             version: null,
             status: 'idle',
+            setEntries: (entries) => {
+                set({ 
+                    entries: entries,
+                    lastSynced: Date.now(),
+                    status: 'ready_from_network'
+                });
+            },
 
             // Checks for local cards in Indexeddb and compares to fetched version
             initialize: async (userId: string) => {
@@ -168,12 +176,16 @@ export const useCollectionStore = create<CollectionStoreState>()(
 
             updateEntry: async (entryId, updates) => {
                 const previousEntries = get().entries;
-                const cleanUpdates = {
-                    ...updates,
-                    purchasePrice: updates.purchasePrice !== undefined 
-                        ? Number(updates.purchasePrice) 
-                        : undefined
-                };
+                const cleanUpdates: Partial<FrontendCollectionEntry> = {};
+                if (updates.variant) {
+                    cleanUpdates.variant = updates.variant;
+                }
+                if (updates.purchasePrice !== undefined) {
+                    cleanUpdates.purchasePrice = Number(updates.purchasePrice);
+                }
+                if (updates.createdAt) {
+                    cleanUpdates.createdAt = updates.createdAt;
+                }
 
                 // Optimistic update
                 set((state: CollectionStoreState) => ({

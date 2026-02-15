@@ -3,7 +3,7 @@ import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { r2 } from '../src/lib/r2';
 import crypto from 'crypto';
 import zlib from 'zlib';
-import { MarketStats } from '../src/shared-types/price-api';
+import { MarketStats, CardPrices } from '../src/shared-types/price-api';
 
 const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
 const prisma = new PrismaClient();
@@ -17,21 +17,29 @@ async function getDailyPrices() {
     const allDailyPrices = await prisma.marketStats.findMany({
         select: {
             cardId: true,
-            tcgNearMintLatest: true
+            tcgNearMintLatest: true,
+            tcgNormalLatest: true,
+            tcgHoloLatest: true,
+            tcgReverseLatest: true,
+            tcgFirstEditionLatest: true 
         }
     });
     console.log(`Processing ${allDailyPrices.length} card prices.`);
 
-    const priceMap: Record<string, number> = allDailyPrices.reduce(
+    const priceMap: Record<string, CardPrices> = allDailyPrices.reduce(
         (acc, stat) => {
-            if (stat.tcgNearMintLatest !== null) {
-                acc[stat.cardId] = stat.tcgNearMintLatest.toNumber();
-            }
+            acc[stat.cardId] = {
+                tcgNearMint: stat.tcgNearMintLatest?.toNumber() ?? null,
+                tcgNormal: stat.tcgNormalLatest?.toNumber() ?? null,
+                tcgHolo: stat.tcgHoloLatest?.toNumber() ?? null,
+                tcgReverse: stat.tcgReverseLatest?.toNumber() ?? null,
+                tcgFirstEdition: stat.tcgFirstEditionLatest?.toNumber() ?? null,
+            };
             return acc;
         },
-        {} as Record<string, number>
+        {} as Record<string, CardPrices>
     );
-    return priceMap;
+    return priceMap;    
 }
 
 async function generateMarketIndex() {

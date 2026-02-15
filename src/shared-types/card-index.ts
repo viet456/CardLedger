@@ -1,3 +1,5 @@
+import { CardPrices } from "./price-api";
+
 export type WeaknessResistanceObject = {
     type: string;
     value: string | null;
@@ -113,6 +115,7 @@ export type DenormalizedCard = {
         text: string;
     } | null;
     price: number | null;
+    variants?: CardPrices | null;
 };
 
 export type PointerFile = {

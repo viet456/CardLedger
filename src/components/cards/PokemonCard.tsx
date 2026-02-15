@@ -1,4 +1,5 @@
 import { DenormalizedCard } from '@/src/shared-types/card-index';
+import { CardPrices } from '@/src/shared-types/price-api';
 import { format } from 'date-fns';
 import { CollectionControl } from '../portfolio/CollectionControl';
 import { TransitionLink } from '@/src/components/ui/TransitionLink';
@@ -24,6 +25,15 @@ interface PokemonCardProps {
     };
 }
 
+interface DashboardCard extends DenormalizedCard {
+    uniqueId?: string; 
+    collectionStats?: {
+        cost: number;
+        acquiredAt: Date;
+        variant: string;
+    };
+}
+
 export function PokemonCard({
     card,
     priority = false,
@@ -35,7 +45,34 @@ export function PokemonCard({
         : `/cards/${card.id}`;
 
     const stats = propStats || card.collectionStats;
-    const currentPrice = card.price || 0;
+
+    //-- PRICE SELECTION LOGIC --
+    const currentPrice = useMemo(() => {
+        // If we have the full variants object, be specific
+        if (card.variants) {
+            // Collection Mode: User owns a specific variant
+            if (stats?.variant) {
+                // Construct key: 'Holo' -> 'tcgHolo', 'Normal' -> 'tcgNormal'
+                const variantKey = `tcg${stats.variant}` as keyof CardPrices;
+                const specificPrice = card.variants[variantKey];
+                
+                // If that specific variant has a price, use it.
+                if (typeof specificPrice === 'number') return specificPrice;
+            }
+
+            // Public/Fallback Mode: Use the "Best Available" price
+            // Priority: Near Mint -> Normal -> Holo -> Reverse -> 1st Ed
+            return card.variants.tcgNearMint 
+                ?? card.variants.tcgNormal 
+                ?? card.variants.tcgHolo 
+                ?? card.variants.tcgReverse 
+                ?? card.variants.tcgFirstEdition 
+                ?? 0;
+        }
+
+        // Fallback if variants are missing (legacy support)
+        return card.price || 0;
+    }, [card.variants, card.price, stats?.variant]);
 
     // --- FINANCIAL LOGIC ---
     const cost = stats ? stats.cost : 0;
@@ -79,7 +116,7 @@ export function PokemonCard({
                 <CollectionControl
                     cardId={card.id}
                     currentPrice={card.price}
-                    entryId={entryId || (card as any).uniqueId}
+                    entryId={entryId || card.uniqueId}
                     cardName={card.n}
                 />
             </div>
