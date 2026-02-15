@@ -5,6 +5,7 @@ import { PriceHistoryDataPoint } from '@/src/shared-types/price-api';
 import 'chartjs-adapter-date-fns';
 import { Button } from '../ui/button';
 import { useTheme } from 'next-themes';
+import { space } from 'postcss/lib/list';
 
 interface PriceHistoryChartProps {
     initialData: PriceHistoryDataPoint[];
@@ -108,6 +109,7 @@ export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
                     data: filteredData.map((d) => d.tcgReverse),
                     borderColor: '#F59E0B', // Amber
                     tension: 0.1,
+                    spanGaps: true
                 },
                 {
                     label: 'First Edition',
