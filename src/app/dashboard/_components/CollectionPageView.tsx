@@ -6,6 +6,7 @@ import { CardFilterControls } from '@/src/components/search/CardFilterControls';
 import { SimpleCardGrid } from '@/src/components/cards/SimpleCardGrid';
 import { DenormalizedCard, FilterOptions, SetObject } from '@/src/shared-types/card-index';
 import { SortableKey } from '@/src/services/pokemonCardValidator';
+import { CardPrices } from '@/src/shared-types/price-api';
 // Modeled after /setId page view
 
 interface DashboardCard extends DenormalizedCard {
@@ -18,6 +19,22 @@ interface DashboardCard extends DenormalizedCard {
 
 interface CollectionPageViewProps {
     cards: DashboardCard[];
+}
+
+// --- HELPER: Resolve the correct price for sorting ---
+function getEffectivePrice(card: DashboardCard): number {
+    // If user owns a specific variant, try to use that specific price
+    if (card.collectionStats?.variant && card.variants) {
+        // Construct key: 'Holo' -> 'tcgHolo'
+        const variantKey = `tcg${card.collectionStats.variant}` as keyof CardPrices;
+        const specificPrice = card.variants[variantKey];
+        
+        if (typeof specificPrice === 'number') {
+            return specificPrice;
+        }
+    }
+    // Fallback to the generic sort price (Near Mint/Normal)
+    return card.price || 0;
 }
 
 function useCollectionFilters(initialCards: DashboardCard[]) {
@@ -57,9 +74,13 @@ function useCollectionFilters(initialCards: DashboardCard[]) {
         const sortOrder = filters.sortOrder || 'desc';
 
         filtered.sort((a, b) => {
+            // Pre-calculate prices based on variants
+            const priceA = getEffectivePrice(a);
+            const priceB = getEffectivePrice(b);
+
             switch (sortBy) {
                 case 'price':
-                    return (a.price || 0) - (b.price || 0);
+                    return priceA - priceB;
                 case 'cost':
                     return (a.collectionStats?.cost || 0) - (b.collectionStats?.cost || 0);
                 case 'acquired':
@@ -68,8 +89,9 @@ function useCollectionFilters(initialCards: DashboardCard[]) {
                         new Date(b.collectionStats?.acquiredAt || 0).getTime()
                     );
                 case 'gain':
-                    const gainA = (a.price || 0) - (a.collectionStats?.cost || 0);
-                    const gainB = (b.price || 0) - (b.collectionStats?.cost || 0);
+                    // Gain = (Real Variant Price) - (Cost)
+                    const gainA = priceA - (a.collectionStats?.cost || 0);
+                    const gainB = priceB - (b.collectionStats?.cost || 0);
                     return gainA - gainB;
                 case 'n':
                     return a.n.localeCompare(b.n);

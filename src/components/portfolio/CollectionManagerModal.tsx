@@ -21,6 +21,7 @@ import { EditablePriceInput } from './EditablePriceInput';
 import { EditableDate } from './EditableDate';
 import { SafeDeleteButton } from './SafeDeleteButton';
 import { useRouter } from 'next/navigation';
+import { Card, CardVariant } from '@prisma/client';
 
 interface CollectionManagerModalProps {
     isOpen: boolean;
@@ -33,6 +34,17 @@ interface CollectionManagerModalProps {
 const MobileLabel = ({ children }: { children: React.ReactNode }) => (
     <span className='mr-2 text-sm font-semibold text-muted-foreground md:hidden'>{children}</span>
 );
+
+function getAllowedVariants(card: Pick<Card, 'hasNormal' | 'hasHolo' | 'hasReverse' | 'hasFirstEdition'>): CardVariant[] {
+    const allowed: CardVariant[] = [];
+
+    if (card.hasNormal) allowed.push(CardVariant.Normal);
+    if (card.hasHolo) allowed.push(CardVariant.Holo);
+    if (card.hasReverse) allowed.push(CardVariant.Reverse);
+    if (card.hasFirstEdition) allowed.push(CardVariant.FirstEdition);
+
+    return allowed.length > 0 ? allowed : [CardVariant.Normal];
+}
 
 export function CollectionManagerModal({
     isOpen,
@@ -85,8 +97,10 @@ export function CollectionManagerModal({
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {entries?.map((entry) => (
-                                    <TableRow
+                                {entries?.map((entry) => {
+                                    const validVariants = getAllowedVariants(entry.card);
+                                    return (
+                                        <TableRow
                                         key={entry.id}
                                         className='flex flex-col divide-y divide-border/50 border-b p-4 md:table-row md:divide-y-0 md:border-b'
                                     >
@@ -100,7 +114,8 @@ export function CollectionManagerModal({
                                             <MobileLabel>Variant</MobileLabel>
                                             <EditableVariantSelect
                                                 id={entry.id}
-                                                initialVariant={entry.variant}
+                                                initialVariant={entry.variant || 'Normal'}
+                                                validVariants={validVariants}
                                             />
                                         </TableCell>
                                         {/* Price */}
@@ -118,7 +133,9 @@ export function CollectionManagerModal({
                                             <SafeDeleteButton id={entry.id} />
                                         </TableCell>
                                     </TableRow>
-                                ))}
+                                    )
+                                    
+                                 })}
                                 {entries?.length === 0 && (
                                     <TableRow>
                                         <TableCell

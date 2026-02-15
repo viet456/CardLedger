@@ -11,12 +11,18 @@ import { RichCollectionEntry } from '@/src/shared-types/collection-types';
 import { useAuthSession } from '@/src/providers/SessionProvider';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@/src/utils/trpc';
+import { CardPrices } from '@/src/shared-types/price-api';
 
 function toNum(val: any): number | null {
     if (val === null || val === undefined) return null;
     if (typeof val === 'number') return val;
-    if (val && typeof val.toNumber === 'function') return val.toNumber();
-    return Number(val);
+    // Check if it's a Prisma Decimal or similar object with a toNumber method
+    if (val && typeof val === 'object' && 'toNumber' in val && typeof val.toNumber === 'function') {
+        return val.toNumber();
+    }
+    
+    const num = Number(val);
+    return isNaN(num) ? null : num;
 }
 
 export function DashboardClient() {
@@ -29,50 +35,85 @@ export function DashboardClient() {
         }
     }, [session, isAuthPending, router]);
 
+    const setEntries = useCollectionStore((state) => state.setEntries);
     const entries = useCollectionStore(
         (state) => state.entries
     ) as unknown as RichCollectionEntry[];
     const status = useCollectionStore((state) => state.status);
 
+    const { data: collectionData } = trpc.collection.getCollection.useQuery(undefined, {
+        enabled: !!session?.user
+    });
+
+    useEffect(() => {
+        if (collectionData?.entries) {
+            setEntries(collectionData.entries);
+        }
+    }, [collectionData, setEntries]);
+
     // Fetch portfolio price history if logged in
     const { data: portfolioHistory } = trpc.collection.getPortfolioHistory.useQuery(undefined, {
         enabled: !!session?.user
     });
-
+    
     const gridCards = useMemo(() => {
         return entries
             .filter((entry) => entry.card && entry.card.set)
-            .map((entry) => ({
-                ...mapPrismaCardToDenormalized(entry.card),
-                uniqueId: entry.id,
-                collectionStats: {
-                    cost: Number(entry.purchasePrice), // Safe cast
-                    acquiredAt: new Date(entry.createdAt),
-                    variant: entry.variant
-                }
-            }));
+            .map((entry) => {
+                // Extract and map variants
+                const s = entry.card.marketStats;
+                const variants = s ? {
+                    tcgNearMint: toNum(s.tcgNearMintLatest),
+                    tcgNormal: toNum(s.tcgNormalLatest),
+                    tcgHolo: toNum(s.tcgHoloLatest),
+                    tcgReverse: toNum(s.tcgReverseLatest),
+                    tcgFirstEdition: toNum(s.tcgFirstEditionLatest),
+                } : null;
+
+                // Return the card with variants attached
+                return {
+                    ...mapPrismaCardToDenormalized(entry.card),
+                    uniqueId: entry.id,
+                    variants: variants, 
+                    collectionStats: {
+                        cost: Number(entry.purchasePrice),
+                        acquiredAt: new Date(entry.createdAt),
+                        variant: entry.variant
+                    }
+                };
+            });
     }, [entries]);
 
     const serializedEntries = useMemo(() => {
         return entries
             .filter((entry) => entry.card && entry.card.set)
-            .map((entry) => ({
-                ...entry,
-                purchasePrice: Number(entry.purchasePrice),
-                card: {
-                    ...entry.card,
-                    marketStats: entry.card.marketStats
-                        ? {
-                              ...entry.card.marketStats,
-                              tcgNearMintLatest: toNum(entry.card.marketStats.tcgNearMintLatest),
-                              tcgNormalLatest: toNum(entry.card.marketStats.tcgNormalLatest),
-                              tcgHoloLatest: toNum(entry.card.marketStats.tcgHoloLatest),
-                              tcgReverseLatest: toNum(entry.card.marketStats.tcgReverseLatest),
-                              tcgFirstEditionLatest: toNum(entry.card.marketStats.tcgFirstEditionLatest),
-                          }
-                        : null
-                }
-            }));
+            .map((entry) => {
+                // Transform raw marketStats to the 'variants' object
+                const s = entry.card.marketStats;
+                const variants: CardPrices | null = s ? {
+                     tcgNearMint: toNum(s.tcgNearMintLatest),
+                     tcgNormal: toNum(s.tcgNormalLatest),
+                     tcgHolo: toNum(s.tcgHoloLatest),
+                     tcgReverse: toNum(s.tcgReverseLatest),
+                     tcgFirstEdition: toNum(s.tcgFirstEditionLatest),
+                } : null;
+
+                return {
+                    id: entry.id,
+                    cardId: entry.cardId,
+                    purchasePrice: Number(entry.purchasePrice),
+                    createdAt: entry.createdAt,
+                    variant: entry.variant,
+                    card: {
+                        name: entry.card.name,
+                        imageKey: entry.card.imageKey ?? '', 
+                        set: {
+                            name: entry.card.set.name
+                        },
+                        variants: variants
+                    }
+                };
+            });
     }, [entries]);
 
     const isLoading = status === 'loading' || status === 'idle';

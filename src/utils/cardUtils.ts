@@ -2,6 +2,7 @@
 import { DenormalizedCard, NormalizedCard, LookupTables } from '@/src/shared-types/card-index';
 import { FilterState } from '@/src/lib/store/searchStore';
 import { SortableKey } from '@/src/services/pokemonCardValidator';
+import { CardPrices } from '../shared-types/price-api';
 
 type LookupsForDenorm = Omit<LookupTables, 'weaknesses' | 'resistances'>;
 
@@ -10,7 +11,7 @@ type LookupsForDenorm = Omit<LookupTables, 'weaknesses' | 'resistances'>;
 export function denormalizeAndSortCards(
     normalizedCards: NormalizedCard[],
     lookups: LookupsForDenorm,
-    prices: { [cardId: string]: number },
+    prices: Record<string, CardPrices>,
     filters: FilterState
 ): DenormalizedCard[] {
     const { artists, rarities, sets, types, subtypes, supertypes, abilities, attacks, rules } =
@@ -18,36 +19,46 @@ export function denormalizeAndSortCards(
 
     if (!normalizedCards.length || !sets.length) return [];
 
-    const finalCards: DenormalizedCard[] = normalizedCards.map((card) => ({
-        id: card.id,
-        n: card.n,
-        hp: card.hp,
-        num: card.num,
-        img: card.img,
-        pS: card.pS,
-        cRC: card.cRC,
-        artist: card.a !== null ? artists[card.a] : null,
-        rarity: card.r !== null ? rarities[card.r] : null,
-        set: sets[card.s],
-        supertype: supertypes[card.st],
-        subtypes: card.sb.map((id) => subtypes[id]),
-        types: card.t.map((id) => types[id]),
-        weaknesses: (card.w || []).map((w) => ({ type: types[w.t], value: w.v })),
-        resistances: (card.rs || []).map((r) => ({ type: types[r.t], value: r.v })),
-        abilities: (card.ab || []).map((id) => abilities[id]),
-        pokedexNumbers: card.pdx,
-        ancientTrait: card.aT ? { name: card.aT.n, text: card.aT.t } : null,
-        rules: (card.ru || []).map((id) => rules[id]),
-        attacks: (card.ak || []).map((id) => attacks[id]),
-        evolvesFrom: card.eF,
-        evolvesTo: card.eT || [],
-        legalities: {
-            standard: card.leg?.s,
-            expanded: card.leg?.e,
-            unlimited: card.leg?.u
-        },
-        price: prices[card.id] ?? null
-    }));
+    const finalCards: DenormalizedCard[] = normalizedCards.map((card) => {
+        const priceData = prices[card.id];
+        
+        // Determine a "display price" for sorting/filtering.
+        const effectivePrice = priceData 
+            ? (priceData.tcgNearMint ?? priceData.tcgNormal ?? priceData.tcgHolo ?? priceData.tcgReverse ?? priceData.tcgFirstEdition ?? null)
+            : null;
+
+        return {
+            id: card.id,
+            n: card.n,
+            hp: card.hp,
+            num: card.num,
+            img: card.img,
+            pS: card.pS,
+            cRC: card.cRC,
+            artist: card.a !== null ? artists[card.a] : null,
+            rarity: card.r !== null ? rarities[card.r] : null,
+            set: sets[card.s],
+            supertype: supertypes[card.st],
+            subtypes: card.sb.map((id) => subtypes[id]),
+            types: card.t.map((id) => types[id]),
+            weaknesses: (card.w || []).map((w) => ({ type: types[w.t], value: w.v })),
+            resistances: (card.rs || []).map((r) => ({ type: types[r.t], value: r.v })),
+            abilities: (card.ab || []).map((id) => abilities[id]),
+            pokedexNumbers: card.pdx,
+            ancientTrait: card.aT ? { name: card.aT.n, text: card.aT.t } : null,
+            rules: (card.ru || []).map((id) => rules[id]),
+            attacks: (card.ak || []).map((id) => attacks[id]),
+            evolvesFrom: card.eF,
+            evolvesTo: card.eT || [],
+            legalities: {
+                standard: card.leg?.s,
+                expanded: card.leg?.e,
+                unlimited: card.leg?.u
+            },
+            price: effectivePrice,
+            variants: priceData 
+        };
+    });
 
     const sortBy = (filters.sortBy || (filters.search ? 'relevance' : 'rD')) as
         | SortableKey
