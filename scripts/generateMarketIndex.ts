@@ -65,7 +65,7 @@ async function generateMarketIndex() {
         Bucket: BUCKET_NAME,
         Key: `market/${artifactFileName}`,
         Body: compressedData,
-        ContentType: 'applications/json',
+        ContentType: 'application/json',
         ContentEncoding: 'br',
         CacheControl: 'public, max-age=86400, immutable' // 1 day
     });
@@ -85,7 +85,7 @@ async function generateMarketIndex() {
         Bucket: BUCKET_NAME,
         Key: `market/${pointerFileName}`,
         Body: JSON.stringify(pointerFile),
-        ContentType: 'applications/json',
+        ContentType: 'application/json',
         CacheControl: 'public, max-age=300' // cache for 5 minutes
     });
     await r2.send(putPointerCommand);
