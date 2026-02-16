@@ -341,7 +341,9 @@ async function main() {
         console.log(` -> API Items: ${apiCards.length} (${ignoredCount} ignored)`);
         console.log(` -> Valid Cards to Sync: ${validApiCards.length} | DB Cards: ${dbCards.length}`);
 
+        // FLAG: Assume success unless a write explicitly fails
         let setProcessingFullySuccessful = true;
+        
         const pendingPromises: Promise<void>[] = [];
         let processedCount = 0;
         let skippedCount = 0;
@@ -370,6 +372,7 @@ async function main() {
             if (!myCard) {
                 skippedCount++;
                 skipStats.noMatch++;
+                // Skip is NOT a failure. It's just a data mismatch.
                 continue;
             }
 
@@ -381,6 +384,7 @@ async function main() {
             if (!namesMatch) {
                 skippedCount++;
                 skipStats.mismatch++;
+                // Name mismatch is NOT a failure.
                 continue;
             }
 
@@ -396,6 +400,7 @@ async function main() {
                 })
                 .catch((err) => {
                     console.error(`\n  ❌ Error on ${apiCard.name}: ${err.message}`);
+                    // ONLY mark as failure if writing to DB failed
                     setProcessingFullySuccessful = false;
                 });
 
@@ -412,16 +417,17 @@ async function main() {
         console.log(`\n  ✅ Report: ${processedCount} Updated | ${skippedCount} Skipped`);
         console.log(`  (Skip Details: NoMatch=${skipStats.noMatch}, Mismatch=${skipStats.mismatch})`);
 
-        const matchedAllCards = processedCount >= (dbCards.length * 0.95); 
-        
-        if (setProcessingFullySuccessful && matchedAllCards) {
+        // COMPLETION LOGIC:
+        // If we didn't have any actual DB errors, mark this set as DONE.
+        // We do NOT care about skipped cards (mismatches/missing data).
+        if (setProcessingFullySuccessful) {
             fs.appendFileSync(COMPLETED_SETS_FILE, `${set.id}\n`);
             console.log(` ✅ DONE: ${set.name} marked as complete.`);
         } else {
-            console.log(` ⚠️ INCOMPLETE: ${set.name} - Only ${processedCount}/${dbCards.length} matched.`);
+            console.log(` ⚠️ INCOMPLETE: ${set.name} had write errors. Will retry next run.`);
         }
 
-        const waitTime = Math.ceil(validApiCards.length / 10) + 4;
+        const waitTime = Math.ceil(apiCards.length / 10)+ 4;
         console.log(` ⏳ Cooling down for ${waitTime}s...`);
         await new Promise((resolve) => setTimeout(resolve, waitTime * 1000));
     }
