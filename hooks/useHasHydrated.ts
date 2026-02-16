@@ -1,6 +1,6 @@
 import { useCardStore } from '@/src/lib/store/cardStore';
 import { useMarketStore } from '@/src/lib/store/marketStore';
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore, useCallback } from 'react';
 
 interface PersistedStore {
     persist: {
@@ -11,21 +11,20 @@ interface PersistedStore {
 }
 
 function useStoreHydration(store: PersistedStore): boolean {
-    const [isHydrated, setIsHydrated] = useState(() => store.persist.hasHydrated());
+    return useSyncExternalStore(
+        // Subscribe: React calls this to register a listener
+        useCallback((callback) => {
+            // Listen for the finish event
+            const unsub = store.persist.onFinishHydration(callback);
+            return unsub;
+        }, [store]),
 
-    useEffect(() => {
-        // A function to subscribe to the hydration event
-        const unsubHydrate = store.persist.onHydrate(() => setIsHydrated(false));
-        // A function to subscribe to the finish hydration event
-        const unsubFinishHydration = store.persist.onFinishHydration(() => setIsHydrated(true));
+        // Get Snapshot: How React checks the current value
+        () => store.persist.hasHydrated(),
 
-        return () => {
-            unsubHydrate();
-            unsubFinishHydration();
-        };
-    }, [store]);
-
-    return isHydrated;
+        // Server Snapshot: For SSR (Next.js), assume not hydrated yet
+        () => false
+    );
 }
 
 export function useHasHydrated() {

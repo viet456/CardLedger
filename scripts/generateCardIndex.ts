@@ -209,7 +209,7 @@ async function generateCardIndex() {
         Bucket: BUCKET_NAME,
         Key: `indices/${artifactFileName}`,
         Body: compressedData,
-        ContentType: 'applications/json',
+        ContentType: 'application/json',
         ContentEncoding: 'br',
         CacheControl: 'public, max-age=31536000, immutable' // Cache for 1 year, never changes
     });
@@ -229,7 +229,7 @@ async function generateCardIndex() {
         Bucket: BUCKET_NAME,
         Key: `indices/${pointerFileName}`,
         Body: JSON.stringify(pointerFile),
-        ContentType: 'applications/json',
+        ContentType: 'application/json',
         CacheControl: 'public, max-age=300' // cache for 5 minutes
     });
     await r2.send(putPointerCommand);
