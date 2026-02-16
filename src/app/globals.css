@@ -7,6 +7,12 @@
         scrollbar-gutter: stable;
         color-scheme: light dark;
     }
+    /* Fixes Shadcn Select hiding scrollbar */
+    /* Context: https://github.com/shadcn-ui/ui/issues/4227#issuecomment-2438290165 */
+    html body[data-scroll-locked] {
+        overflow: visible !important;
+        margin-right: 0 !important;
+    } 
     h1 {
         @apply text-3xl font-bold;
     }
