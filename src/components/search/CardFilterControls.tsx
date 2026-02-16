@@ -76,7 +76,6 @@ export function CardFilterControls({
             resistance: undefined,
             search: ''
         });
-        setOpen(false);
     };
 
     const dynamicSortOptions = [...sortOptions];
@@ -283,17 +282,26 @@ export function CardFilterControls({
                                     )}
                                 </Button>
                             </DrawerTrigger>
-                            <DrawerContent className='h-auto max-h-[90vh]'>
-                                <DrawerHeader className='pb-2 text-left'>
+                            <DrawerContent className='h-auto max-h-[90dvh]'>
+                                <DrawerHeader className='pb-1 text-left'>
                                     <DrawerTitle>Filter Collection</DrawerTitle>
                                 </DrawerHeader>
                                 <div className='pb-0'>{MobileDrawerContent}</div>
-                                <DrawerFooter>
-                                    <Button variant='outline' onClick={handleClearFilters}>
+                                <DrawerFooter className='flex-row items-center gap-2 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]'>
+                                    <Button 
+                                        variant='outline' 
+                                        onClick={handleClearFilters} 
+                                        className='flex-1'
+                                    >
+                                        <RotateCcw className='mr-2 h-4 w-4' /> 
                                         Reset
                                     </Button>
                                     <DrawerClose asChild>
-                                        <Button>Done</Button>
+                                        <Button 
+                                            className='flex-[2]' 
+                                        >
+                                            Done
+                                        </Button>
                                     </DrawerClose>
                                 </DrawerFooter>
                             </DrawerContent>
