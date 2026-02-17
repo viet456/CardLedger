@@ -125,7 +125,9 @@ export function CardFilterControls({
             <SelectTrigger
                 className={`border-border bg-card text-sm ${fullWidth ? 'w-full' : 'h-10 w-full'}`}
             >
-                <SelectValue placeholder={filter.label} className='truncate' />
+                <span className="flex-1 truncate text-left">
+                <SelectValue placeholder={filter.label} />
+            </span>
             </SelectTrigger>
             <SelectContent className='max-h-[20rem]'>
                 <SelectItem value='all'>All {filter.label}s</SelectItem>
@@ -158,8 +160,6 @@ export function CardFilterControls({
 
     const SidebarLayout = (
         <div className='flex flex-col gap-3'>
-            {/* CHANGED: Removed h-full, flex-1, overflow-y-auto, pr-1. Simple vertical stack. */}
-
             {/* Top Area */}
             <div className='w-full shrink-0'>
                 <SearchBar />
@@ -224,14 +224,34 @@ export function CardFilterControls({
         </div>
     );
 
+    // Mobile view with Drawer
+    const isHighDensity = filterConfig.length > 6;
     const MobileDrawerContent = (
-        <div className='grid grid-cols-1 gap-2 px-4 sm:grid-cols-2'>
-            {filterConfig.map((filter) => (
-                <div key={filter.key} className='space-y-1'>
-                    <label className='text-sm font-medium leading-none'>{filter.label}</label>
-                    {renderSelect(filter, true)}
-                </div>
-            ))}
+        <div className={`grid gap-2 px-4 ${
+                // If dense, force 2 columns on mobile. If not, keep standard 1 column.
+                isHighDensity ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-2'
+            }`} >
+            {filterConfig.map((filter) => {
+                // Identify "Wide" fields that need more room (Sets)
+                const isWideField = filter.key === 'setId' || filter.key === 'series';
+                
+                return (
+                    <div
+                        key={filter.key}
+                        className={`space-y-2 ${
+                            // Span 2 columns if it's a wide field, otherwise 1
+                            isHighDensity && isWideField ? 'col-span-2' : 'col-span-1'
+                        }`}
+                    >
+                        <label
+                            className={`text-xs font-medium leading-none `}
+                        >
+                            {filter.label}
+                        </label>
+                        {renderSelect(filter, true)}
+                    </div>
+                );
+            })}
         </div>
     );
 
