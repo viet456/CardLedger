@@ -21,10 +21,15 @@ export function denormalizeAndSortCards(
 
     const finalCards: DenormalizedCard[] = normalizedCards.map((card) => {
         const priceData = prices[card.id];
-        
+
         // Determine a "display price" for sorting/filtering.
-        const effectivePrice = priceData 
-            ? (priceData.tcgNearMint ?? priceData.tcgNormal ?? priceData.tcgHolo ?? priceData.tcgReverse ?? priceData.tcgFirstEdition ?? null)
+        const effectivePrice = priceData
+            ? (priceData.tcgNearMint ??
+              priceData.tcgNormal ??
+              priceData.tcgHolo ??
+              priceData.tcgReverse ??
+              priceData.tcgFirstEdition ??
+              null)
             : null;
 
         return {
@@ -56,7 +61,7 @@ export function denormalizeAndSortCards(
                 unlimited: card.leg?.u
             },
             price: effectivePrice,
-            variants: priceData 
+            variants: priceData
         };
     });
 

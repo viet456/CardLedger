@@ -33,7 +33,7 @@ export async function getCachedSetData(setId: string) {
                             tcgHoloLatest: true,
                             tcgReverseLatest: true,
                             tcgFirstEditionLatest: true,
-                            tcgPlayerUpdatedAt: true,
+                            tcgPlayerUpdatedAt: true
                         }
                     },
                     set: true

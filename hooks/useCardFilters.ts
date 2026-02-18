@@ -146,15 +146,15 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
         let finalResults = searchResults;
         if (candidateCards.length !== cards.length) {
             // Create a Set of allowed IDs for O(1) lookup
-            const allowedIds = new Set(candidateCards.map(c => c.id));
-            finalResults = searchResults.filter(c => allowedIds.has(c.id));
+            const allowedIds = new Set(candidateCards.map((c) => c.id));
+            finalResults = searchResults.filter((c) => allowedIds.has(c.id));
         }
 
         //const endTime = performance.now();
         //console.log(`[uFuzzy Search] Query: "${query}" | Results: ${finalResults.length} | Time: ${(endTime - startTime).toFixed(2)}ms`);
 
         return finalResults;
-        }, [filters.search, ufInstance, searchHaystack, candidateCards, cards]);
+    }, [filters.search, ufInstance, searchHaystack, candidateCards, cards]);
 
     return { filteredCards };
 }

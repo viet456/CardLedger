@@ -28,7 +28,7 @@ function getEffectivePrice(card: DashboardCard): number {
         // Construct key: 'Holo' -> 'tcgHolo'
         const variantKey = `tcg${card.collectionStats.variant}` as keyof CardPrices;
         const specificPrice = card.variants[variantKey];
-        
+
         if (typeof specificPrice === 'number') {
             return specificPrice;
         }

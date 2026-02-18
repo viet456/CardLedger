@@ -43,7 +43,5 @@ export function BreadcrumbSkeleton() {
 }
 
 export function ImageSkeleton() {
-    return (
-        <div className='aspect-[2.5/3.5] w-full animate-pulse rounded-xl bg-muted' />
-    );
+    return <div className='aspect-[2.5/3.5] w-full animate-pulse rounded-xl bg-muted' />;
 }

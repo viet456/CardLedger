@@ -53,10 +53,7 @@ export function CardGrid({ cards, totalCount }: CardGridProps) {
                 if (!card) return null;
 
                 return (
-                    <div 
-                        key={card.id} 
-                        className='flex w-full relative pb-1' 
-                    >
+                    <div key={card.id} className='relative flex w-full pb-1'>
                         <PokemonCard card={card} priority={index < 6} />
                     </div>
                 );

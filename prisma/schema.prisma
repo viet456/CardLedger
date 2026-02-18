@@ -150,13 +150,13 @@ model Card {
 model MarketStats {
     id     Int    @id @default(autoincrement())
     card   Card   @relation(fields: [cardId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-    cardId String @unique   
+    cardId String @unique
 
-    tcgNearMintLatest         Decimal? @db.Decimal(10, 2)
-    tcgNormalLatest        Decimal? @db.Decimal(10, 2)
-    tcgReverseLatest       Decimal? @db.Decimal(10, 2)
-    tcgHoloLatest          Decimal? @db.Decimal(10, 2)
-    tcgFirstEditionLatest  Decimal? @db.Decimal(10, 2)
+    tcgNearMintLatest     Decimal? @db.Decimal(10, 2)
+    tcgNormalLatest       Decimal? @db.Decimal(10, 2)
+    tcgReverseLatest      Decimal? @db.Decimal(10, 2)
+    tcgHoloLatest         Decimal? @db.Decimal(10, 2)
+    tcgFirstEditionLatest Decimal? @db.Decimal(10, 2)
 
     tcgPlayerUpdatedAt DateTime?
 }
@@ -166,11 +166,11 @@ model PriceHistory {
     timestamp DateTime @default(now())
 
     // TCGplayer prices
-    tcgNearMint         Decimal? @db.Decimal(10, 2)
-    tcgNormal         Decimal? @db.Decimal(10, 2)
-    tcgReverse          Decimal? @db.Decimal(10, 2)
-    tcgHolo             Decimal? @db.Decimal(10, 2)
-    tcgFirstEdition     Decimal? @db.Decimal(10, 2)
+    tcgNearMint     Decimal? @db.Decimal(10, 2)
+    tcgNormal       Decimal? @db.Decimal(10, 2)
+    tcgReverse      Decimal? @db.Decimal(10, 2)
+    tcgHolo         Decimal? @db.Decimal(10, 2)
+    tcgFirstEdition Decimal? @db.Decimal(10, 2)
 
     cardId String
     card   Card   @relation(fields: [cardId], references: [id], onDelete: Cascade, onUpdate: Cascade)
@@ -356,9 +356,9 @@ model CollectionEntry {
     cardId String
     card   Card   @relation(fields: [cardId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-    purchasePrice Decimal      @db.Decimal(10, 2)
+    purchasePrice Decimal @db.Decimal(10, 2)
 
-    variant       CardVariant  @default(Normal)
+    variant CardVariant @default(Normal)
 
     @@index([userId])
     @@index([cardId])

@@ -12,7 +12,7 @@
     html body[data-scroll-locked] {
         overflow: visible !important;
         margin-right: 0 !important;
-    } 
+    }
     h1 {
         @apply text-3xl font-bold;
     }

@@ -125,9 +125,9 @@ export function CardFilterControls({
             <SelectTrigger
                 className={`border-border bg-card text-sm ${fullWidth ? 'w-full' : 'h-10 w-full'}`}
             >
-                <span className="flex-1 truncate text-left">
-                <SelectValue placeholder={filter.label} />
-            </span>
+                <span className='flex-1 truncate text-left'>
+                    <SelectValue placeholder={filter.label} />
+                </span>
             </SelectTrigger>
             <SelectContent className='max-h-[20rem]'>
                 <SelectItem value='all'>All {filter.label}s</SelectItem>
@@ -227,14 +227,16 @@ export function CardFilterControls({
     // Mobile view with Drawer
     const isHighDensity = filterConfig.length > 6;
     const MobileDrawerContent = (
-        <div className={`grid gap-2 px-4 ${
+        <div
+            className={`grid gap-2 px-4 ${
                 // If dense, force 2 columns on mobile. If not, keep standard 1 column.
                 isHighDensity ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-2'
-            }`} >
+            }`}
+        >
             {filterConfig.map((filter) => {
                 // Identify "Wide" fields that need more room (Sets)
                 const isWideField = filter.key === 'setId' || filter.key === 'series';
-                
+
                 return (
                     <div
                         key={filter.key}
@@ -243,11 +245,7 @@ export function CardFilterControls({
                             isHighDensity && isWideField ? 'col-span-2' : 'col-span-1'
                         }`}
                     >
-                        <label
-                            className={`text-xs font-medium leading-none `}
-                        >
-                            {filter.label}
-                        </label>
+                        <label className={`text-xs font-medium leading-none`}>{filter.label}</label>
                         {renderSelect(filter, true)}
                     </div>
                 );
@@ -307,21 +305,17 @@ export function CardFilterControls({
                                     <DrawerTitle>Filter Collection</DrawerTitle>
                                 </DrawerHeader>
                                 <div className='pb-0'>{MobileDrawerContent}</div>
-                                <DrawerFooter className='flex-row items-center gap-2 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]'>
-                                    <Button 
-                                        variant='outline' 
-                                        onClick={handleClearFilters} 
+                                <DrawerFooter className='flex-row items-center gap-2 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4'>
+                                    <Button
+                                        variant='outline'
+                                        onClick={handleClearFilters}
                                         className='flex-1'
                                     >
-                                        <RotateCcw className='mr-2 h-4 w-4' /> 
+                                        <RotateCcw className='mr-2 h-4 w-4' />
                                         Reset
                                     </Button>
                                     <DrawerClose asChild>
-                                        <Button 
-                                            className='flex-[2]' 
-                                        >
-                                            Done
-                                        </Button>
+                                        <Button className='flex-[2]'>Done</Button>
                                     </DrawerClose>
                                 </DrawerFooter>
                             </DrawerContent>

@@ -117,7 +117,7 @@ export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
                     borderColor: '#EF4444', // Red
                     tension: 0.1,
                     spanGaps: true
-                },
+                }
                 // only add datasets with data
             ].filter((d) => d.data.some((val) => val !== null));
 

@@ -63,7 +63,7 @@ export function CollectionControl({
                 purchasePrice: currentPrice || 0,
                 // Default variant, to be edited later in modal
                 // Should be refactored to the card's primary variant
-                variant: CardVariant.Normal,
+                variant: CardVariant.Normal
             });
             toast.success('Added to collection');
         } catch (error) {

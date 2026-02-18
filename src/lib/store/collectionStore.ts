@@ -25,7 +25,7 @@ type CollectionEntryInput = {
 export type CollectionStoreState = PersistedState & {
     status: 'idle' | 'loading' | 'ready_from_cache' | 'ready_from_network' | 'error';
     initialize: (userId: string) => Promise<void>;
-    addEntry: (entry: CollectionEntryInput) => Promise<void>;    
+    addEntry: (entry: CollectionEntryInput) => Promise<void>;
     updateEntry: (entryId: string, updates: Partial<CollectionEntry>) => Promise<void>;
     removeEntry: (entryId: string) => Promise<void>;
     setEntries: (entries: FrontendCollectionEntry[]) => void;
@@ -54,7 +54,7 @@ export const useCollectionStore = create<CollectionStoreState>()(
             version: null,
             status: 'idle',
             setEntries: (entries) => {
-                set({ 
+                set({
                     entries: entries,
                     lastSynced: Date.now(),
                     status: 'ready_from_network'
@@ -101,7 +101,7 @@ export const useCollectionStore = create<CollectionStoreState>()(
                     //     `[CollectionStore]: ✅ Loaded ${serverEntries.length} entries from network`
                     // );
 
-                    const mappedEntries: FrontendCollectionEntry[] = serverEntries.map(e => ({
+                    const mappedEntries: FrontendCollectionEntry[] = serverEntries.map((e) => ({
                         ...e,
                         purchasePrice: Number(e.purchasePrice)
                     }));
@@ -113,7 +113,6 @@ export const useCollectionStore = create<CollectionStoreState>()(
                         version: `${serverTimestamp}`,
                         status: 'ready_from_network'
                     });
-
                 } catch (error) {
                     //console.error('[CollectionStore]: ❌ Error during initialization:', error);
 
@@ -137,8 +136,8 @@ export const useCollectionStore = create<CollectionStoreState>()(
                     userId: currentUserId,
                     createdAt: new Date(),
                     cardId: entry.cardId,
-                    purchasePrice: entry.purchasePrice, 
-                    variant: entry.variant || 'Normal',
+                    purchasePrice: entry.purchasePrice,
+                    variant: entry.variant || 'Normal'
                 };
 
                 // Optimistic update
@@ -149,10 +148,10 @@ export const useCollectionStore = create<CollectionStoreState>()(
                 try {
                     const newEntry = await trpcClient.collection.addToCollection.mutate({
                         cardId: entry.cardId,
-                        purchasePrice: entry.purchasePrice, 
+                        purchasePrice: entry.purchasePrice,
                         variant: entry.variant || 'Normal'
                     });
-                    
+
                     const mappedNewEntry: FrontendCollectionEntry = {
                         ...newEntry,
                         purchasePrice: Number(newEntry.purchasePrice)

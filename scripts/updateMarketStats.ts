@@ -90,10 +90,10 @@ async function upsertCardMarketStats(myCardId: string, apiCard: ApiCard) {
         }
         return null;
     };
-    const pNormal = getVariantPrice(["Normal"]);
-    const pHolo = getVariantPrice(["Holofoil"]);
-    const pReverse = getVariantPrice(["Reverse Holofoil", "Reverse"]);
-    const p1stEd = getVariantPrice(["1st Edition", "1st Edition Holofoil"]);
+    const pNormal = getVariantPrice(['Normal']);
+    const pHolo = getVariantPrice(['Holofoil']);
+    const pReverse = getVariantPrice(['Reverse Holofoil', 'Reverse']);
+    const p1stEd = getVariantPrice(['1st Edition', '1st Edition Holofoil']);
 
     let basePrice: number | null = null;
     const primaryKey = apiCard.prices?.primaryPrinting;
@@ -142,7 +142,7 @@ async function upsertCardMarketStats(myCardId: string, apiCard: ApiCard) {
             tcgNormal: pNormal,
             tcgHolo: pHolo,
             tcgReverse: pReverse,
-            tcgFirstEdition: p1stEd,
+            tcgFirstEdition: p1stEd
         },
         create: {
             cardId: myCardId,
@@ -151,7 +151,7 @@ async function upsertCardMarketStats(myCardId: string, apiCard: ApiCard) {
             tcgNormal: pNormal,
             tcgHolo: pHolo,
             tcgReverse: pReverse,
-            tcgFirstEdition: p1stEd,
+            tcgFirstEdition: p1stEd
         }
     });
 
@@ -268,10 +268,10 @@ async function main() {
     });
 
     const desiredSetIds = new Set([
-        ...highPrioritySets.map(s => s.id),
-        ...alternatingSets.map(s => s.id)
+        ...highPrioritySets.map((s) => s.id),
+        ...alternatingSets.map((s) => s.id)
     ]);
-    const setsToProcess = dbSets.filter(set => desiredSetIds.has(set.id));
+    const setsToProcess = dbSets.filter((set) => desiredSetIds.has(set.id));
 
     console.log(`Starting daily MarketStats update for ${setsToProcess.length} sets...`);
 

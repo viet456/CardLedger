@@ -13,11 +13,14 @@ interface PersistedStore {
 function useStoreHydration(store: PersistedStore): boolean {
     return useSyncExternalStore(
         // Subscribe: React calls this to register a listener
-        useCallback((callback) => {
-            // Listen for the finish event
-            const unsub = store.persist.onFinishHydration(callback);
-            return unsub;
-        }, [store]),
+        useCallback(
+            (callback) => {
+                // Listen for the finish event
+                const unsub = store.persist.onFinishHydration(callback);
+                return unsub;
+            },
+            [store]
+        ),
 
         // Get Snapshot: How React checks the current value
         () => store.persist.hasHydrated(),
