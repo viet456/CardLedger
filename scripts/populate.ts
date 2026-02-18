@@ -156,7 +156,7 @@ async function processCard(cardRef: any, dbSet: any, cardsWithImages: Set<string
         });
 
         const variants = card.variants || {};
-        
+
         await prisma.card.upsert({
             where: { id: card.id },
             create: {
@@ -190,7 +190,7 @@ async function processCard(cardRef: any, dbSet: any, cardsWithImages: Set<string
                 hasNormal: variants.normal ?? false,
                 hasHolo: variants.holo ?? false,
                 hasReverse: variants.reverse ?? false,
-                hasFirstEdition: variants.firstEdition ?? false,
+                hasFirstEdition: variants.firstEdition ?? false
             },
             update: {
                 hp: card.hp ? parseInt(String(card.hp)) : null,
@@ -297,7 +297,7 @@ async function syncCards() {
             continue;
         }
 
-      const toProcess = setDetails.cards.filter((c) => !completed.has(c.id));
+        const toProcess = setDetails.cards.filter((c) => !completed.has(c.id));
         // const toProcess = setDetails.cards;
         if (toProcess.length === 0) {
             console.log(`  ✅ ${dbSet.name} is 100% complete. Moving on...`);

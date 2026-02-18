@@ -20,7 +20,7 @@ function toNum(val: any): number | null {
     if (val && typeof val === 'object' && 'toNumber' in val && typeof val.toNumber === 'function') {
         return val.toNumber();
     }
-    
+
     const num = Number(val);
     return isNaN(num) ? null : num;
 }
@@ -55,26 +55,28 @@ export function DashboardClient() {
     const { data: portfolioHistory } = trpc.collection.getPortfolioHistory.useQuery(undefined, {
         enabled: !!session?.user
     });
-    
+
     const gridCards = useMemo(() => {
         return entries
             .filter((entry) => entry.card && entry.card.set)
             .map((entry) => {
                 // Extract and map variants
                 const s = entry.card.marketStats;
-                const variants = s ? {
-                    tcgNearMint: toNum(s.tcgNearMintLatest),
-                    tcgNormal: toNum(s.tcgNormalLatest),
-                    tcgHolo: toNum(s.tcgHoloLatest),
-                    tcgReverse: toNum(s.tcgReverseLatest),
-                    tcgFirstEdition: toNum(s.tcgFirstEditionLatest),
-                } : null;
+                const variants = s
+                    ? {
+                          tcgNearMint: toNum(s.tcgNearMintLatest),
+                          tcgNormal: toNum(s.tcgNormalLatest),
+                          tcgHolo: toNum(s.tcgHoloLatest),
+                          tcgReverse: toNum(s.tcgReverseLatest),
+                          tcgFirstEdition: toNum(s.tcgFirstEditionLatest)
+                      }
+                    : null;
 
                 // Return the card with variants attached
                 return {
                     ...mapPrismaCardToDenormalized(entry.card),
                     uniqueId: entry.id,
-                    variants: variants, 
+                    variants: variants,
                     collectionStats: {
                         cost: Number(entry.purchasePrice),
                         acquiredAt: new Date(entry.createdAt),
@@ -90,13 +92,15 @@ export function DashboardClient() {
             .map((entry) => {
                 // Transform raw marketStats to the 'variants' object
                 const s = entry.card.marketStats;
-                const variants: CardPrices | null = s ? {
-                     tcgNearMint: toNum(s.tcgNearMintLatest),
-                     tcgNormal: toNum(s.tcgNormalLatest),
-                     tcgHolo: toNum(s.tcgHoloLatest),
-                     tcgReverse: toNum(s.tcgReverseLatest),
-                     tcgFirstEdition: toNum(s.tcgFirstEditionLatest),
-                } : null;
+                const variants: CardPrices | null = s
+                    ? {
+                          tcgNearMint: toNum(s.tcgNearMintLatest),
+                          tcgNormal: toNum(s.tcgNormalLatest),
+                          tcgHolo: toNum(s.tcgHoloLatest),
+                          tcgReverse: toNum(s.tcgReverseLatest),
+                          tcgFirstEdition: toNum(s.tcgFirstEditionLatest)
+                      }
+                    : null;
 
                 return {
                     id: entry.id,
@@ -106,7 +110,7 @@ export function DashboardClient() {
                     variant: entry.variant,
                     card: {
                         name: entry.card.name,
-                        imageKey: entry.card.imageKey ?? '', 
+                        imageKey: entry.card.imageKey ?? '',
                         set: {
                             name: entry.card.set.name
                         },

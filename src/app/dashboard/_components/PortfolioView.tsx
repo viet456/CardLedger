@@ -15,11 +15,11 @@ interface PortfolioEntry {
     variant: CardVariant | null; // 'Normal' | 'Holo' | 'Reverse' | 'FirstEdition'
     card: {
         name: string;
-        imageKey: string; 
+        imageKey: string;
         set: {
             name: string;
         };
-        variants: CardPrices | null; 
+        variants: CardPrices | null;
     };
 }
 

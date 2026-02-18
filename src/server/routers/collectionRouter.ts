@@ -20,37 +20,49 @@ function toNum(val: number | Decimal | null | undefined): number | null {
 }
 
 function mapMarketStatsToVariants(
-    marketStats: Pick<MarketStats, 
-        'tcgNearMintLatest' | 
-        'tcgNormalLatest' | 
-        'tcgHoloLatest' | 
-        'tcgReverseLatest' | 
-        'tcgFirstEditionLatest'
-    > | null | undefined
+    marketStats:
+        | Pick<
+              MarketStats,
+              | 'tcgNearMintLatest'
+              | 'tcgNormalLatest'
+              | 'tcgHoloLatest'
+              | 'tcgReverseLatest'
+              | 'tcgFirstEditionLatest'
+          >
+        | null
+        | undefined
 ): CardPrices | null {
     if (!marketStats) return null;
-    
+
     return {
         tcgNearMint: toNum(marketStats.tcgNearMintLatest),
         tcgNormal: toNum(marketStats.tcgNormalLatest),
         tcgHolo: toNum(marketStats.tcgHoloLatest),
         tcgReverse: toNum(marketStats.tcgReverseLatest),
-        tcgFirstEdition: toNum(marketStats.tcgFirstEditionLatest),
+        tcgFirstEdition: toNum(marketStats.tcgFirstEditionLatest)
     };
 }
 
 // Helper to check if a variant physically exists on a card
 function validateVariant(
-    card: Pick<Card, 'hasNormal' | 'hasHolo' | 'hasReverse' | 'hasFirstEdition'>, 
+    card: Pick<Card, 'hasNormal' | 'hasHolo' | 'hasReverse' | 'hasFirstEdition'>,
     requestedVariant: CardVariant
 ): CardVariant {
     let isValid = false;
 
     switch (requestedVariant) {
-        case CardVariant.Normal: isValid = card.hasNormal; break;
-        case CardVariant.Holo: isValid = card.hasHolo; break;
-        case CardVariant.Reverse: isValid = card.hasReverse; break;
-        case CardVariant.FirstEdition: isValid = card.hasFirstEdition; break;
+        case CardVariant.Normal:
+            isValid = card.hasNormal;
+            break;
+        case CardVariant.Holo:
+            isValid = card.hasHolo;
+            break;
+        case CardVariant.Reverse:
+            isValid = card.hasReverse;
+            break;
+        case CardVariant.FirstEdition:
+            isValid = card.hasFirstEdition;
+            break;
     }
 
     if (isValid) return requestedVariant;
@@ -60,7 +72,7 @@ function validateVariant(
     if (card.hasHolo) return CardVariant.Holo;
     if (card.hasReverse) return CardVariant.Reverse;
     if (card.hasFirstEdition) return CardVariant.FirstEdition;
-    
+
     return CardVariant.Normal;
 }
 
@@ -90,7 +102,7 @@ export const collectionRouter = router({
                                     tcgHoloLatest: true,
                                     tcgReverseLatest: true,
                                     tcgFirstEditionLatest: true,
-                                    tcgPlayerUpdatedAt: true,
+                                    tcgPlayerUpdatedAt: true
                                 }
                             },
                             artist: true,
@@ -112,8 +124,13 @@ export const collectionRouter = router({
                 entries: entries.map((entry) => {
                     const variants = mapMarketStatsToVariants(entry.card.marketStats);
 
-                    const defaultPrice = variants 
-                        ? (variants.tcgNearMint ?? variants.tcgNormal ?? variants.tcgHolo ?? variants.tcgReverse ?? variants.tcgFirstEdition?? 0)
+                    const defaultPrice = variants
+                        ? (variants.tcgNearMint ??
+                          variants.tcgNormal ??
+                          variants.tcgHolo ??
+                          variants.tcgReverse ??
+                          variants.tcgFirstEdition ??
+                          0)
                         : 0;
 
                     return {
@@ -122,16 +139,16 @@ export const collectionRouter = router({
                         variant: entry.variant || CardVariant.Normal,
                         card: {
                             ...entry.card,
-                            price: defaultPrice, 
-                            variants: variants, 
+                            price: defaultPrice,
+                            variants: variants,
                             hasNormal: entry.card.hasNormal,
                             hasHolo: entry.card.hasHolo,
                             hasReverse: entry.card.hasReverse,
-                            hasFirstEdition: entry.card.hasFirstEdition,
+                            hasFirstEdition: entry.card.hasFirstEdition
                         }
                     };
                 }),
-                lastModified,
+                lastModified
             };
         }),
     /**
@@ -142,7 +159,7 @@ export const collectionRouter = router({
         .input(
             z.object({
                 cardId: z.string(),
-                purchasePrice: z.number().min(0, "Price cannot be negative"),
+                purchasePrice: z.number().min(0, 'Price cannot be negative'),
                 variant: z.nativeEnum(CardVariant)
             })
         )
@@ -155,9 +172,9 @@ export const collectionRouter = router({
             });
 
             if (!card) {
-                throw new TRPCError({ 
-                    code: 'NOT_FOUND', 
-                    message: 'Card not found.' 
+                throw new TRPCError({
+                    code: 'NOT_FOUND',
+                    message: 'Card not found.'
                 });
             }
             // Validate/Auto-correct the variant
@@ -191,7 +208,7 @@ export const collectionRouter = router({
                 purchasePrice: Number(newEntry.purchasePrice),
                 card: {
                     ...newEntry.card,
-                    variants: variants 
+                    variants: variants
                 }
             };
         }),
@@ -226,17 +243,17 @@ export const collectionRouter = router({
                 // Auto-correct the variant
                 updateData.variant = validateVariant(entry.card, dataToUpdate.variant);
             }
-            
+
             await prisma.collectionEntry.updateMany({
-                where: { 
-                    id: entryId, 
-                    userId: ctx.user.id 
+                where: {
+                    id: entryId,
+                    userId: ctx.user.id
                 },
-                data: updateData 
+                data: updateData
             });
-            return { 
-                success: true, 
-                variant: updateData.variant ?? dataToUpdate.variant 
+            return {
+                success: true,
+                variant: updateData.variant ?? dataToUpdate.variant
             };
         }),
     /**

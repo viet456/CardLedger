@@ -1,4 +1,4 @@
-import { CardPrices } from "./price-api";
+import { CardPrices } from './price-api';
 
 export type WeaknessResistanceObject = {
     type: string;

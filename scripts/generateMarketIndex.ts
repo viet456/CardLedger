@@ -21,7 +21,7 @@ async function getDailyPrices() {
             tcgNormalLatest: true,
             tcgHoloLatest: true,
             tcgReverseLatest: true,
-            tcgFirstEditionLatest: true 
+            tcgFirstEditionLatest: true
         }
     });
     console.log(`Processing ${allDailyPrices.length} card prices.`);
@@ -33,13 +33,13 @@ async function getDailyPrices() {
                 tcgNormal: stat.tcgNormalLatest?.toNumber() ?? null,
                 tcgHolo: stat.tcgHoloLatest?.toNumber() ?? null,
                 tcgReverse: stat.tcgReverseLatest?.toNumber() ?? null,
-                tcgFirstEdition: stat.tcgFirstEditionLatest?.toNumber() ?? null,
+                tcgFirstEdition: stat.tcgFirstEditionLatest?.toNumber() ?? null
             };
             return acc;
         },
         {} as Record<string, CardPrices>
     );
-    return priceMap;    
+    return priceMap;
 }
 
 async function generateMarketIndex() {

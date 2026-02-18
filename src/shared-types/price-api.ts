@@ -64,12 +64,7 @@ export interface CardPrices {
 
 // Application / Domain Types
 
-export type MarketKey =
-    | 'tcgNearMint'
-    | 'tcgNormal'
-    | 'tcgHolo'
-    | 'tcgReverse'
-    | 'tcgFirstEdition';
+export type MarketKey = 'tcgNearMint' | 'tcgNormal' | 'tcgHolo' | 'tcgReverse' | 'tcgFirstEdition';
 
 // Historical DB row shape (domain representation)
 export type PriceHistoryDataPoint = {
@@ -86,15 +81,9 @@ export interface MarketStats {
     prices: Record<string, CardPrices>;
 }
 
-
-
 // Variant Mapping Helpers
 
-export type PriceColumn =
-    | 'tcgNormal'
-    | 'tcgHolo'
-    | 'tcgReverse'
-    | 'tcgFirstEdition';
+export type PriceColumn = 'tcgNormal' | 'tcgHolo' | 'tcgReverse' | 'tcgFirstEdition';
 
 export interface VariantMapping {
     apiKeys: string[];
@@ -112,10 +101,10 @@ export const VARIANT_MAPPINGS: VariantMapping[] = [
 // Simple lookup map (optional utility)
 export const variantsMarketMap: Record<string, MarketKey> = {
     'Near Mint': 'tcgNearMint',
-    'Normal': 'tcgNormal',
-    'Holofoil': 'tcgHolo',
+    Normal: 'tcgNormal',
+    Holofoil: 'tcgHolo',
     'Reverse Holofoil': 'tcgReverse',
-    'Reverse': 'tcgReverse',
+    Reverse: 'tcgReverse',
     '1st Edition': 'tcgFirstEdition',
     '1st Edition Holofoil': 'tcgFirstEdition'
 };
@@ -127,12 +116,5 @@ export function resolveBestNearMint(
     reverse?: number | null,
     firstEdition?: number | null
 ): number | null {
-    return (
-        nearMint ??
-        normal ??
-        holo ??
-        reverse ??
-        firstEdition ??
-        null
-    );
+    return nearMint ?? normal ?? holo ?? reverse ?? firstEdition ?? null;
 }

@@ -1,6 +1,12 @@
 'use client';
 import { useCollectionStore } from '@/src/lib/store/collectionStore';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/src/components/ui/select';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue
+} from '@/src/components/ui/select';
 import { CardVariant } from '@prisma/client';
 import { toast } from 'sonner';
 import { useState } from 'react';
@@ -8,10 +14,10 @@ import { useState } from 'react';
 export function EditableVariantSelect({
     id,
     initialVariant,
-    validVariants,
+    validVariants
 }: {
     id: string;
-    initialVariant: CardVariant,
+    initialVariant: CardVariant;
     validVariants: CardVariant[];
 }) {
     const updateEntry = useCollectionStore((state) => state.updateEntry);
@@ -33,13 +39,17 @@ export function EditableVariantSelect({
 
     return (
         <Select value={val} onValueChange={handleChange}>
-            <SelectTrigger className="w-[140px] h-8">
+            <SelectTrigger className='h-8 w-[140px]'>
                 <SelectValue />
             </SelectTrigger>
             <SelectContent>
                 {validVariants.map((v) => (
                     <SelectItem key={v} value={v}>
-                        {v === 'FirstEdition' ? '1st Edition' : v === 'Reverse' ? 'Reverse Holo' : v}
+                        {v === 'FirstEdition'
+                            ? '1st Edition'
+                            : v === 'Reverse'
+                              ? 'Reverse Holo'
+                              : v}
                     </SelectItem>
                 ))}
             </SelectContent>

@@ -58,11 +58,11 @@ const customSort = (info: any, haystack: string[], needle: string) => {
         if (start[a] !== start[b]) {
             return start[a] - start[b];
         }
-        
+
         // If start is tied, prioritize shortest string (closer to exact match)
         const lenA = haystack[idx[a]].length;
         const lenB = haystack[idx[b]].length;
-        
+
         return lenA - lenB;
     });
 
@@ -71,9 +71,9 @@ const customSort = (info: any, haystack: string[], needle: string) => {
 
 const ufOptions = {
     // intraMode: 1 allows for partial matches inside words (crucial for IDs like 'sv1-001')
-    intraMode: 1,  
+    intraMode: 1,
     // Optimize for standard latin characters + numbers
-    intraChars: "[a-z0-9]", 
+    intraChars: '[a-z0-9]',
     sort: customSort
 };
 
@@ -126,7 +126,7 @@ function buildIndexes(fullData: FullCardData) {
     }
 
     //console.log('[CardStore]: Building uFuzzy index...');
-    const ufInstance = new uFuzzy(ufOptions);    
+    const ufInstance = new uFuzzy(ufOptions);
     //console.log('[CardStore]: ✅ uFuzzy index built.');
 
     return {

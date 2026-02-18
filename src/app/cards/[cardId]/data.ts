@@ -16,7 +16,7 @@ export async function getCachedPriceHistory(cardId: string): Promise<PriceHistor
             tcgNormal: true,
             tcgHolo: true,
             tcgReverse: true,
-            tcgFirstEdition: true,
+            tcgFirstEdition: true
         }
     });
     return history.map((row) => ({

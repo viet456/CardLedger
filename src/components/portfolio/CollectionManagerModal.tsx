@@ -35,7 +35,9 @@ const MobileLabel = ({ children }: { children: React.ReactNode }) => (
     <span className='mr-2 text-sm font-semibold text-muted-foreground md:hidden'>{children}</span>
 );
 
-function getAllowedVariants(card: Pick<Card, 'hasNormal' | 'hasHolo' | 'hasReverse' | 'hasFirstEdition'>): CardVariant[] {
+function getAllowedVariants(
+    card: Pick<Card, 'hasNormal' | 'hasHolo' | 'hasReverse' | 'hasFirstEdition'>
+): CardVariant[] {
     const allowed: CardVariant[] = [];
 
     if (card.hasNormal) allowed.push(CardVariant.Normal);
@@ -101,41 +103,43 @@ export function CollectionManagerModal({
                                     const validVariants = getAllowedVariants(entry.card);
                                     return (
                                         <TableRow
-                                        key={entry.id}
-                                        className='flex flex-col divide-y divide-border/50 border-b p-4 md:table-row md:divide-y-0 md:border-b'
-                                    >
-                                        {/* Date */}
-                                        <TableCell className='flex items-center justify-between border-none px-0 py-3 md:table-cell md:py-4 md:pl-2'>
-                                            <MobileLabel>Acquired</MobileLabel>
-                                            <EditableDate id={entry.id} date={entry.createdAt} />
-                                        </TableCell>
-                                        {/* Variant */}
-                                        <TableCell className='flex items-center justify-between border-none px-0 py-3 md:table-cell md:py-4 md:pl-2'>
-                                            <MobileLabel>Variant</MobileLabel>
-                                            <EditableVariantSelect
-                                                id={entry.id}
-                                                initialVariant={entry.variant || 'Normal'}
-                                                validVariants={validVariants}
-                                            />
-                                        </TableCell>
-                                        {/* Price */}
-                                        <TableCell className='flex items-center justify-between border-none px-0 py-3 md:table-cell md:py-4 md:pl-2'>
-                                            <MobileLabel>Cost</MobileLabel>
-                                            <EditablePriceInput
-                                                id={entry.id}
-                                                initialPrice={Number(entry.purchasePrice)}
-                                            />
-                                        </TableCell>
-                                        <TableCell className='flex items-center justify-between border-none px-0 py-3 md:table-cell md:py-4 md:pl-2 md:pr-4'>
-                                            <span className='text-sm font-bold text-muted-foreground md:hidden'>
-                                                Actions:
-                                            </span>
-                                            <SafeDeleteButton id={entry.id} />
-                                        </TableCell>
-                                    </TableRow>
-                                    )
-                                    
-                                 })}
+                                            key={entry.id}
+                                            className='flex flex-col divide-y divide-border/50 border-b p-4 md:table-row md:divide-y-0 md:border-b'
+                                        >
+                                            {/* Date */}
+                                            <TableCell className='flex items-center justify-between border-none px-0 py-3 md:table-cell md:py-4 md:pl-2'>
+                                                <MobileLabel>Acquired</MobileLabel>
+                                                <EditableDate
+                                                    id={entry.id}
+                                                    date={entry.createdAt}
+                                                />
+                                            </TableCell>
+                                            {/* Variant */}
+                                            <TableCell className='flex items-center justify-between border-none px-0 py-3 md:table-cell md:py-4 md:pl-2'>
+                                                <MobileLabel>Variant</MobileLabel>
+                                                <EditableVariantSelect
+                                                    id={entry.id}
+                                                    initialVariant={entry.variant || 'Normal'}
+                                                    validVariants={validVariants}
+                                                />
+                                            </TableCell>
+                                            {/* Price */}
+                                            <TableCell className='flex items-center justify-between border-none px-0 py-3 md:table-cell md:py-4 md:pl-2'>
+                                                <MobileLabel>Cost</MobileLabel>
+                                                <EditablePriceInput
+                                                    id={entry.id}
+                                                    initialPrice={Number(entry.purchasePrice)}
+                                                />
+                                            </TableCell>
+                                            <TableCell className='flex items-center justify-between border-none px-0 py-3 md:table-cell md:py-4 md:pl-2 md:pr-4'>
+                                                <span className='text-sm font-bold text-muted-foreground md:hidden'>
+                                                    Actions:
+                                                </span>
+                                                <SafeDeleteButton id={entry.id} />
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
                                 {entries?.length === 0 && (
                                     <TableRow>
                                         <TableCell

@@ -20,14 +20,20 @@ const MAX_CONCURRENT_WRITES = 6;
 let rateLimitCount = 0;
 let consecutive429s = 0;
 
-const MAX_TOTAL_429S = 25;        // total allowed before aborting
-const MAX_CONSECUTIVE_429S = 5;   // burst protection
-
+const MAX_TOTAL_429S = 25; // total allowed before aborting
+const MAX_CONSECUTIVE_429S = 5; // burst protection
 
 const IGNORED_TERMS = [
-    'Booster Box', 'Booster Pack', 'Elite Trainer Box', 'ETB',
-    'Theme Deck', 'League Battle Deck', 'Premium Collection',
-    'Special Collection', 'Pin Collection', 'Blister Pack'
+    'Booster Box',
+    'Booster Pack',
+    'Elite Trainer Box',
+    'ETB',
+    'Theme Deck',
+    'League Battle Deck',
+    'Premium Collection',
+    'Special Collection',
+    'Pin Collection',
+    'Blister Pack'
 ];
 
 type WorkingPriceRow = {
@@ -38,7 +44,6 @@ type WorkingPriceRow = {
     tcgReverse?: number | null;
     tcgFirstEdition?: number | null;
 };
-
 
 async function getSets() {
     const dbSets = await prisma.set.findMany({
@@ -62,9 +67,7 @@ async function getSetPriceHistory(set: string) {
         consecutive429s = 0;
         return response.data;
     } catch (error: unknown) {
-
         if (axios.isAxiosError(error)) {
-
             const status = error.response?.status;
 
             // --- Handle Rate Limit ---
@@ -74,9 +77,7 @@ async function getSetPriceHistory(set: string) {
 
                 const retryAfterHeader = error.response?.headers?.['retry-after'];
                 const retryAfterSeconds =
-                    typeof retryAfterHeader === 'string'
-                        ? Number(retryAfterHeader)
-                        : 10;
+                    typeof retryAfterHeader === 'string' ? Number(retryAfterHeader) : 10;
 
                 console.warn(
                     `⚠️ 429 Rate Limit (Total: ${rateLimitCount}, Consecutive: ${consecutive429s})`
@@ -95,24 +96,17 @@ async function getSetPriceHistory(set: string) {
                 }
 
                 // Optional exponential backoff
-                const backoffDelay =
-                    retryAfterSeconds * Math.pow(2, consecutive429s - 1);
+                const backoffDelay = retryAfterSeconds * Math.pow(2, consecutive429s - 1);
 
                 console.log(`⏳ Backing off for ${backoffDelay}s...`);
 
-                await new Promise((r) =>
-                    setTimeout(r, backoffDelay * 1000)
-                );
+                await new Promise((r) => setTimeout(r, backoffDelay * 1000));
 
                 return getSetPriceHistory(set); // retry
             }
 
             // --- Other Axios errors ---
-            console.error(
-                `❌ Axios error for set ${set}:`,
-                status,
-                error.message
-            );
+            console.error(`❌ Axios error for set ${set}:`, status, error.message);
 
             return null;
         }
@@ -139,7 +133,10 @@ async function processAndWriteHistory(myCardId: string, apiCard: ApiCard) {
         for (const variantKey of mapping.apiKeys) {
             if (historyRoot.variants?.[variantKey]) {
                 const variantObj = historyRoot.variants[variantKey];
-                const nmData = variantObj['Near Mint'] || variantObj['Near Mint Holofoil'] || variantObj['Near Mint Reverse Holofoil'];
+                const nmData =
+                    variantObj['Near Mint'] ||
+                    variantObj['Near Mint Holofoil'] ||
+                    variantObj['Near Mint Reverse Holofoil'];
                 if (nmData?.history && nmData.history.length > 0) {
                     historyArray = nmData.history;
                     break;
@@ -197,11 +194,11 @@ async function processAndWriteHistory(myCardId: string, apiCard: ApiCard) {
         tcgNormal: row.tcgNormal,
         tcgHolo: row.tcgHolo,
         tcgReverse: row.tcgReverse,
-        tcgFirstEdition: row.tcgFirstEdition,
+        tcgFirstEdition: row.tcgFirstEdition
     }));
 
     if (dataForPrisma.length > 0) {
-        const operations = dataForPrisma.map((row) => 
+        const operations = dataForPrisma.map((row) =>
             prisma.priceHistory.upsert({
                 where: { cardId_timestamp: { cardId: row.cardId, timestamp: row.timestamp } },
                 update: {
@@ -229,8 +226,8 @@ async function processAndWriteHistory(myCardId: string, apiCard: ApiCard) {
 
     // Update current market stats (same day price)
     let currentMarketPrice = apiCard.prices?.market ?? null;
-    const metaVariants = apiCard.variants || {}; 
-    
+    const metaVariants = apiCard.variants || {};
+
     const getVariantPrice = (keysToCheck: string[]) => {
         for (const key of keysToCheck) {
             const data = metaVariants[key];
@@ -239,23 +236,15 @@ async function processAndWriteHistory(myCardId: string, apiCard: ApiCard) {
         return null;
     };
 
-    const pNormal = getVariantPrice(["Normal"]);
-    const pHolo = getVariantPrice(["Holofoil"]);
-    const pReverse = getVariantPrice(["Reverse Holofoil", "Reverse"]);
-    const p1stEd = getVariantPrice(["1st Edition", "1st Edition Holofoil"]);
+    const pNormal = getVariantPrice(['Normal']);
+    const pHolo = getVariantPrice(['Holofoil']);
+    const pReverse = getVariantPrice(['Reverse Holofoil', 'Reverse']);
+    const p1stEd = getVariantPrice(['1st Edition', '1st Edition Holofoil']);
 
     const tcgLastUpdatedAt = apiCard.prices?.lastUpdated;
     const validTcgUpdatedAt = tcgLastUpdatedAt ? new Date(tcgLastUpdatedAt) : undefined;
 
-
-    currentMarketPrice = resolveBestNearMint(
-        currentMarketPrice,
-        pNormal,
-        pHolo,
-        pReverse,
-        p1stEd
-    );
-
+    currentMarketPrice = resolveBestNearMint(currentMarketPrice, pNormal, pHolo, pReverse, p1stEd);
 
     await prisma.marketStats.upsert({
         where: { cardId: myCardId },
@@ -339,22 +328,24 @@ async function main() {
 
         const ignoredCount = apiCards.length - validApiCards.length;
         console.log(` -> API Items: ${apiCards.length} (${ignoredCount} ignored)`);
-        console.log(` -> Valid Cards to Sync: ${validApiCards.length} | DB Cards: ${dbCards.length}`);
+        console.log(
+            ` -> Valid Cards to Sync: ${validApiCards.length} | DB Cards: ${dbCards.length}`
+        );
 
         // FLAG: Assume success unless a write explicitly fails
         let setProcessingFullySuccessful = true;
-        
+
         const pendingPromises: Promise<void>[] = [];
         let processedCount = 0;
         let skippedCount = 0;
-        
+
         const skipStats = { noMatch: 0, mismatch: 0 };
         const processedCardIds = new Set<string>();
 
-        const dbCardMap = new Map<string, typeof dbCards[0]>();
-        dbCards.forEach(c => {
-             const cleanNum = c.number.split('/')[0].replace(/^0+/, '').trim();
-             dbCardMap.set(cleanNum, c);
+        const dbCardMap = new Map<string, (typeof dbCards)[0]>();
+        dbCards.forEach((c) => {
+            const cleanNum = c.number.split('/')[0].replace(/^0+/, '').trim();
+            dbCardMap.set(cleanNum, c);
         });
 
         for (const apiCard of validApiCards) {
@@ -395,7 +386,9 @@ async function main() {
                 .then(() => {
                     processedCount++;
                     if (processedCount % 10 === 0) {
-                        process.stdout.write(`\r  [${processedCount}/${validApiCards.length}] Syncing...`);
+                        process.stdout.write(
+                            `\r  [${processedCount}/${validApiCards.length}] Syncing...`
+                        );
                     }
                 })
                 .catch((err) => {
@@ -415,7 +408,9 @@ async function main() {
         await Promise.all(pendingPromises);
 
         console.log(`\n  ✅ Report: ${processedCount} Updated | ${skippedCount} Skipped`);
-        console.log(`  (Skip Details: NoMatch=${skipStats.noMatch}, Mismatch=${skipStats.mismatch})`);
+        console.log(
+            `  (Skip Details: NoMatch=${skipStats.noMatch}, Mismatch=${skipStats.mismatch})`
+        );
 
         // COMPLETION LOGIC:
         // If we didn't have any actual DB errors, mark this set as DONE.
@@ -427,7 +422,7 @@ async function main() {
             console.log(` ⚠️ INCOMPLETE: ${set.name} had write errors. Will retry next run.`);
         }
 
-        const waitTime = Math.ceil(apiCards.length / 10)+ 4;
+        const waitTime = Math.ceil(apiCards.length / 10) + 4;
         console.log(` ⏳ Cooling down for ${waitTime}s...`);
         await new Promise((resolve) => setTimeout(resolve, waitTime * 1000));
     }
