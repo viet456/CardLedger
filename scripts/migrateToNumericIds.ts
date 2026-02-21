@@ -51,18 +51,30 @@ async function main() {
 
     console.log('🚀 Starting Batch Update...');
 
+    let duplicateCount = 0;
     for (const localSet of setsToMigrate) {
         if (!localSet.tcgPlayerSetId) continue;
 
         const numericId = apiIdMap.get(localSet.tcgPlayerSetId);
 
         if (numericId) {
-            await prisma.set.update({
-                where: { id: localSet.id },
-                data: { tcgPlayerNumericId: numericId }
-            });
-            process.stdout.write('.');
-            successCount++;
+            try {
+                await prisma.set.update({
+                    where: { id: localSet.id },
+                    data: { tcgPlayerNumericId: numericId }
+                });
+                process.stdout.write('.');
+                successCount++;
+            } catch (error: any) {
+                // Prisma duplicate on unique column
+                if (error.code === 'P2002') {
+                    console.log(`\n   ❌ Duplicate Collision: Cannot update "${localSet.name}". The numeric ID ${numericId} is already taken by another set in the DB.`);
+                    duplicateCount++;
+                } else {
+                    // Rethrow if it's a completely different database error
+                    throw error;
+                }
+            }
         } else {
             console.log(`\n   ⚠️  No match for: ${localSet.name} (ID: ${localSet.tcgPlayerSetId})`);
             missingCount++;
@@ -72,6 +84,7 @@ async function main() {
     console.log('\n\n--- Migration Complete ---');
     console.log(`✅ Updated: ${successCount}`);
     console.log(`❌ No Match Found: ${missingCount}`);
+    console.log(`❌ Duplicate Count: ${duplicateCount}`);
 }
 
 main()
