@@ -11,6 +11,10 @@ import uFuzzy from '@leeoniya/ufuzzy';
 
 const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
 
+// Front-end type with index for fastest sorting when multiple filters selected
+// Ensures intersected filter maps return cards sorted, quickly
+export type IndexedCard = NormalizedCard & { _index: number };
+
 type StoreStatus =
     | 'idle'
     | 'loading_cache'
@@ -34,7 +38,7 @@ export type CardStoreState = LookupTables & {
     status: 'idle' | 'loading' | 'ready_from_cache' | 'ready_from_network' | 'error';
     initialize: () => Promise<void>;
 
-    cardMap: Map<string, NormalizedCard>;
+    cardMap: Map<string, IndexedCard>;
     rarityIndex: IndexMap;
     setIndex: IndexMap;
     typeIndex: IndexMap;
@@ -79,7 +83,7 @@ const ufOptions = {
 
 // Helper function to build search indexes
 function buildIndexes(fullData: FullCardData) {
-    const cardMap = new Map<string, NormalizedCard>();
+    const cardMap = new Map<string, IndexedCard>();
     const rarityIndex: IndexMap = new Map();
     const setIndex: IndexMap = new Map();
     const typeIndex: IndexMap = new Map();
@@ -98,8 +102,9 @@ function buildIndexes(fullData: FullCardData) {
         }
         index.get(key)!.add(cardId);
     };
-    for (const card of fullData.cards) {
-        cardMap.set(card.id, card);
+    for (let i = 0; i < fullData.cards.length; i++) {
+        const card = fullData.cards[i];
+        cardMap.set(card.id, { ...card, _index: i });
         searchHaystack.push(`${card.n} ${card.id}`);
 
         if (card.r !== null) {

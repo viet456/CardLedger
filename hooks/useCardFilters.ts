@@ -3,14 +3,29 @@ import { useSearchStore } from '@/src/lib/store/searchStore';
 import { NormalizedCard } from '@/src/shared-types/card-index';
 import { useMemo, useEffect } from 'react';
 import { SortableKey } from '../src/services/pokemonCardValidator';
-import { useCardStore } from '@/src/lib/store/cardStore';
+import { useCardStore, IndexedCard } from '@/src/lib/store/cardStore';
 import { useShallow } from 'zustand/react/shallow';
+import { CardPrices } from '@/src/shared-types/price-api';
+import { useMarketStore } from '@/src/lib/store/marketStore';
 
 interface UseCardFiltersProps {
     defaultSort?: {
         sortBy: SortableKey;
         sortOrder: 'asc' | 'desc';
     };
+}
+
+// Helper to get price for sorting without full denormalization
+function getEffectivePrice(priceData?: CardPrices): number | null {
+    if (!priceData) return null;
+    return (
+        priceData.tcgNearMint ??
+        priceData.tcgNormal ??
+        priceData.tcgHolo ??
+        priceData.tcgReverse ??
+        priceData.tcgFirstEdition ??
+        null
+    );
 }
 
 function intersectSets(setA: Set<string>, setB: Set<string>): Set<string> {
@@ -30,9 +45,11 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
             setFilters: state.setFilters
         }))
     );
+    const prices = useMarketStore((state) => state.prices);
 
     const {
         cards,
+        sets,
         cardMap,
         rarityIndex,
         setIndex,
@@ -46,6 +63,7 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
     } = useCardStore(
         useShallow((state) => ({
             cards: state.cards,
+            sets: state.sets,
             cardMap: state.cardMap,
             rarityIndex: state.rarityIndex,
             setIndex: state.setIndex,
@@ -93,15 +111,18 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
                 candidateSet = intersectSets(candidateSet, activeFilterSets[i]);
             }
 
-            results = [];
+            const matchedCards: IndexedCard[] = [];
+
             for (const id of candidateSet) {
                 const card = cardMap.get(id);
-                if (card) results.push(card);
+                if (card) matchedCards.push(card);
             }
+            matchedCards.sort((a, b) => a._index - b._index);
+            results = matchedCards;
         }
 
-        //const endTime = performance.now();
-        //console.log(`[CandidateCards] Count: ${results.length} | Time: ${(endTime - startTime).toFixed(2)}ms`);
+        // const endTime = performance.now();
+        // console.log(`[CandidateCards] Count: ${results.length} | Time: ${(endTime - startTime).toFixed(2)}ms`);
         return results;
     }, [
         cards,
@@ -122,6 +143,7 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
         resistanceIndex
     ]);
 
+    // uFuzzy Search Filter
     const filteredCards = useMemo(() => {
         if (!filters.search || !ufInstance || !searchHaystack.length) {
             return candidateCards;
@@ -143,18 +165,86 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
             }
         }
 
-        let finalResults = searchResults;
         if (candidateCards.length !== cards.length) {
             // Create a Set of allowed IDs for O(1) lookup
             const allowedIds = new Set(candidateCards.map((c) => c.id));
-            finalResults = searchResults.filter((c) => allowedIds.has(c.id));
+            return searchResults.filter((c) => allowedIds.has(c.id));
         }
 
-        //const endTime = performance.now();
-        //console.log(`[uFuzzy Search] Query: "${query}" | Results: ${finalResults.length} | Time: ${(endTime - startTime).toFixed(2)}ms`);
+        // const endTime = performance.now();
+        // console.log(`[uFuzzy Search] Query: "${query}" | Results: ${finalResults.length} | Time: ${(endTime - startTime).toFixed(2)}ms`);
 
-        return finalResults;
+        return searchResults;
     }, [filters.search, ufInstance, searchHaystack, candidateCards, cards]);
 
-    return { filteredCards };
+    // Sort the normalized cards
+    const sortedAndFilteredCards = useMemo(() => {
+        const sortBy = (filters.sortBy || (filters.search ? 'relevance' : 'rD')) as SortableKey | 'relevance';
+        const sortOrder = filters.sortOrder || 'desc';
+
+        // Fast path 1: Relevance preserves uFuzzy order
+        if (sortBy === 'relevance') return filteredCards;
+
+        // Fast path 2: Default backend JSON order, skip sorting entirely.
+        if (sortBy === 'rD' && sortOrder === 'desc' && !filters.search) {
+            return filteredCards;
+        }
+
+        const cardsToSort = [...filteredCards];
+        const setReleaseDateMap = new Map<number, number>(
+            sets.map((set, index) => [index, new Date(set.releaseDate).getTime()])
+        );
+        cardsToSort.sort((a, b) => {
+            switch (sortBy) {
+                case 'price':
+                    const priceA = getEffectivePrice(prices[a.id]);
+                    const priceB = getEffectivePrice(prices[b.id]);
+                    const isAInvalid = priceA === null;
+                    const isBInvalid = priceB === null;
+                    
+                    if (isAInvalid && isBInvalid) return 0;
+                    if (isAInvalid) return 1;
+                    if (isBInvalid) return -1;
+                    return sortOrder === 'desc' ? priceB - priceA : priceA - priceB;
+
+                case 'n':
+                    const nameDiff = a.n.localeCompare(b.n);
+                    if (nameDiff !== 0) return nameDiff;
+                    return setReleaseDateMap.get(a.s)! - setReleaseDateMap.get(b.s)!;
+                
+                case 'num':
+                    return a.num.localeCompare(b.num, undefined, { numeric: true });
+                
+                case 'pS':
+                    const pokedexDiff = (a.pS || 9999) - (b.pS || 9999);
+                    if (pokedexDiff !== 0) return pokedexDiff;
+                    return setReleaseDateMap.get(a.s)! - setReleaseDateMap.get(b.s)!;
+                
+                case 'rD':
+                default:
+                    const dateA = setReleaseDateMap.get(a.s)!;
+                    const dateB = setReleaseDateMap.get(b.s)!;
+                    
+                    if (dateA !== dateB) {
+                        return dateA - dateB; 
+                    }
+                    
+                    // Tie-breaker: Set Size (prevents interweaving on ascending sort)
+                    if (a.s !== b.s) {
+                        return sets[b.s].total - sets[a.s].total;
+                    }
+
+                    // Tie-breaker: Card Number
+                    return a.num.localeCompare(b.num, undefined, { numeric: true });
+            }
+        });
+
+        if (sortOrder === 'desc' && sortBy !== 'price' && sortBy !== 'rD') {
+            cardsToSort.reverse();
+        }
+        return cardsToSort;
+
+    }, [filteredCards, filters.sortBy, filters.search, filters.sortOrder, sets, prices]);
+
+    return { filteredCards: sortedAndFilteredCards };
 }
