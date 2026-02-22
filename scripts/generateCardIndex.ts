@@ -49,58 +49,49 @@ function sanitizePublicId(id: string): string {
 
 async function generateCardIndex() {
     console.log('Starting to build the card index artifact...');
-    console.log(' -> Querying all cards from the database...');
-    const allCardsFromDb = await prisma.card.findMany({
-        orderBy: [{ releaseDate: 'desc' }, { number: 'asc' }],
+    console.log(' -> Querying all sets and their cards from the database...');
+    const allSetsFromDb = await prisma.set.findMany({
+        // Sort sets by newest release date
+        // Tie-breaker: bigger sets first (puts main sets before promos of the same day)
+        orderBy: [
+            { releaseDate: 'desc' },
+            { total: 'desc' } 
+        ],
         select: {
             id: true,
             name: true,
-            number: true,
-            hp: true,
-            convertedRetreatCost: true,
-            supertype: true,
-            artist: { select: { name: true } }, // Flatten relation
-            rarity: { select: { name: true } }, // Flatten relation
-            set: {
+            total: true,
+            printedTotal: true,
+            logoImageKey: true,
+            symbolImageKey: true,
+            series: true,
+            releaseDate: true,
+            ptcgoCode: true,
+            // Fetch all cards belonging to this set!
+            cards: {
                 select: {
                     id: true,
                     name: true,
-                    total: true,
-                    printedTotal: true,
-                    logoImageKey: true,
-                    symbolImageKey: true,
-                    series: true,
+                    number: true,
+                    hp: true,
+                    convertedRetreatCost: true,
+                    supertype: true,
+                    artist: { select: { name: true } },
+                    rarity: { select: { name: true } },
+                    types: { select: { type: { select: { name: true } } } },
+                    subtypes: { select: { subtype: { select: { name: true } } } },
+                    weaknesses: { select: { type: { select: { name: true } }, value: true } },
+                    resistances: { select: { type: { select: { name: true } }, value: true } },
+                    imageKey: true,
                     releaseDate: true,
-                    ptcgoCode: true
+                    pokedexNumberSort: true,
+                    abilities: true
                 }
-            }, // Flatten relation
-            types: { select: { type: { select: { name: true } } } }, // Flatten nested relation
-            subtypes: { select: { subtype: { select: { name: true } } } }, // Flatten nested relation
-            weaknesses: { select: { type: { select: { name: true } }, value: true } },
-            resistances: { select: { type: { select: { name: true } }, value: true } },
-            imageKey: true,
-            releaseDate: true,
-            pokedexNumberSort: true,
-            abilities: true
+            }
         }
     });
-    // sorts the stringed cardnumbers
-    allCardsFromDb.sort((a, b) => {
-        // group by releaseDate
-        if (a.releaseDate.getTime() !== b.releaseDate.getTime()) {
-            return b.releaseDate.getTime() - a.releaseDate.getTime();
-        }
-        const numA = parseInt(a.number, 10);
-        const numB = parseInt(b.number, 10);
-        const aIsNum = !isNaN(numA);
-        const bIsNum = !isNaN(numB);
-
-        if (aIsNum && bIsNum) return numA - numB; // numeric vs numeric
-        if (aIsNum) return -1; // numeric before non-numeric
-        if (bIsNum) return 1;
-        return a.number.localeCompare(b.number); // string fallback
-    });
-    console.log(` -> Found ${allCardsFromDb.length} cards to process.`);
+    const normalizedCards = [];
+    console.log(` -> Found ${allSetsFromDb.length} sets to process.`);
 
     // Create lookup tables and maps to hold the unique values and their integer IDs.
     const supertypeMap = new Map<string, number>();
@@ -125,59 +116,80 @@ async function generateCardIndex() {
     const abilities: AbilityObject[] = [];
 
     // Post-process the cards for the client by pruning and flattening
-    const normalizedCards = allCardsFromDb.map((card) => {
-        const supertypeId = getOrCreateId(supertypeMap, supertypes, card.supertype);
-        const artistId = card.artist ? getOrCreateId(artistMap, artists, card.artist.name) : null;
-        const rarityId = card.rarity ? getOrCreateId(rarityMap, rarities, card.rarity.name) : null;
+    for (const set of allSetsFromDb) {
+        
+        // Register the set in your global lookup map
         const setId = getOrCreateId(setMap, sets, {
-            ...card.set,
-            total: card.set.total,
-            printedTotal: card.set.printedTotal,
-            releaseDate: card.set.releaseDate.toISOString().split('T')[0]
+            id: set.id,
+            name: set.name,
+            total: set.total,
+            printedTotal: set.printedTotal,
+            logoImageKey: set.logoImageKey,
+            symbolImageKey: set.symbolImageKey,
+            series: set.series,
+            ptcgoCode: set.ptcgoCode,
+            releaseDate: set.releaseDate.toISOString().split('T')[0]
         });
 
-        const typeIds = card.types.map((t) => getOrCreateId(typeMap, types, t.type.name));
-        const subtypeIds = card.subtypes.map((s) =>
-            getOrCreateId(subtypeMap, subtypes, s.subtype.name)
-        );
+        // Sort the cards ONLY for this specific set
+        set.cards.sort((a, b) => {
+            const numA = parseInt(a.number, 10);
+            const numB = parseInt(b.number, 10);
+            const aIsNum = !isNaN(numA);
+            const bIsNum = !isNaN(numB);
 
-        const weaknessObjects = card.weaknesses.map((w) => ({
-            t: getOrCreateId(typeMap, types, w.type.name),
-            v: w.value
-        }));
-        const resistanceObjects = card.resistances.map((r) => ({
-            t: getOrCreateId(typeMap, types, r.type.name),
-            v: r.value
-        }));
+            if (aIsNum && bIsNum) return numA - numB; // numeric vs numeric
+            if (aIsNum) return -1; // numeric before non-numeric
+            if (bIsNum) return 1;
+            return a.number.localeCompare(b.number); // string fallback
+        });
 
-        const abilityIds = card.abilities.map((ability) =>
-            getOrCreateAbilityId(abilityMap, abilities, {
-                name: ability.name,
-                text: ability.text,
-                type: ability.type
-            })
-        );
-        // Return a compact card object with short keys and integer IDs
-        return {
-            id: card.id,
-            n: card.name,
-            hp: card.hp,
-            num: card.number,
-            img: card.imageKey,
-            // rD: card.releaseDate.toISOString().split('T')[0],
-            pS: card.pokedexNumberSort,
-            cRC: card.convertedRetreatCost,
-            st: supertypeId,
-            a: artistId,
-            r: rarityId,
-            s: setId,
-            t: typeIds,
-            sb: subtypeIds,
-            w: weaknessObjects,
-            rs: resistanceObjects,
-            ab: abilityIds
-        };
-    });
+        // Normalize the cards and push them to the final flat array
+        for (const card of set.cards) {
+            const supertypeId = getOrCreateId(supertypeMap, supertypes, card.supertype);
+            const artistId = card.artist ? getOrCreateId(artistMap, artists, card.artist.name) : null;
+            const rarityId = card.rarity ? getOrCreateId(rarityMap, rarities, card.rarity.name) : null;
+            const typeIds = card.types.map((t) => getOrCreateId(typeMap, types, t.type.name));
+            const subtypeIds = card.subtypes.map((s) => getOrCreateId(subtypeMap, subtypes, s.subtype.name));
+            
+            const weaknessObjects = card.weaknesses.map((w) => ({
+                t: getOrCreateId(typeMap, types, w.type.name),
+                v: w.value
+            }));
+            const resistanceObjects = card.resistances.map((r) => ({
+                t: getOrCreateId(typeMap, types, r.type.name),
+                v: r.value
+            }));
+
+            const abilityIds = card.abilities.map((ability) =>
+                getOrCreateAbilityId(abilityMap, abilities, {
+                    name: ability.name,
+                    text: ability.text,
+                    type: ability.type
+                })
+            );
+
+            // Push to our flat array
+            normalizedCards.push({
+                id: card.id,
+                n: card.name,
+                hp: card.hp,
+                num: card.number,
+                img: card.imageKey,
+                pS: card.pokedexNumberSort,
+                cRC: card.convertedRetreatCost,
+                st: supertypeId,
+                a: artistId,
+                r: rarityId,
+                s: setId,  
+                t: typeIds,
+                sb: subtypeIds,
+                w: weaknessObjects,
+                rs: resistanceObjects,
+                ab: abilityIds
+            });
+        }
+    }
     console.log(` -> Processed and normalized ${normalizedCards.length} cards.`);
 
     // Generate version and its checksum
