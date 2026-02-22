@@ -10,7 +10,8 @@ import { denormalizeSingleCard } from '@/src/utils/cardUtils';
 import { useCardStore } from '@/src/lib/store/cardStore';
 import { useMarketStore } from '@/src/lib/store/marketStore';
 import { useShallow } from 'zustand/react/shallow';
-import { StatsEvent$ } from '@aws-sdk/client-s3';
+
+let isMobile = window.innerWidth < 768;
 
 interface CardGridProps {
     cards: NormalizedCard[];
@@ -63,7 +64,11 @@ export function CardGrid({ cards, totalCount }: CardGridProps) {
     return (
         <VirtuosoGrid
             useWindowScroll
-            overscan={1500}
+            increaseViewportBy={
+                isMobile
+                ? { top: 500, bottom: 1000 }
+                : { top: 800, bottom: 1500 }
+            }
             totalCount={totalCount}
             components={gridComponents}
             initialTopMostItemIndex={scrollIndex}
