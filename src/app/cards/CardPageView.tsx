@@ -6,7 +6,6 @@ import { useCardFilters } from '@/hooks/useCardFilters';
 import { CardGrid } from '@/src/components/cards/CardGrid';
 import { useHasHydrated } from '@/hooks/useHasHydrated';
 import { PokemonCardSkeleton } from '@/src/components/cards/PokemonCardSkeleton';
-import { useDenormalizedCards } from '@/hooks/useDenormalizedCards';
 import { useShallow } from 'zustand/react/shallow';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useSearchStore } from '@/src/lib/store/searchStore';
@@ -107,8 +106,12 @@ export default function CardPageView() {
     const defaultSort = { sortBy: 'rD' as SortableKey, sortOrder: 'desc' as const };
     const isLoading = !isHydrated || !status.startsWith('ready');
 
+    //const startTime = performance.now();
     const { filteredCards: normalizedFilteredCards } = useCardFilters({ defaultSort });
-    const { denormalizedAndSortedCards } = useDenormalizedCards(normalizedFilteredCards);
+    // const endTime = performance.now();
+    // if (normalizedFilteredCards.length > 0) {
+    //     console.log(`🏎️ [Total Data Pipeline] Filter + Sort + Denorm: ${(endTime - startTime).toFixed(2)}ms`);
+    // }
 
     // Generate Active Badges for Desktop View
     const activeBadges = useMemo(() => {
@@ -171,7 +174,7 @@ export default function CardPageView() {
                         <p className='text-sm text-muted-foreground'>
                             Showing{' '}
                             <span className='font-medium text-foreground'>
-                                {denormalizedAndSortedCards.length.toLocaleString()}
+                                {normalizedFilteredCards.length.toLocaleString()}
                             </span>{' '}
                             cards
                         </p>
@@ -183,7 +186,7 @@ export default function CardPageView() {
                     <p className='shrink-0 text-sm text-muted-foreground'>
                         Showing{' '}
                         <span className='font-medium text-foreground'>
-                            {denormalizedAndSortedCards.length.toLocaleString()}
+                            {normalizedFilteredCards.length.toLocaleString()}
                         </span>{' '}
                         cards
                     </p>
@@ -222,8 +225,8 @@ export default function CardPageView() {
                         </div>
                     ) : (
                         <CardGrid
-                            cards={denormalizedAndSortedCards}
-                            totalCount={denormalizedAndSortedCards.length}
+                            cards={normalizedFilteredCards}
+                            totalCount={normalizedFilteredCards.length}
                         />
                     )}
                 </div>
