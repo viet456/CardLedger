@@ -5,9 +5,15 @@ import { forwardRef, HTMLAttributes } from 'react';
 import { PokemonCard } from './PokemonCard';
 import { DenormalizedCard } from '@/src/shared-types/card-index';
 import { useScrollStore } from '@/src/lib/store/scrollStore';
+import { NormalizedCard } from '@/src/shared-types/card-index';
+import { denormalizeSingleCard } from '@/src/utils/cardUtils';
+import { useCardStore } from '@/src/lib/store/cardStore';
+import { useMarketStore } from '@/src/lib/store/marketStore';
+import { useShallow } from 'zustand/react/shallow';
+import { StatsEvent$ } from '@aws-sdk/client-s3';
 
 interface CardGridProps {
-    cards: DenormalizedCard[];
+    cards: NormalizedCard[];
     totalCount: number;
     priority?: boolean;
 }
@@ -38,6 +44,22 @@ const gridComponents: VirtuosoGridProps<DenormalizedCard, undefined>['components
 export function CardGrid({ cards, totalCount }: CardGridProps) {
     const { scrollIndex, setScrollIndex } = useScrollStore();
 
+    const lookups = useCardStore(
+        useShallow((state) => ({
+            artists: state.artists,
+            rarities: state.rarities,
+            sets: state.sets,
+            types: state.types,
+            subtypes: state.subtypes,
+            supertypes: state.supertypes,
+            abilities: state.abilities,
+            attacks: state.attacks,
+            rules: state.rules
+        }))
+    );
+    const prices = useMarketStore((state) => state.prices);
+
+
     return (
         <VirtuosoGrid
             useWindowScroll
@@ -49,8 +71,9 @@ export function CardGrid({ cards, totalCount }: CardGridProps) {
                 setScrollIndex(startIndex);
             }}
             itemContent={(index) => {
-                const card = cards[index];
-                if (!card) return null;
+                const normalizedCard = cards[index];
+                if (!normalizedCard) return null;
+                const card = denormalizeSingleCard(normalizedCard, lookups, prices);
 
                 return (
                     <div key={card.id} className='relative flex w-full pb-1'>
