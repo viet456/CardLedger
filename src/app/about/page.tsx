@@ -12,11 +12,12 @@ export default function About() {
             <article className='prose mx-auto dark:prose-invert'>
                 <h1>About CardLedger: Engineering a Modern TCG Platform</h1>
                 <p>
-                    CardLedger is a technical showcase of modern full-stack architecture. It solves
-                    the challenge of managing large, relationship-heavy datasets (20,000+ cards)
-                    with the speed and interactivity of a native application. It serves as both a
-                    functional TCG collection manager and a case study in building a
-                    high-performance, type-safe, and scalable web application from the ground up.
+                    CardLedger began with a strict engineering constraint: handle massive, 
+                    relationship-heavy datasets (21,000+ cards and 3.4M+ price records) over the web, 
+                    but make the experience feel as instant and fluid as a locally installed desktop app. 
+                    Born from the frustration of slow, pagination-heavy web interfaces, it serves as both a 
+                    functional TCG collection manager and a technical case study in building a high-performance, 
+                    type-safe, and scalable architecture from the ground up.
                 </p>
                 <p>
                     For a deeper dive into the architectural decisions,{' '}
@@ -40,92 +41,57 @@ export default function About() {
                     <li>
                         <b>The Ingestion Engine</b>: A Node.js pipeline extracts raw API data and
                         normalizes it into a relational schema, breaking flat responses into
-                        distinct entities (Sets, Artists, Rarities). Sequential processing with
-                        retry logic and circuit breakers ensures resilience against API rate limits
-                        and transient failures, while Prisma&apos;s idempotent upserts allow the
-                        script to run on a schedule via GitHub Actions without manual intervention.
+                        distinct entities. Sequential processing with
+                        retry logic and circuit breakers ensures resilience against API rate limits, 
+                        while Prisma&apos;s idempotent upserts allow the
+                        script to run daily via GitHub Actions without manual intervention.
                     </li>
                     <li>
                         <b>Prisma & Advanced Filtering</b>: The normalized data is managed by{' '}
-                        <b>Prisma ORM</b>, which serves as the application&apos;s query engine. By
-                        leveraging Prisma&apos;s powerful relation filtering, the backend can
-                        execute complex, multi-parameter queries that would be impossible with the
-                        source API alone.
-                    </li>
-                    <li>
-                        <b>Automation</b>: Fully automated maintenance via <b>GitHub Actions</b>{' '}
-                        keeps the database synchronized with new card releases and volatile market
-                        prices without manual intervention.
+                        <b>Prisma ORM</b>. By leveraging Prisma&apos;s powerful relation filtering, 
+                        the backend can execute complex, multi-parameter queries that would be impossible 
+                        with the source APIs alone, managing over 3.4 million price history records.
                     </li>
                 </ul>
 
-                <h2>The Frontend Architecture: A Hybrid Approach</h2>
+                <h2>The Frontend Architecture: A Local-First Approach</h2>
                 <p>
-                    Delivering nearly 20,000 cards without sacrificing performance required a hybrid
-                    rendering strategy:
+                    Delivering 21,000+ cards without sacrificing performance required a highly optimized data strategy:
                 </p>
                 <ul>
                     <li>
-                        <b>Local-First Search</b>: The application uses a client-side indexing
-                        strategy with a custom versioning protocol to minimize bandwidth while
-                        enabling instant, fuzzy-search across the entire 20,000+ card collection.
-                        Data is cached locally with IndexedDB and queried via <b>Zustand</b> and{' '}
-                        <b>Fuse.js</b>, eliminating network latency during browsing.
+                        <b>Dictionary Compression & Sync</b>: To bypass traditional DB query latency, data is aggregated into dictionary-indexed JSON streams, compressing the raw payload from <b>8MB down to ~350KB</b>. A smart versioning protocol ensures clients only download new data when necessary.
+                    </li>
+                    <li>
+                        <b>Local-First Search</b>: To achieve a &ldquo;native app&rdquo; feel, the application uses a client-side
+                        indexing strategy. Data is cached locally with <b>IndexedDB</b> and queried via <b>Zustand</b> and <b>uFuzzy</b>. 
+                        By utilizing a highly optimized micro-library alongside custom pre-calculated intersection maps, 
+                        the app achieves 0.3ms filtering latency, eliminating network wait times and making browsing 21,000+ 
+                        cards feel instantaneous.
                     </li>
                     <li>
                         <b>Optimistic UI Patterns</b>: Collection interactions—adding or removing
-                        cards, adjusting quantities—update instantly in the UI while <b>tRPC</b>{' '}
-                        handles database synchronization in the background. This creates the tactile
-                        responsiveness of native desktop software.
+                        cards—update instantly in the UI while <b>tRPC</b> handles 
+                        database synchronization in the background. Automatic state rollback ensures data consistency during network failures.
                     </li>
                     <li>
-                        <b>Static Site Generation (SSG)</b>: For pages with a defined dataset, like
-                        an individual set&apos;s card list, I leveraged Next.js&apos;s SSG. These
-                        pages are pre-built on the server at build time, resulting in instant load
-                        times and optimal SEO. The user receives a static HTML file with all the
-                        card data and images ready to go.
-                    </li>
-                    <li>
-                        <b>On-Demand Invalidation</b>: To bridge the gap between Static Generation
-                        and Real-Time Data, the backend triggers targeted cache purges via a secure
-                        API route whenever the ETL pipeline updates prices. This ensures users
-                        always see fresh price data without sacrificing the performance benefits of
-                        SSG.
+                        <b>On-Demand Invalidation</b>: To bridge the gap between Static Site Generation (SSG)
+                        and real-time data, the backend triggers targeted cache purges via a secure
+                        webhook whenever the ETL pipeline updates prices. This ensures users
+                        always see fresh data without nuking the entire CDN cache.
                     </li>
                 </ul>
 
-                <h2>Security & Authentication</h2>
-                <p>
-                    Transitioning from a read-only viewer to a user-centric application required a
-                    robust security layer. I implemented a full authentication system using{' '}
-                    <b>Better Auth</b>:
-                </p>
+                <h2>Security & Asset Optimization</h2>
                 <ul>
                     <li>
-                        <b>Robust Authentication</b>: Security is handled via Better Auth with a
-                        multi-strategy approach (Google, Discord, Email). The implementation focuses
+                        <b>Robust Authentication</b>: Security is handled via Better Auth (Google, Discord, Email). The implementation focuses
                         on <b>Server-Side Authentication</b> to eliminate layout shifts and ensure a
                         premium, flicker-free user experience.
                     </li>
-                </ul>
-
-                <h2>Key Features & Technical Highlights</h2>
-                <ul>
                     <li>
-                        <b>End-to-End Type Safety</b>: TypeScript is used throughout, enforced by
-                        Prisma on the backend, Zod for validation, and shared types for the
-                        frontend, eliminating an entire class of potential bugs.
-                    </li>
-                    <li>
-                        <b>Image Optimization</b>: Card images are processed with <b>Sharp</b> into
-                        highly optimized AVIF formats and stored in Cloudflare R2. A custom image
-                        loader dynamically serves the optimal resolution based on the user&apos;s
-                        viewport, significantly reducing load times.
-                    </li>
-                    <li>
-                        <b>Real-time Search</b>: The header search bar uses tRPC to provide a
-                        server-side search experience with tiered priority for card IDs, names, and
-                        suggestions.
+                        <b>Cost-Optimized Asset Pipeline</b>: A custom <b>Node.js/Sharp</b> script processes card images into 
+                        highly optimized AVIF formats stored in Cloudflare R2. This pipeline eliminates runtime image transformation costs and proactively generates variants for all target breakpoints to prevent hydration errors.
                     </li>
                 </ul>
 
@@ -138,7 +104,6 @@ export default function About() {
                 </p>
                 {/* Creator Section */}
                 <div className='flex flex-col gap-2'>
-                    <h3 className='font-semibold text-foreground'>Created By</h3>
                     <a
                         href='https://vietle.me'
                         target='_blank'
