@@ -11,7 +11,7 @@ import { useCardStore } from '@/src/lib/store/cardStore';
 import { useMarketStore } from '@/src/lib/store/marketStore';
 import { useShallow } from 'zustand/react/shallow';
 
-let isMobile = window.innerWidth < 768;
+const isMobile = typeof window !== 'undefined' ? window.innerWidth < 768 : false;
 
 interface CardGridProps {
     cards: NormalizedCard[];
@@ -66,8 +66,8 @@ export function CardGrid({ cards, totalCount }: CardGridProps) {
             useWindowScroll
             increaseViewportBy={
                 isMobile
-                ? { top: 500, bottom: 1000 }
-                : { top: 800, bottom: 1500 }
+                ? { top: 300, bottom: 800 }
+                : { top: 400, bottom: 1200 }
             }
             totalCount={totalCount}
             components={gridComponents}

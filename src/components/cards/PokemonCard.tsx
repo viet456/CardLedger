@@ -37,7 +37,7 @@ export function PokemonCard({
     const cardHref = card.img
         ? `/cards/${card.id}?preview=${encodeURIComponent(card.img)}`
         : `/cards/${card.id}`;
-
+    const isMobile = typeof window !== 'undefined' ? window.innerWidth < 768 : false;
     const stats = propStats || card.collectionStats;
 
     //-- PRICE SELECTION LOGIC --
@@ -106,7 +106,7 @@ export function PokemonCard({
                 />
             </div>
 
-            <TransitionLink href={cardHref} prefetch={true} className='flex h-full w-full flex-col'>
+            <TransitionLink href={cardHref} prefetch={!isMobile} className='flex h-full w-full flex-col'>
                 {/* --- IMAGE AREA --- */}
                 <div className='relative aspect-[2.5/3.5] w-full'>
                     <ResilientImage
@@ -115,6 +115,7 @@ export function PokemonCard({
                         alt={card.n}
                         fill
                         sizes='192px'
+                        decoding='async'
                         className='object-cover'
                         loading={priority ? 'eager' : 'lazy'}
                         fetchPriority={priority ? 'high' : 'auto'}
