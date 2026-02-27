@@ -16,6 +16,10 @@ export function TransitionLink({ children, href, ...props }: TransitionLinkProps
     const router = useRouter();
 
     const handleTransition = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+        // Do not intercept if opkning in new tab
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) {
+            return; 
+        }
         e.preventDefault();
 
         // Fallback for browsers without View Transition support (Safari/Firefox)
