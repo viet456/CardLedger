@@ -53,10 +53,7 @@ async function generateCardIndex() {
     const allSetsFromDb = await prisma.set.findMany({
         // Sort sets by newest release date
         // Tie-breaker: bigger sets first (puts main sets before promos of the same day)
-        orderBy: [
-            { releaseDate: 'desc' },
-            { total: 'desc' } 
-        ],
+        orderBy: [{ releaseDate: 'desc' }, { total: 'desc' }],
         select: {
             id: true,
             name: true,
@@ -117,7 +114,6 @@ async function generateCardIndex() {
 
     // Post-process the cards for the client by pruning and flattening
     for (const set of allSetsFromDb) {
-        
         // Register the set in your global lookup map
         const setId = getOrCreateId(setMap, sets, {
             id: set.id,
@@ -147,11 +143,17 @@ async function generateCardIndex() {
         // Normalize the cards and push them to the final flat array
         for (const card of set.cards) {
             const supertypeId = getOrCreateId(supertypeMap, supertypes, card.supertype);
-            const artistId = card.artist ? getOrCreateId(artistMap, artists, card.artist.name) : null;
-            const rarityId = card.rarity ? getOrCreateId(rarityMap, rarities, card.rarity.name) : null;
+            const artistId = card.artist
+                ? getOrCreateId(artistMap, artists, card.artist.name)
+                : null;
+            const rarityId = card.rarity
+                ? getOrCreateId(rarityMap, rarities, card.rarity.name)
+                : null;
             const typeIds = card.types.map((t) => getOrCreateId(typeMap, types, t.type.name));
-            const subtypeIds = card.subtypes.map((s) => getOrCreateId(subtypeMap, subtypes, s.subtype.name));
-            
+            const subtypeIds = card.subtypes.map((s) =>
+                getOrCreateId(subtypeMap, subtypes, s.subtype.name)
+            );
+
             const weaknessObjects = card.weaknesses.map((w) => ({
                 t: getOrCreateId(typeMap, types, w.type.name),
                 v: w.value
@@ -181,7 +183,7 @@ async function generateCardIndex() {
                 st: supertypeId,
                 a: artistId,
                 r: rarityId,
-                s: setId,  
+                s: setId,
                 t: typeIds,
                 sb: subtypeIds,
                 w: weaknessObjects,

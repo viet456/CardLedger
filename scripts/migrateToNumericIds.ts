@@ -68,7 +68,9 @@ async function main() {
             } catch (error: any) {
                 // Prisma duplicate on unique column
                 if (error.code === 'P2002') {
-                    console.log(`\n   ❌ Duplicate Collision: Cannot update "${localSet.name}". The numeric ID ${numericId} is already taken by another set in the DB.`);
+                    console.log(
+                        `\n   ❌ Duplicate Collision: Cannot update "${localSet.name}". The numeric ID ${numericId} is already taken by another set in the DB.`
+                    );
                     duplicateCount++;
                 } else {
                     // Rethrow if it's a completely different database error

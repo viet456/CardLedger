@@ -14,12 +14,17 @@ export function denormalizeSingleCard(
     lookups: Omit<LookupTables, 'weaknesses' | 'resistances'>,
     prices: Record<string, CardPrices> = {}
 ): DenormalizedCard {
-    const { artists, rarities, sets, types, subtypes, supertypes, abilities, attacks, rules } = lookups;
+    const { artists, rarities, sets, types, subtypes, supertypes, abilities, attacks, rules } =
+        lookups;
     const priceData = prices[card.id];
 
     const effectivePrice = priceData
-        ? (priceData.tcgNearMint ?? priceData.tcgNormal ?? priceData.tcgHolo ?? 
-           priceData.tcgReverse ?? priceData.tcgFirstEdition ?? null)
+        ? (priceData.tcgNearMint ??
+          priceData.tcgNormal ??
+          priceData.tcgHolo ??
+          priceData.tcgReverse ??
+          priceData.tcgFirstEdition ??
+          null)
         : null;
 
     return {

@@ -75,7 +75,7 @@ export function DashboardClient() {
                 collectionStats: {
                     cost: Number(entry.purchasePrice),
                     // Safely handle createdAt whether it's a Date or string from TRPC
-                    acquiredAt: new Date(entry.createdAt), 
+                    acquiredAt: new Date(entry.createdAt),
                     variant: entry.variant || 'Normal'
                 }
             });

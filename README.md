@@ -32,7 +32,7 @@ The platform synthesizes data from disparate sources (TCGDex API + PokemonPriceT
 
 ### 🖼️ Cost-Optimized Asset Pipeline
 
-- **Infrastructure Migration:** Replaced expensive managed image optimization services with a custom **Node.js/Sharp** solution hosted on R2, significantly reducing monthly infrastructure overhead while maintaining high performance. 
+- **Infrastructure Migration:** Replaced expensive managed image optimization services with a custom **Node.js/Sharp** solution hosted on R2, significantly reducing monthly infrastructure overhead while maintaining high performance.
 - **Self-Healing State:** The asset pipeline tracks an `isOptimized` state for every card in the database, making the synchronization script fully idempotent (re-runnable without side effects).
 - **Frontend Contract Enforcement:** To prevent hydration errors, the pipeline proactively generates image variants for all target breakpoints.
 
@@ -46,7 +46,7 @@ The platform synthesizes data from disparate sources (TCGDex API + PokemonPriceT
 
 - **Framework:** Next.js 16 (App Router) / React 19.2
 - **Language:** TypeScript
-- **State & Data Fetching:** tRPC, TanStack Query, Zustand, IndexedDB 
+- **State & Data Fetching:** tRPC, TanStack Query, Zustand, IndexedDB
 - **Auth:** Better Auth (Google, Discord, Email/Pass)
 - **Styling:** Tailwind CSS, Shadcn UI
 

@@ -150,17 +150,18 @@ export const useCollectionStore = create<CollectionStoreState>()(
                     const newEntry = await trpcClient.collection.addToCollection.mutate({
                         cardId: entryInput.cardId,
                         purchasePrice: entryInput.purchasePrice,
-                        variant: entryInput.variant || 'Normal' 
+                        variant: entryInput.variant || 'Normal'
                     });
 
                     // Swap the temporary ID with the real Postgres ID silently
                     set((state) => ({
-                        entries: state.entries.map((e) => 
-                            e.id === tempId ? { ...e, id: newEntry.id, createdAt: newEntry.createdAt } : e
+                        entries: state.entries.map((e) =>
+                            e.id === tempId
+                                ? { ...e, id: newEntry.id, createdAt: newEntry.createdAt }
+                                : e
                         ),
                         lastSynced: Date.now()
                     }));
-
                 } catch (error) {
                     // Rollback if the server fails
                     set({ entries: previousEntries });
