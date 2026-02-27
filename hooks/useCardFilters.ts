@@ -179,7 +179,9 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
 
     // Sort the normalized cards
     const sortedAndFilteredCards = useMemo(() => {
-        const sortBy = (filters.sortBy || (filters.search ? 'relevance' : 'rD')) as SortableKey | 'relevance';
+        const sortBy = (filters.sortBy || (filters.search ? 'relevance' : 'rD')) as
+            | SortableKey
+            | 'relevance';
         const sortOrder = filters.sortOrder || 'desc';
 
         // Fast path 1: Relevance preserves uFuzzy order
@@ -201,7 +203,7 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
                     const priceB = getEffectivePrice(prices[b.id]);
                     const isAInvalid = priceA === null;
                     const isBInvalid = priceB === null;
-                    
+
                     if (isAInvalid && isBInvalid) return 0;
                     if (isAInvalid) return 1;
                     if (isBInvalid) return -1;
@@ -211,24 +213,24 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
                     const nameDiff = a.n.localeCompare(b.n);
                     if (nameDiff !== 0) return nameDiff;
                     return setReleaseDateMap.get(a.s)! - setReleaseDateMap.get(b.s)!;
-                
+
                 case 'num':
                     return a.num.localeCompare(b.num, undefined, { numeric: true });
-                
+
                 case 'pS':
                     const pokedexDiff = (a.pS || 9999) - (b.pS || 9999);
                     if (pokedexDiff !== 0) return pokedexDiff;
                     return setReleaseDateMap.get(a.s)! - setReleaseDateMap.get(b.s)!;
-                
+
                 case 'rD':
                 default:
                     const dateA = setReleaseDateMap.get(a.s)!;
                     const dateB = setReleaseDateMap.get(b.s)!;
-                    
+
                     if (dateA !== dateB) {
-                        return dateA - dateB; 
+                        return dateA - dateB;
                     }
-                    
+
                     // Tie-breaker: Set Size (prevents interweaving on ascending sort)
                     if (a.s !== b.s) {
                         return sets[b.s].total - sets[a.s].total;
@@ -243,7 +245,6 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
             cardsToSort.reverse();
         }
         return cardsToSort;
-
     }, [filteredCards, filters.sortBy, filters.search, filters.sortOrder, sets, prices]);
 
     return { filteredCards: sortedAndFilteredCards };

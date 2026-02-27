@@ -48,12 +48,14 @@ export function PokemonCard({
                 const specificPrice = card.variants[variantKey];
                 if (typeof specificPrice === 'number') return specificPrice;
             }
-            return card.variants.tcgNearMint 
-                ?? card.variants.tcgNormal 
-                ?? card.variants.tcgHolo 
-                ?? card.variants.tcgReverse 
-                ?? card.variants.tcgFirstEdition 
-                ?? 0;
+            return (
+                card.variants.tcgNearMint ??
+                card.variants.tcgNormal ??
+                card.variants.tcgHolo ??
+                card.variants.tcgReverse ??
+                card.variants.tcgFirstEdition ??
+                0
+            );
         }
         return card.price || 0;
     }, [card.variants, card.price, stats?.variant]);
@@ -65,15 +67,15 @@ export function PokemonCard({
 
     const displayPercent = Math.abs(rawPercent).toFixed(0);
     const isNeutral = displayPercent === '0';
-    
-    let overlayColor = 'text-zinc-300'; 
-    let bodyColor = 'text-muted-foreground'; 
-    
+
+    let overlayColor = 'text-zinc-300';
+    let bodyColor = 'text-muted-foreground';
+
     let TrendIconComponent = Minus;
 
     if (!isNeutral) {
         if (rawPercent > 0) {
-            overlayColor = 'text-emerald-400'; 
+            overlayColor = 'text-emerald-400';
             bodyColor = 'text-trend-up';
             TrendIconComponent = TrendingUp;
         } else {
@@ -86,17 +88,16 @@ export function PokemonCard({
     const variantLabel = useMemo(() => {
         if (!stats?.variant) return '';
         const labels: Record<string, string> = {
-            'Normal': 'Normal',
-            'Holo': 'Holo',
-            'Reverse': 'Reverse',
-            'FirstEdition': '1st Ed'
+            Normal: 'Normal',
+            Holo: 'Holo',
+            Reverse: 'Reverse',
+            FirstEdition: '1st Ed'
         };
         return labels[stats.variant] || stats.variant;
     }, [stats?.variant]);
 
     return (
         <div className='group relative flex w-full flex-col rounded-xl bg-card text-card-foreground transition-transform will-change-transform hover:scale-[1.02]'>
-            
             <div className='absolute right-2 top-2 z-10 opacity-100 transition-opacity duration-200 lg:opacity-0 lg:focus-within:opacity-100 lg:group-hover:opacity-100'>
                 <CollectionControl
                     cardId={card.id}
@@ -106,7 +107,11 @@ export function PokemonCard({
                 />
             </div>
 
-            <TransitionLink href={cardHref} prefetch={!isMobile} className='flex h-full w-full flex-col'>
+            <TransitionLink
+                href={cardHref}
+                prefetch={!isMobile}
+                className='flex h-full w-full flex-col'
+            >
                 {/* --- IMAGE AREA --- */}
                 <div className='relative aspect-[2.5/3.5] w-full'>
                     <ResilientImage
@@ -124,7 +129,7 @@ export function PokemonCard({
                             viewTransitionClass: 'card-expand'
                         }}
                     />
-                    
+
                     {stats && (
                         <div className='absolute bottom-0 left-0 rounded-tr-lg bg-black/80 px-2 py-1 text-xs font-bold text-white'>
                             {variantLabel}
@@ -132,8 +137,10 @@ export function PokemonCard({
                     )}
 
                     {stats && (
-                        <div className={`absolute bottom-0 right-0 z-10 flex min-w-[60px] items-center justify-center gap-1.5 rounded-tl-lg bg-black/80 px-2 py-1 text-xs font-bold font-mono ${overlayColor}`}>
-                            <TrendIconComponent className="h-3.5 w-3.5 stroke-[3px]" />
+                        <div
+                            className={`absolute bottom-0 right-0 z-10 flex min-w-[60px] items-center justify-center gap-1.5 rounded-tl-lg bg-black/80 px-2 py-1 font-mono text-xs font-bold ${overlayColor}`}
+                        >
+                            <TrendIconComponent className='h-3.5 w-3.5 stroke-[3px]' />
                             {displayPercent}%
                         </div>
                     )}
@@ -141,15 +148,12 @@ export function PokemonCard({
 
                 {/* --- INFO AREA --- */}
                 <div className='flex h-[5.5rem] flex-col gap-1 py-2'>
-                    
                     <div className='flex w-full items-start justify-between px-2'>
-                        <p className='truncate text-sm font-bold leading-snug w-full'>
-                            {card.n}
-                        </p>
+                        <p className='w-full truncate text-sm font-bold leading-snug'>{card.n}</p>
                     </div>
 
                     {stats ? (
-                        <div className='mt-auto flex items-end justify-between border-t border-border/50 px-1 md:px-2 pt-1'>
+                        <div className='mt-auto flex items-end justify-between border-t border-border/50 px-1 pt-1 md:px-2'>
                             <div className='flex flex-col gap-0'>
                                 <span className='text-[10px] uppercase tracking-wider text-muted-foreground'>
                                     Acquired
@@ -179,7 +183,7 @@ export function PokemonCard({
                             <p className='truncate text-xs text-muted-foreground'>
                                 {card.set.name}
                             </p>
-                            
+
                             <div className='mt-1 flex items-end justify-between'>
                                 <p className='text-xs text-muted-foreground'>
                                     {card.num}/{card.set.printedTotal}

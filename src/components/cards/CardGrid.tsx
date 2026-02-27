@@ -42,7 +42,6 @@ const gridComponents: VirtuosoGridProps<DenormalizedCard, undefined>['components
 };
 
 export function CardGrid({ cards, totalCount }: CardGridProps) {
-
     const lookups = useCardStore(
         useShallow((state) => ({
             artists: state.artists,
@@ -58,15 +57,10 @@ export function CardGrid({ cards, totalCount }: CardGridProps) {
     );
     const prices = useMarketStore((state) => state.prices);
 
-
     return (
         <VirtuosoGrid
             useWindowScroll
-            increaseViewportBy={
-                isMobile
-                ? { top: 300, bottom: 800 }
-                : { top: 400, bottom: 1200 }
-            }
+            increaseViewportBy={isMobile ? { top: 300, bottom: 800 } : { top: 400, bottom: 1200 }}
             totalCount={totalCount}
             components={gridComponents}
             itemContent={(index) => {

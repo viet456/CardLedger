@@ -11,7 +11,7 @@ import { ProvidersWrapper } from '../providers/ProvidersWrapper';
 import { Header } from '../components/layout/Header';
 import { Suspense } from 'react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
-import { Analytics } from "@vercel/analytics/next"
+import { Analytics } from '@vercel/analytics/next';
 
 const inter = Inter({
     subsets: ['latin'],
