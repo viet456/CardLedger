@@ -4,7 +4,6 @@ import { VirtuosoGrid, VirtuosoGridProps } from 'react-virtuoso';
 import { forwardRef, HTMLAttributes } from 'react';
 import { PokemonCard } from './PokemonCard';
 import { DenormalizedCard } from '@/src/shared-types/card-index';
-import { useScrollStore } from '@/src/lib/store/scrollStore';
 import { NormalizedCard } from '@/src/shared-types/card-index';
 import { denormalizeSingleCard } from '@/src/utils/cardUtils';
 import { useCardStore } from '@/src/lib/store/cardStore';
@@ -43,7 +42,6 @@ const gridComponents: VirtuosoGridProps<DenormalizedCard, undefined>['components
 };
 
 export function CardGrid({ cards, totalCount }: CardGridProps) {
-    const { scrollIndex, setScrollIndex } = useScrollStore();
 
     const lookups = useCardStore(
         useShallow((state) => ({
@@ -71,10 +69,6 @@ export function CardGrid({ cards, totalCount }: CardGridProps) {
             }
             totalCount={totalCount}
             components={gridComponents}
-            initialTopMostItemIndex={scrollIndex}
-            rangeChanged={({ startIndex }) => {
-                setScrollIndex(startIndex);
-            }}
             itemContent={(index) => {
                 const normalizedCard = cards[index];
                 if (!normalizedCard) return null;
