@@ -125,50 +125,45 @@ export const useCollectionStore = create<CollectionStoreState>()(
                     }
                 }
             },
-            addEntry: async (entry) => {
-                const tempId = `temp-${Date.now()}`;
-                const currentUserId = get().userId;
-                if (!currentUserId) {
-                    throw new Error('Cannot add entry: user not initialized');
-                }
+            addEntry: async (entryInput: CollectionEntryInput) => {
+                const { cardId, purchasePrice, variant } = entryInput;
+                const previousEntries = get().entries;
+
+                // Create a temporary optimistic entry
+                const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
                 const optimisticEntry: FrontendCollectionEntry = {
                     id: tempId,
-                    userId: currentUserId,
-                    createdAt: new Date(),
-                    cardId: entry.cardId,
-                    purchasePrice: entry.purchasePrice,
-                    variant: entry.variant || 'Normal'
+                    userId: get().userId || 'optimistic-user',
+                    cardId,
+                    purchasePrice,
+                    variant: variant || 'Normal',
+                    createdAt: new Date() // Pretend it happened right now
                 };
 
-                // Optimistic update
+                // 2.Instantly update the store -- The UI will react immediately.
                 set((state) => ({
-                    entries: [optimisticEntry, ...state.entries]
+                    entries: [...state.entries, optimisticEntry]
                 }));
 
                 try {
+                    // Fire the actual network request in the background
                     const newEntry = await trpcClient.collection.addToCollection.mutate({
-                        cardId: entry.cardId,
-                        purchasePrice: entry.purchasePrice,
-                        variant: entry.variant || 'Normal'
+                        cardId: entryInput.cardId,
+                        purchasePrice: entryInput.purchasePrice,
+                        variant: entryInput.variant || 'Normal' 
                     });
 
-                    const mappedNewEntry: FrontendCollectionEntry = {
-                        ...newEntry,
-                        purchasePrice: Number(newEntry.purchasePrice)
-                    };
-
-                    // Replace temp(ui) entry with real entry from server
+                    // Swap the temporary ID with the real Postgres ID silently
                     set((state) => ({
-                        entries: state.entries.map((e) => (e.id === tempId ? mappedNewEntry : e)),
+                        entries: state.entries.map((e) => 
+                            e.id === tempId ? { ...e, id: newEntry.id, createdAt: newEntry.createdAt } : e
+                        ),
                         lastSynced: Date.now()
                     }));
-                    //console.log('[CollectionStore]: ✅ Entry added successfully');
+
                 } catch (error) {
-                    // Rollback
-                    //console.error('[CollectionStore]: ❌ Failed to add entry:', error);
-                    set((state) => ({
-                        entries: state.entries.filter((e) => e.id !== tempId)
-                    }));
+                    // Rollback if the server fails
+                    set({ entries: previousEntries });
                     throw error;
                 }
             },
