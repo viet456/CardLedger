@@ -60,7 +60,7 @@ export default function About() {
                 </p>
                 <ul>
                     <li>
-                        <b>Dictionary Compression & Sync</b>: To bypass traditional DB query latency, data is aggregated into dictionary-indexed JSON streams, compressing the raw payload from <b>8MB down to ~350KB</b>. A smart versioning protocol ensures clients only download new data when necessary.
+                        <b>Dictionary Compression & Sync</b>: To bypass traditional DB query latency, data is aggregated into dictionary-indexed JSON streams. This normalization reduces the raw payload from <b>8MB to 3.5MB</b>, halving JSON.parse() blocking time and saving ~20MB of JS heap memory to ensure the main thread remains unblocked on low-end devices. A smart versioning protocol then compresses it further for network delivery.
                     </li>
                     <li>
                         <b>Local-First Search</b>: To achieve a &ldquo;native app&rdquo; feel, the application uses a client-side
@@ -68,6 +68,9 @@ export default function About() {
                         By utilizing a highly optimized micro-library alongside custom pre-calculated intersection maps, 
                         the app achieves 0.3ms filtering latency, eliminating network wait times and making browsing 21,000+ 
                         cards feel instantaneous.
+                    </li>
+                    <li>
+                        <b>JIT Rendering Pipeline</b>: To prevent main-thread blocking during rapid scrolling, the UI leverages <b>JIT denormalization</b> via react-virtuoso. By deferring complex object construction until viewport entry, the application eliminates 20-30ms UI freezes and maintains a perfectly fluid frame rate.
                     </li>
                     <li>
                         <b>Optimistic UI Patterns</b>: Collection interactions—adding or removing
