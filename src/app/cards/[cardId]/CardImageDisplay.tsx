@@ -22,7 +22,7 @@ export function CardImageDisplay({ img, name, id }: CardImageDisplayProps) {
         if (typeof window !== 'undefined' && window.location.search.includes('preview=')) {
             const url = new URL(window.location.href);
             url.searchParams.delete('preview');
-            window.history.replaceState({}, '', url);
+            window.history.replaceState(window.history.state, '', url);
         }
     }, []);
 
