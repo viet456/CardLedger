@@ -70,7 +70,7 @@ export function CardGrid({ cards, totalCount }: CardGridProps) {
 
                 return (
                     <div key={card.id} className='relative flex w-full pb-1'>
-                        <PokemonCard card={card} priority={index < 6} />
+                        <PokemonCard card={card} />
                     </div>
                 );
             }}
