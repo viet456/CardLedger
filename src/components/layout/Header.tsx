@@ -37,7 +37,10 @@ export function Header() {
         label: string;
         isMobile?: boolean;
     }) => {
-        const isActive = pathname === href.split('?')[0];
+        const basePath = href.split('?')[0];
+        const isActive = basePath === '/' 
+            ? pathname === '/' 
+            : pathname.startsWith(basePath);
 
         return (
             <Link

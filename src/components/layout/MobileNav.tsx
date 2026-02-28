@@ -34,7 +34,10 @@ const NavLink = ({
     onClick: () => void;
 }) => {
     const pathname = usePathname();
-    const isActive = pathname === href;
+    const basePath = href.split('?')[0];
+    const isActive = basePath === '/' 
+        ? pathname === '/' 
+        : pathname.startsWith(basePath);
 
     return (
         <Link
