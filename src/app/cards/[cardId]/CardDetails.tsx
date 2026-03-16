@@ -1,4 +1,4 @@
-import { getCachedCardData, getCachedPriceHistory } from '@/src/app/cards/[cardId]/data';
+import { getCachedCardData } from '@/src/app/cards/[cardId]/data';
 import { PriceHistoryChart } from '@/src/components/cards/PriceHistoryChart';
 import { AbilityObject } from '@/src/shared-types/card-index';
 import { notFound } from 'next/navigation';
@@ -12,11 +12,7 @@ const DetailItem = ({ label, children }: { label: string; children: React.ReactN
 );
 
 export async function CardDetails({ cardId }: { cardId: string }) {
-    const [card, priceHistory] = await Promise.all([
-        getCachedCardData(cardId),
-        getCachedPriceHistory(cardId)
-    ]);
-
+    const card = await getCachedCardData(cardId);
     if (!card) notFound();
 
     return (
@@ -33,7 +29,7 @@ export async function CardDetails({ cardId }: { cardId: string }) {
             {/* Price Chart */}
             <section className='rounded-lg border bg-card p-4 shadow-sm'>
                 <h2 className='mb-2 text-2xl font-semibold tracking-tight'>Prices</h2>
-                <PriceHistoryChart initialData={priceHistory} />
+                <PriceHistoryChart cardId={cardId} />
             </section>
 
             {/* Details Grid */}

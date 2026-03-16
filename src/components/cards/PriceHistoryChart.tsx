@@ -1,37 +1,44 @@
 'use client';
-import { Chart, type ChartOptions, type TooltipItem } from 'chart.js/auto';
+import { Chart, type ChartOptions } from 'chart.js/auto';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { PriceHistoryDataPoint } from '@/src/shared-types/price-api';
 import 'chartjs-adapter-date-fns';
 import { Button } from '../ui/button';
 import { useTheme } from 'next-themes';
-import { space } from 'postcss/lib/list';
-
-interface PriceHistoryChartProps {
-    initialData: PriceHistoryDataPoint[];
-}
 
 type TimeRange = '1m' | '3m' | '6m' | '1y' | 'YTD' | 'All';
 
-export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
+export function PriceHistoryChart({ cardId }: { cardId: string }) {
+    const [initialData, setInitialData] = useState<PriceHistoryDataPoint[] | null>(null);
     const chartRef = useRef<HTMLCanvasElement>(null);
     const chartInstanceRef = useRef<Chart | null>(null);
     const { resolvedTheme } = useTheme();
-    const [activeRange, setActiveRange] = useState<TimeRange>(() => {
-        if (!initialData || initialData.length === 0) return 'All';
+    const [activeRange, setActiveRange] = useState<TimeRange>('All');
 
-        // Assumes data is sorted ascending by timestamp
-        const earliest = new Date(initialData[0].timestamp).getTime();
-        const now = new Date().getTime();
-        const diffDays = (now - earliest) / (1000 * 60 * 60 * 24);
+    useEffect(() => {
+        fetch(`/api/prices/${cardId}`)
+            .then(res => res.json())
+            .then(data => {
+                setInitialData(data);
+                
+                // Calculate the default range here, once we actually have the data
+                if (data && data.length > 0) {
+                    const earliest = new Date(data[0].timestamp).getTime();
+                    const now = new Date().getTime();
+                    const diffDays = (now - earliest) / (1000 * 60 * 60 * 24);
 
-        // Prefer '3m', fallback to '1m', fallback to 'All'
-        if (diffDays >= 90) return '3m';
-        if (diffDays >= 30) return '1m';
-        return 'All';
-    });
+                    if (diffDays >= 90) setActiveRange('3m');
+                    else if (diffDays >= 30) setActiveRange('1m');
+                    else setActiveRange('All');
+                }
+            })
+            .catch(err => console.error("Failed to fetch price history:", err));
+    }, [cardId]);
 
     const filteredData = useMemo(() => {
+        // Safe-guard for when data hasn't loaded yet
+        if (!initialData) return []; 
+
         const now = new Date();
         let startDate = new Date();
 
@@ -58,11 +65,14 @@ export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
         return initialData.filter((d) => new Date(d.timestamp) >= startDate);
     }, [initialData, activeRange]);
 
+    const earliestDate = useMemo(() => {
+        if (!initialData || initialData.length === 0) return new Date();
+        return new Date(initialData[0].timestamp); 
+    }, [initialData]);
+
     useEffect(() => {
-        // Wait for theme to be resolved
-        if (!resolvedTheme) {
-            return;
-        }
+        if (!resolvedTheme) return;
+        
         const timerId = setTimeout(() => {
             if (!chartRef.current || !filteredData || filteredData.length === 0) {
                 return;
@@ -76,65 +86,62 @@ export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
                 return;
             }
 
-            // Get the computed style from the document body
             const style = getComputedStyle(document.documentElement);
             const foregroundColor = `oklch(${style.getPropertyValue('--foreground').trim()})`;
             const borderColor = `oklch(${style.getPropertyValue('--border').trim()})`;
 
             const labels = filteredData.map((d) => d.timestamp);
-            const datasets = [
+            
+            // Re-map the datasets to ensure we capture the values
+            const rawDatasets = [
                 {
                     label: 'Normal',
                     data: filteredData.map((d) => d.tcgNormal),
-                    borderColor: '#10B981', // Green
+                    borderColor: '#10B981',
                     tension: 0.1,
                     spanGaps: true
                 },
                 {
                     label: 'Raw',
                     data: filteredData.map((d) => d.tcgNearMint),
-                    borderColor: '#fc4e60', // Red
+                    borderColor: '#fc4e60', 
                     tension: 0.1,
                     spanGaps: true
                 },
                 {
                     label: 'Holofoil',
                     data: filteredData.map((d) => d.tcgHolo),
-                    borderColor: '#6366F1', // Indigo
+                    borderColor: '#6366F1', 
                     tension: 0.1,
                     spanGaps: true
                 },
                 {
                     label: 'Reverse Holofoil',
                     data: filteredData.map((d) => d.tcgReverse),
-                    borderColor: '#F59E0B', // Amber
+                    borderColor: '#F59E0B', 
                     tension: 0.1,
                     spanGaps: true
                 },
                 {
                     label: 'First Edition',
                     data: filteredData.map((d) => d.tcgFirstEdition),
-                    borderColor: '#EF4444', // Red
+                    borderColor: '#EF4444', 
                     tension: 0.1,
                     spanGaps: true
                 }
-                // only add datasets with data
-            ].filter((d) => d.data.some((val) => val !== null));
+            ];
+
+            // Only add datasets with data
+            const datasets = rawDatasets.filter((d) => d.data.some((val) => val !== null));
 
             let timeUnit: 'day' | 'week' | 'month' = 'day';
             if (filteredData.length > 1) {
                 const start = new Date(filteredData[0].timestamp).getTime();
                 const end = new Date(filteredData[filteredData.length - 1].timestamp).getTime();
                 const diffDays = (end - start) / (1000 * 60 * 60 * 24);
-                if (diffDays > 180) {
-                    // > 6 months
-                    timeUnit = 'month';
-                } else if (diffDays > 30) {
-                    // > 1 month
-                    timeUnit = 'week';
-                } else {
-                    timeUnit = 'day';
-                }
+                if (diffDays > 180) timeUnit = 'month';
+                else if (diffDays > 30) timeUnit = 'week';
+                else timeUnit = 'day';
             }
 
             const chartOptions: ChartOptions = {
@@ -148,33 +155,19 @@ export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
                             unit: timeUnit,
                             tooltipFormat: 'MMM d, yyyy'
                         },
-                        title: {
-                            display: false
-                            // display: true,
-                            // text: 'Date',
-                            // color: foregroundColor
-                        },
+                        title: { display: false },
                         ticks: {
                             maxTicksLimit: 6,
                             color: foregroundColor,
                             maxRotation: 45,
                             minRotation: 45,
                             autoSkip: true,
-                            font: {
-                                size: 12
-                            }
+                            font: { size: 12 }
                         },
-                        grid: {
-                            color: borderColor
-                        }
+                        grid: { color: borderColor }
                     },
                     y: {
-                        title: {
-                            display: false
-                            // display: true,
-                            // text: 'Price ($)',
-                            // color: foregroundColor
-                        },
+                        title: { display: false },
                         ticks: {
                             callback: (value: string | number) => {
                                 return new Intl.NumberFormat('en-US', {
@@ -184,22 +177,15 @@ export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
                                 }).format(Number(value));
                             },
                             color: foregroundColor,
-                            font: {
-                                size: 12
-                            }
+                            font: { size: 12 }
                         },
-                        grid: {
-                            color: borderColor
-                        }
+                        grid: { color: borderColor }
                     }
                 },
                 plugins: {
                     legend: {
-                        labels: {
-                            color: foregroundColor
-                        }
+                        labels: { color: foregroundColor }
                     },
-                    // pop-up on hover
                     tooltip: {
                         mode: 'index',
                         intersect: false,
@@ -221,7 +207,6 @@ export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
             };
 
             if (chartInstanceRef.current) {
-                // Chart exists, just update it
                 const chart = chartInstanceRef.current;
                 chart.data.labels = labels;
                 chart.data.datasets = datasets;
@@ -239,9 +224,7 @@ export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
             }
         }, 0);
 
-        return () => {
-            clearTimeout(timerId);
-        };
+        return () => clearTimeout(timerId);
     }, [filteredData, resolvedTheme]);
 
     useEffect(() => {
@@ -253,11 +236,11 @@ export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
         };
     }, []);
 
+    if (!initialData) {
+        return <div className="h-[300px] w-full animate-pulse bg-muted rounded-md flex items-center justify-center text-sm text-muted-foreground">Loading chart...</div>;
+    }
+
     const hasData = filteredData.some((d) => d.tcgNearMint !== null);
-    const earliestDate = useMemo(() => {
-        if (initialData.length === 0) return new Date();
-        return new Date(initialData[0].timestamp); // Assumes data is sorted asc
-    }, [initialData]);
     const now = new Date();
     const cutoffs = {
         '1m': new Date(new Date().setMonth(now.getMonth() - 1)),
@@ -271,7 +254,6 @@ export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
         <div>
             <div className='mb-4 flex gap-2'>
                 {(['1m', '3m', '6m', '1y', 'YTD', 'All'] as TimeRange[]).map((range) => {
-                    // Check if this button should be disabled
                     const isDisabled = range !== 'All' && earliestDate > cutoffs[range];
 
                     return (
@@ -298,7 +280,6 @@ export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
             ) : (
                 <div className='relative h-[300px] w-full'>
                     <canvas ref={chartRef} aria-hidden='true' />
-                    {/* Add a screen-reader-only table here */}
                 </div>
             )}
         </div>
