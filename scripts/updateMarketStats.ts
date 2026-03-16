@@ -56,6 +56,25 @@ async function revalidateNextCache() {
     }
 }
 
+async function warmSetCaches(setsToProcess: { id: string, name: string }[]) {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (!appUrl) return;
+
+    console.log(`-- Warming Next.js cache for ${setsToProcess.length} sets to prevent DB trickle...`);
+    
+    // Process in batches of 10 so we don't overwhelm the Vercel edge network
+    for (let i = 0; i < setsToProcess.length; i += 10) {
+        const batch = setsToProcess.slice(i, i + 10);
+        await Promise.all(
+            batch.map(set => 
+                // A simple GET request forces Next.js to rebuild and cache the page
+                axios.get(`${appUrl}/sets/${set.id}`).catch(() => {}) 
+            )
+        );
+    }
+    console.log('✅ Cache warming complete.');
+}
+
 async function getCardPage(setId: string, limit: number, offset: number) {
     try {
         const response = await axios.get(`${API_BASE_URL}`, {
@@ -362,6 +381,7 @@ async function main() {
 
     console.log('✅ Daily MarketStats update complete.');
     await revalidateNextCache();
+    await warmSetCaches(setsToProcess);
 }
 
 main()
