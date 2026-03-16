@@ -5,7 +5,7 @@ import { cacheTag, cacheLife } from 'next/cache';
 
 export async function getCachedPriceHistory(cardId: string): Promise<PriceHistoryDataPoint[]> {
     'use cache';
-    cacheTag('card-data', 'price-history');
+    cacheTag('price-history');
     cacheLife('days');
     const history = await prisma.priceHistory.findMany({
         where: { cardId: cardId },
@@ -47,16 +47,6 @@ async function getCardDataRaw(cardId: string): Promise<DenormalizedCard | null> 
                     cost: {
                         include: { type: true }
                     }
-                }
-            },
-            marketStats: {
-                select: {
-                    tcgNearMintLatest: true,
-                    tcgNormalLatest: true,
-                    tcgHoloLatest: true,
-                    tcgReverseLatest: true,
-                    tcgFirstEditionLatest: true,
-                    tcgPlayerUpdatedAt: true
                 }
             }
         }
@@ -112,7 +102,7 @@ async function getCardDataRaw(cardId: string): Promise<DenormalizedCard | null> 
             rawCard.ancientTraitName && rawCard.ancientTraitText
                 ? { name: rawCard.ancientTraitName, text: rawCard.ancientTraitText }
                 : null,
-        price: rawCard.marketStats?.tcgNearMintLatest?.toNumber() ?? null
+        price: null
     };
     return denormalizedCard;
 }
@@ -120,7 +110,7 @@ async function getCardDataRaw(cardId: string): Promise<DenormalizedCard | null> 
 export async function getCachedCardData(cardId: string) {
     'use cache';
     cacheTag('card-data', 'card-details');
-    cacheLife('days');
+    cacheLife('max');
 
     return getCardDataRaw(cardId);
 }

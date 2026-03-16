@@ -11,8 +11,8 @@ export async function POST(request: NextRequest) {
         });
     }
     try {
-        // Revalidate all pages with fetches tagged with 'card-data'
-        revalidateTag('card-data', 'days');
+        // Revalidate all pages with prices updated
+        revalidateTag('price-history', 'days');
 
         // Revalidate the set overview pages (SetPageView cache)
         revalidateTag('set-data', 'days');
