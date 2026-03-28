@@ -236,10 +236,6 @@ export function PriceHistoryChart({ cardId }: { cardId: string }) {
         };
     }, []);
 
-    if (!initialData) {
-        return <div className="h-[300px] w-full animate-pulse bg-muted rounded-md flex items-center justify-center text-sm text-muted-foreground">Loading chart...</div>;
-    }
-
     const hasData = filteredData.some((d) => d.tcgNearMint !== null);
     const now = new Date();
     const cutoffs = {
