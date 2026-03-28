@@ -5,5 +5,9 @@ export async function GET(request: NextRequest, context: { params: Promise<{ car
     const { cardId } = await context.params;
     const priceHistory = await getCachedPriceHistory(cardId);
 
-    return NextResponse.json(priceHistory );
+    return NextResponse.json(priceHistory, {
+        headers: {
+            'Cache-Control': 'public, s-maxage=82800, stale-while-revalidate=600'
+        }
+    });
 }
