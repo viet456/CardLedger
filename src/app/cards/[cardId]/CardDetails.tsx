@@ -3,6 +3,7 @@ import { PriceHistoryChart } from '@/src/components/cards/PriceHistoryChart';
 import { AbilityObject } from '@/src/shared-types/card-index';
 import { notFound } from 'next/navigation';
 import { FilterLink } from '@/src/app/cards/[cardId]/FilterLink';
+import { PriceHero } from '@/src/components/cards/PriceHero';
 
 const DetailItem = ({ label, children }: { label: string; children: React.ReactNode }) => (
     <div>
@@ -16,14 +17,18 @@ export async function CardDetails({ cardId }: { cardId: string }) {
     if (!card) notFound();
 
     return (
-        <div className='flex flex-col gap-8 md:col-span-2'>
-            {/* Header */}
+        <div className='flex flex-col gap-8'>
             <header>
                 <h1 className='text-4xl font-bold tracking-tight'>{card.n}</h1>
                 <p className='mt-1 text-lg text-muted-foreground'>
                     {card.supertype} - {card.subtypes.join(', ')}
                     {card.hp && ` - HP ${card.hp}`}
                 </p>
+
+                {/* Mobile-only PriceHero: visible on small screens, hidden on md+ */}
+                <div className='mt-6 block md:hidden'>
+                    <PriceHero cardId={cardId} />
+                </div>
             </header>
 
             {/* Price Chart */}

@@ -45,3 +45,12 @@ export function BreadcrumbSkeleton() {
 export function ImageSkeleton() {
     return <div className='aspect-[2.5/3.5] w-full animate-pulse rounded-xl bg-muted' />;
 }
+
+export function PriceHeroSkeleton() {
+    return (
+        <div className="flex flex-col gap-2">
+            <div className="h-4 w-44 animate-pulse rounded bg-muted/60" />
+            <div className="h-8 w-48 animate-pulse rounded bg-muted" />
+        </div>
+    );
+}
