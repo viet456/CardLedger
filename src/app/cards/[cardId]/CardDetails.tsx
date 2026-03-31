@@ -4,6 +4,7 @@ import { AbilityObject } from '@/src/shared-types/card-index';
 import { notFound } from 'next/navigation';
 import { FilterLink } from '@/src/app/cards/[cardId]/FilterLink';
 import { PriceHero } from '@/src/components/cards/PriceHero';
+import { EnergyIcon } from '@/src/components/ui/EnergyIcon';
 
 const DetailItem = ({ label, children }: { label: string; children: React.ReactNode }) => (
     <div>
@@ -11,6 +12,13 @@ const DetailItem = ({ label, children }: { label: string; children: React.ReactN
         <p className='text-base'>{children}</p>
     </div>
 );
+
+const getEnergyStack = (costs: string[]) => {
+    return costs.reduce((acc, type) => {
+        acc[type] = (acc[type] || 0) + 1;
+        return acc;
+    }, {} as Record<string, number>)
+}
 
 export async function CardDetails({ cardId }: { cardId: string }) {
     const card = await getCachedCardData(cardId);
@@ -162,12 +170,34 @@ export async function CardDetails({ cardId }: { cardId: string }) {
                             className='mb-4 grid grid-cols-4 gap-4 border-b pb-4 last:mb-0 last:border-b-0 last:pb-0'
                         >
                             <div className='col-span-3'>
-                                <p className='font-semibold'>{attack.name}</p>
-                                <p className='mt-1 text-sm text-foreground'>{attack.text}</p>
+                                <div className='flex items-center gap-2'>
+                                    <p className='font-semibold'>{attack.name}</p>
+                                </div>
+                                <p className='mt-1 text-sm text-muted-foreground leading-relaxed'>
+                                    {attack.text}
+                                </p>
                             </div>
-                            <div className='col-span-1 text-right'>
-                                <p className='text-lg font-bold'>{attack.damage}</p>
-                                <p className='text-sm text-foreground'>{attack.cost.join(', ')}</p>
+                            
+                            <div className='col-span-1 flex flex-col items-end gap-1'>
+                                <p className='text-lg font-bold tracking-tighter'>
+                                    {attack.damage}
+                                </p>
+                                {/* Energy Icons - Stacked Logic */}
+                                <div className='flex flex-wrap justify-end gap-1'>
+                                    {Object.entries(getEnergyStack(attack.cost)).map(([type, count]) => (
+                                        <div 
+                                            key={type} 
+                                            className="flex items-center gap-0.5 bg-secondary/50 rounded-full px-1 py-0.5 border border-border/50"
+                                        >
+                                            {count > 1 && (
+                                                <span className="text-xs font-bold pl-0.5">
+                                                    {count}×
+                                                </span>
+                                            )}
+                                            <EnergyIcon type={type} size={18} />
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     ))}
