@@ -238,7 +238,7 @@ model Attack {
 
 model AttackCost {
     id       Int    @id @default(autoincrement())
-    attack   Attack @relation(fields: [attackId], references: [id])
+    attack   Attack @relation(fields: [attackId], references: [id], onDelete: Cascade)
     attackId Int
     type     Type   @relation(fields: [typeId], references: [id])
     typeId   Int
