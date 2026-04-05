@@ -60,6 +60,7 @@ export type LookupTables = {
 export type NormalizedCard = {
     id: string;
     n: string; // name
+    d: string | null;
     hp: number | null;
     num: string;
     img: string | null; //image key
@@ -87,6 +88,7 @@ export type DenormalizedCard = {
     id: string;
     n: string;
     hp: number | null;
+    description: string | null;
     num: string;
     img: string | null;
     pS: number | null;

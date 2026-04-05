@@ -4,7 +4,8 @@ import { AbilityObject } from '@/src/shared-types/card-index';
 import { notFound } from 'next/navigation';
 import { FilterLink } from '@/src/app/cards/[cardId]/FilterLink';
 import { PriceHero } from '@/src/components/cards/PriceHero';
-import { EnergyIcon } from '@/src/components/ui/EnergyIcon';
+import { EnergyIcon } from '@/src/components/cards/EnergyIcon';
+import { FormattedText } from '@/src/components/cards/FormattedText';
 
 const DetailItem = ({ label, children }: { label: string; children: React.ReactNode }) => (
     <div>
@@ -219,6 +220,16 @@ export async function CardDetails({ cardId }: { cardId: string }) {
                             <p className='mt-1 text-sm text-muted-foreground'>{ability.text}</p>
                         </div>
                     ))}
+                </section>
+            )}
+
+            {/* Description Section */}
+            {card.description && (
+                <section className='rounded-lg border bg-card p-4 shadow-sm'>
+                    <h2 className='mb-2 text-2xl font-semibold tracking-tight'>Description</h2>
+                    <p className='text-base leading-relaxed text-muted-foreground'>
+                        <FormattedText text={card.description} />
+                    </p>
                 </section>
             )}
         </div>

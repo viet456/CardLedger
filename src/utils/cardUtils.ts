@@ -30,6 +30,7 @@ export function denormalizeSingleCard(
     return {
         id: card.id,
         n: card.n,
+        description: card.d,
         hp: card.hp,
         num: card.num,
         img: card.img,
