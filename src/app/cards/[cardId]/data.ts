@@ -57,6 +57,7 @@ async function getCardDataRaw(cardId: string): Promise<DenormalizedCard | null> 
         id: rawCard.id,
         n: rawCard.name,
         hp: rawCard.hp,
+        description: rawCard.description,
         num: rawCard.number,
         img: rawCard.imageKey,
         pS: rawCard.pokedexNumberSort,

@@ -61,6 +61,7 @@ export function mapPrismaCardToDenormalized(
     return {
         id: card.id,
         n: card.name,
+        description: card.description,
         hp: card.hp,
         num: card.number,
         img: card.imageKey,
