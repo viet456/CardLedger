@@ -1,9 +1,9 @@
 import { prisma } from '@/src/lib/prisma';
 import { SetObject } from '@/src/shared-types/card-index';
-import { SetCard } from '@/src/components/SetCard';
 import { Metadata } from 'next';
 import { cacheLife, cacheTag } from 'next/cache';
 import { type Set as PrismaSet } from '@prisma/client';
+import { SetClient } from './SetClient';
 
 export const metadata: Metadata = {
     title: 'All Sets | CardLedger',
@@ -34,24 +34,10 @@ async function getCachedGroupedSets() {
 
 export default async function SetsPage() {
     const groupedSets = await getCachedGroupedSets();
-    const prioritySetCount = 5;
 
     return (
         <div className='container mx-auto p-4 sm:p-6 lg:p-8'>
-            <h1 className='mb-6 text-3xl font-bold tracking-tight md:text-4xl'>All Sets</h1>
-            <div className='space-y-8'>
-                {Object.keys(groupedSets).map((series, seriesIndex) => (
-                    <div key={series}>
-                        <h2 className='mb-4 border-b pb-2 text-2xl font-semibold'>{series}</h2>
-                        <div className='grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5'>
-                            {groupedSets[series].map((set: SetObject, setIndex: number) => {
-                                const isPriority = seriesIndex < 2 && setIndex < prioritySetCount;
-                                return <SetCard key={set.id} set={set} isPriority={isPriority} />;
-                            })}
-                        </div>
-                    </div>
-                ))}
-            </div>
+            <SetClient groupedSets={groupedSets} />
         </div>
     );
 }
