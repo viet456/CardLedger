@@ -18,7 +18,7 @@ interface ImageToOptimize {
     type: 'card' | 'setLogo' | 'setSymbol';
 }
 
-async function downloadFromR2(key: string): Promise<Buffer> {
+export async function downloadFromR2(key: string): Promise<Buffer> {
     const command = new GetObjectCommand({
         Bucket: R2_BUCKET_NAME,
         Key: key
@@ -31,7 +31,7 @@ async function downloadFromR2(key: string): Promise<Buffer> {
     return Buffer.from(byteArray);
 }
 
-async function uploadImageToR2(key: string, buffer: Buffer, contentType: string): Promise<void> {
+export async function uploadImageToR2(key: string, buffer: Buffer, contentType: string): Promise<void> {
     await r2.send(
         new PutObjectCommand({
             Bucket: R2_BUCKET_NAME,
@@ -43,17 +43,9 @@ async function uploadImageToR2(key: string, buffer: Buffer, contentType: string)
     );
 }
 
-async function optimizeImage(image: ImageToOptimize): Promise<void> {
+export async function optimizeImage(image: ImageToOptimize): Promise<void> {
     try {
         const originalBuffer = await downloadFromR2(image.r2Key);
-
-        // Only process sizes <= sourceWidth
-        // const metadata = await sharp(originalBuffer).metadata();
-        // const sourceWidth = metadata.width || 0;
-        // let validSizes = ALL_SIZES.filter((size) => size <= sourceWidth);
-        // if (validSizes.length === 0) {
-        //     validSizes = [ALL_SIZES[0]];
-        // }
         const validSizes = ALL_SIZES;
 
         // Run resizes in parallel
@@ -203,7 +195,8 @@ async function main() {
     console.log(`\n 📈 Total variants created: ${totalVariants}`);
 }
 
-main()
+if (import.meta.url === `file://${process.argv[1]}`) {
+    main()
     .catch((e) => {
         console.error(e);
         process.exit(1);
@@ -211,3 +204,5 @@ main()
     .finally(async () => {
         await prisma.$disconnect();
     });
+}
+
