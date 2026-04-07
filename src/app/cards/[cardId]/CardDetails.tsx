@@ -28,16 +28,17 @@ export async function CardDetails({ cardId }: { cardId: string }) {
     return (
         <div className='flex flex-col gap-8'>
             <header>
-                <h1 className='text-4xl font-bold tracking-tight'>{card.n}</h1>
-                <p className='mt-1 text-lg text-muted-foreground'>
-                    {card.supertype} - {card.subtypes.join(', ')}
-                    {card.hp && ` - HP ${card.hp}`}
-                </p>
-
-                {/* Mobile-only PriceHero: visible on small screens, hidden on md+ */}
-                <div className='mt-6 block md:hidden'>
-                    <PriceHero cardId={cardId} />
+                <div className="flex justify-between items-start">
+                    <h1 className='text-4xl font-bold tracking-tight'>{card.n}</h1>
+                    {card.hp && (
+                        <span className="text-2xl font-bold tracking-tighter opacity-80">
+                            {card.hp} HP
+                        </span>
+                    )}
                 </div>
+                <p className='mt-1 text-lg text-muted-foreground'>
+                    {card.supertype} {card.subtypes.length > 0 && `— ${card.subtypes.join(', ')}`}
+                </p>
             </header>
 
             {/* Price Chart */}
@@ -220,6 +221,60 @@ export async function CardDetails({ cardId }: { cardId: string }) {
                             <p className='mt-1 text-sm text-muted-foreground'>{ability.text}</p>
                         </div>
                     ))}
+                </section>
+            )}
+
+            {/* Game Stats Section */}
+            {((card.weaknesses?.length ?? 0) > 0 || 
+  (card.resistances?.length ?? 0) > 0 || 
+  (card.cRC !== null && card.cRC > 0)) && (
+                <section className="grid grid-cols-3 gap-4 rounded-lg border bg-card p-4 shadow-sm text-center">
+                    
+                    {/* Weakness */}
+                    <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Weakness</p>
+                        <div className="mt-1 flex justify-center gap-1">
+                            {card.weaknesses?.length > 0 ? (
+                                card.weaknesses.map(w => (
+                                    <div key={w.type} className="flex items-center gap-1">
+                                        <EnergyIcon type={w.type} size={16} />
+                                        <span className="text-sm font-bold">{w.value}</span>
+                                    </div>
+                                ))
+                            ) : <span className="text-sm opacity-30">—</span>}
+                        </div>
+                    </div>
+
+                    {/* Resistance */}
+                    <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Resistance</p>
+                        <div className="mt-1 flex justify-center gap-1">
+                            {card.resistances?.length > 0 ? (
+                                card.resistances.map(r => (
+                                    <div key={r.type} className="flex items-center gap-1">
+                                        <EnergyIcon type={r.type} size={16} />
+                                        <span className="text-sm font-bold">{r.value}</span>
+                                    </div>
+                                ))
+                            ) : <span className="text-sm opacity-30">—</span>}
+                        </div>
+                    </div>
+
+                    {/* Retreat Cost */}
+                    <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Retreat</p>
+                        <div className="mt-1 flex justify-center gap-1">
+                            {card.cRC !== null && card.cRC > 0 ? (
+                                <div className="flex gap-0.5">
+                                    {/* If retreatCost is a number (eg 2), we fill an array to show 2 icons */}
+                                    {Array.from({ length: card.cRC }).map((_, i) => (
+                                        <EnergyIcon key={i} type="Colorless" size={16} />
+                                    ))}
+                                </div>
+                            ) : <span className="text-sm opacity-30">—</span>}
+                        </div>
+                    </div>
+
                 </section>
             )}
 
