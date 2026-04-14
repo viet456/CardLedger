@@ -1,8 +1,7 @@
 User-agent: *
 Disallow: /api/
-Disallow: /cards/
 
-# Block known aggressive crawlers
+# Block known aggressive commercial scrapers
 User-agent: AhrefsBot
 Disallow: /
 
@@ -14,3 +13,12 @@ Disallow: /
 
 User-agent: DotBot
 Disallow: /
+
+User-agent: PetalBot
+Disallow: /
+
+User-agent: barkrowler
+Disallow: /
+
+# Point search engines directly to dynamic catalog
+Sitemap: https://cardledger.io/sitemap.xml
