@@ -72,8 +72,15 @@ export default function CardPageView() {
             }
         });
 
-        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    }, [filters, pathname, router]);
+        //router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+
+        // Service worker / Offline support:
+        // Bypass Next.js router, update browser URL natively
+        window.history.replaceState(null, '', `${pathname}?${params.toString()}`);
+    }, [filters, pathname, 
+        //router
+
+    ]);
 
     const { status, artists, rarities, sets, types, subtypes } = useCardStore(
         useShallow((state: CardStoreState) => ({
