@@ -14,7 +14,9 @@ interface CardImageDisplayProps {
 
 export function CardImageDisplay({ img, name, id }: CardImageDisplayProps) {
     const [isHighResLoaded, setIsHighResLoaded] = useState(false);
-    const [hasError, setHasError] = useState(false);
+    
+    const [baseError, setBaseError] = useState(false);
+    const [highResError, setHighResError] = useState(false);
 
     useEffect(() => {
         // If we have the preview param, clean it up from the URL bar
@@ -26,7 +28,8 @@ export function CardImageDisplay({ img, name, id }: CardImageDisplayProps) {
         }
     }, []);
 
-    if (!img || hasError) {
+    // Only show the gray placeholder if we have NO image, or the low-res completely failed
+    if (!img || baseError) {
         return (
             <div className='relative aspect-[2.5/3.5] w-full overflow-hidden rounded-xl bg-muted shadow-lg'>
                 <img
@@ -51,23 +54,25 @@ export function CardImageDisplay({ img, name, id }: CardImageDisplayProps) {
                 fill
                 sizes='192px'
                 className='object-cover'
-                onError={() => setHasError(true)}
+                onError={() => setBaseError(true)}
             />
 
-            {/* LAYER 2: High Res Overlay */}
-            <Image
-                loader={r2ImageLoader}
-                src={img}
-                alt={name}
-                fill
-                priority
-                sizes='(max-width: 768px) 100vw, 33vw'
-                className={`z-10 object-cover transition-opacity duration-500 ${
-                    isHighResLoaded ? 'opacity-100' : 'opacity-0'
-                }`}
-                onLoad={() => setIsHighResLoaded(true)}
-                onError={() => setHasError(true)}
-            />
+            {/* LAYER 2: High Res Overlay  */}
+            {!highResError && (
+                <Image
+                    loader={r2ImageLoader}
+                    src={img}
+                    alt={name}
+                    fill
+                    priority
+                    sizes='(max-width: 768px) 100vw, 33vw'
+                    className={`z-10 object-cover transition-opacity duration-500 ${
+                        isHighResLoaded ? 'opacity-100' : 'opacity-0'
+                    }`}
+                    onLoad={() => setIsHighResLoaded(true)}
+                    onError={() => setHighResError(true)}
+                />
+            )}
         </div>
     );
 }

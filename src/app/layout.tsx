@@ -12,6 +12,7 @@ import { Header } from '../components/layout/Header';
 import { Suspense } from 'react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Analytics } from '@vercel/analytics/next';
+import { ServiceWorkerRegistry } from '../components/ServiceWorkerRegistry';
 
 const inter = Inter({
     subsets: ['latin'],
@@ -55,7 +56,10 @@ export default function RootLayout({
                 className={`flex min-h-screen flex-col bg-background font-sans text-foreground antialiased`}
             >
                 <Suspense fallback={<div className='min-h-screen bg-background' />}>
-                    <AppContent>{children}</AppContent>
+                    <AppContent>
+                        {children}
+                        <ServiceWorkerRegistry />
+                    </AppContent>
                 </Suspense>
                 <Analytics />
                 <SpeedInsights />
