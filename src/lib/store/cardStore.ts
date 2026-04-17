@@ -51,6 +51,7 @@ export type CardStoreState = LookupTables & {
     searchHaystack: string[];
 };
 
+// If search querying, use
 // Relevance sort: shortest matches first
 const customSort = (info: any, haystack: string[], needle: string) => {
     const { idx, start } = info;
@@ -81,7 +82,12 @@ const ufOptions = {
     sort: customSort
 };
 
-// Helper function to build search indexes
+// Helper function to build filtering indexes
+// Inverted index: get a map, returns all matching cardIds
+// eg: [
+//     water:[id1, id2], 
+//     fire:[id3, id4]
+// ]
 function buildIndexes(fullData: FullCardData) {
     const cardMap = new Map<string, IndexedCard>();
     const rarityIndex: IndexMap = new Map();
@@ -96,6 +102,7 @@ function buildIndexes(fullData: FullCardData) {
 
     const searchHaystack: string[] = [];
 
+    // Add cards to filter indexes where their parameters apply
     const addToIndex = (index: IndexMap, key: string, cardId: string) => {
         if (!index.has(key)) {
             index.set(key, new Set());
@@ -104,7 +111,14 @@ function buildIndexes(fullData: FullCardData) {
     };
     for (let i = 0; i < fullData.cards.length; i++) {
         const card = fullData.cards[i];
+
+        // Backend sets the default sort of Set release date, 
+        // secondary sort by card number
+        // Add _index as a 'base' sort if only filters are enabled (no query relevance sort)
         cardMap.set(card.id, { ...card, _index: i });
+        
+        // uFuzzy only returns name matches,
+        // so we add in the cards' IDs
         searchHaystack.push(`${card.n} ${card.id}`);
 
         if (card.r !== null) {

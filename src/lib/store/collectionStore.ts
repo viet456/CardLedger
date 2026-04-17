@@ -130,6 +130,7 @@ export const useCollectionStore = create<CollectionStoreState>()(
                 const previousEntries = get().entries;
 
                 // Create a temporary optimistic entry
+                // tempId is both a React key and entryId
                 const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
                 const optimisticEntry: FrontendCollectionEntry = {
                     id: tempId,
@@ -156,6 +157,8 @@ export const useCollectionStore = create<CollectionStoreState>()(
                     // Swap the temporary ID with the real Postgres ID silently
                     set((state) => ({
                         entries: state.entries.map((e) =>
+                            // Overrides only the ID and timestamp of the local entry
+                            // with that of the DB
                             e.id === tempId
                                 ? { ...e, id: newEntry.id, createdAt: newEntry.createdAt }
                                 : e

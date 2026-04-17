@@ -158,6 +158,7 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
                 const index = info.idx[order[i]];
                 searchResults.push(cards[index]);
             }
+        // uFuzzy bypasses sorting engine on simple queries
         } else if (idxs) {
             // Otherwise just mapped indices
             for (let i = 0; i < idxs.length; i++) {
