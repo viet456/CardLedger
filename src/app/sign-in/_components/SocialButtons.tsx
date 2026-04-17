@@ -1,22 +1,23 @@
 'use client';
-import { signIn } from '@/src/lib/auth-client';
 import { Button } from '@/src/components/ui/button';
 import { toast } from 'sonner';
 import { useState } from 'react';
+import { authClient } from '@/src/lib/auth-client';
 
 export function SocialButtons() {
     const [isPending, setIsPending] = useState(false);
 
     const handleSocialSignIn = async (provider: 'google' | 'discord') => {
         setIsPending(true);
-        await signIn.social({
+        const result = await authClient.signIn.social({
             provider: provider,
-            callbackURL: '/dashboard', // Redirect after success
-            onError: (ctx: { error: { message: string } }) => {
-                toast.error(ctx.error.message || 'Social sign-in failed');
-                setIsPending(false);
-            }
+            callbackURL: '/dashboard',
         });
+        
+        if (result?.error) {
+            toast.error(result.error.message || 'Social sign-in failed');
+            setIsPending(false);
+        }
     };
 
     return (

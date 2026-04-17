@@ -1,11 +1,10 @@
-const CACHE_NAME = 'cardledger-offline-v5';
+const CACHE_NAME = 'cardledger-offline-v6';
 
 const CORE_ASSETS = [
     '/',
     '/cards',
     '/sets',
     '/about',
-    '/dashboard',
     '/manifest.json' 
 ];
 
@@ -45,17 +44,27 @@ self.addEventListener('fetch', (event) => {
 
     const url = new URL(event.request.url);
 
+    // 0. Never intercept Auth, tRPC, or API routes
+    if (url.pathname.startsWith('/api/')) {
+        return; // Exits the SW and forces a real network request
+    }
+
     // 1. Handle RSC (React Server Component) Data Requests
     // Cache these so client-side routing works offline for visited cards
     if (event.request.headers.get('RSC') === '1') {
         event.respondWith(
             fetch(event.request).then((networkResponse) => {
-                // If network is good, save a copy to the cache
-                if (networkResponse.ok) {
-                    const clone = networkResponse.clone();
-                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+                // Add the bodyUsed and opaque checks to prevent streaming crashes
+                if (networkResponse.ok && !networkResponse.bodyUsed && networkResponse.type !== 'opaque') {
+                    try {
+                        const clone = networkResponse.clone();
+                        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+                    } catch (e) {
+                        console.error('[ServiceWorker] Clone failed:', e);
+                    }
                 }
                 return networkResponse;
+
             }).catch(() => {
                 // If offline, try to find the RSC payload in the cache
                 return caches.match(event.request);
@@ -128,11 +137,15 @@ self.addEventListener('fetch', (event) => {
         caches.match(event.request).then((cachedResponse) => {
             if (cachedResponse) return cachedResponse;
             return fetch(event.request).then((networkResponse) => {
-                if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+                if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic' || networkResponse.bodyUsed) {
                     return networkResponse;
                 }
-                const responseToCache = networkResponse.clone();
-                caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
+                try {
+                    const responseToCache = networkResponse.clone();
+                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
+                } catch (e) {
+                    console.error('[ServiceWorker] Clone failed:', e);
+                }
                 return networkResponse;
             });
         })

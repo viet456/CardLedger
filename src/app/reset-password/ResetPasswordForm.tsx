@@ -1,7 +1,7 @@
 'use client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/src/components/ui/button';
-import { resetPassword } from '@/src/lib/auth-client';
+import { authClient } from '@/src/lib/auth-client';
 import { useState } from 'react';
 
 export default function ResetPasswordForm() {
@@ -24,7 +24,7 @@ export default function ResetPasswordForm() {
         }
 
         try {
-            const response = await resetPassword({
+            const response = await authClient.resetPassword({
                 token: resetToken,
                 newPassword: password
             });
