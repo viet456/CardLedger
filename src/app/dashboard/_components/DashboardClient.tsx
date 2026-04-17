@@ -97,6 +97,7 @@ export function DashboardClient() {
         }
 
         return { gridCards: mappedGridCards, serializedEntries: mappedTableEntries };
+        // Zustand is reactive: UI updates if entries update
     }, [entries, cardMap, lookups, prices]);
 
     const isLoading = status === 'loading' || status === 'idle';
