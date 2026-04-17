@@ -22,7 +22,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/src/components/ui/avatar'
 import { LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuthSession } from '@/src/providers/SessionProvider';
-import { signOut } from '@/src/lib/auth-client';
+import { authClient } from '@/src/lib/auth-client';
 
 const NavLink = ({
     href,
@@ -137,16 +137,10 @@ export function MobileNav() {
                                     size='sm'
                                     className='h-9 flex-grow'
                                     onClick={async () => {
-                                        await signOut({
-                                            redirectTo: '/',
-                                            fetchOptions: {
-                                                onSuccess: () => {
-                                                    window.location.href = '/';
-                                                    router.push('/');
-                                                    router.refresh();
-                                                }
-                                            }
-                                        });
+                                        const result = await authClient.signOut();
+                                        if (!result?.error) {
+                                            window.location.href = '/';
+                                        }
                                         setIsMenuOpen(false);
                                     }}
                                 >

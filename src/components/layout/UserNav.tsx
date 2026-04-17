@@ -10,9 +10,10 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/src/components/ui/avatar';
 import { Button } from '@/src/components/ui/button';
 import { LayoutDashboard, LogOut } from 'lucide-react';
-import { signOut } from '@/src/lib/auth-client';
+import { authClient } from '@/src/lib/auth-client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useAuthSession } from '@/src/providers/SessionProvider';
 
 interface UserNavProps {
     user: {
@@ -22,23 +23,31 @@ interface UserNavProps {
     };
 }
 
-export function UserNav({ user }: UserNavProps) {
+export function UserNav({ user: serverUser }: UserNavProps) {
     const router = useRouter();
+    
+    const { data: sessionData } = useAuthSession();
+    const activeUser = sessionData?.user;
+
+    if (!activeUser) {
+        return null; 
+    }
+
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button variant='ghost' className='relative h-9 w-9 rounded-full'>
                     <Avatar className='h-9 w-9 border border-border'>
-                        <AvatarImage src={user.image || ''} alt={user.name || ''} />
-                        <AvatarFallback>{user.name?.charAt(0) || 'U'}</AvatarFallback>
+                        <AvatarImage src={activeUser.image || ''} alt={activeUser.name || ''} />
+                        <AvatarFallback>{activeUser.name?.charAt(0) || 'U'}</AvatarFallback>
                     </Avatar>
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className='w-56' align='end' forceMount>
                 <DropdownMenuLabel className='font-normal'>
                     <div className='flex flex-col space-y-1'>
-                        <p className='text-sm font-medium leading-none'>{user.name}</p>
-                        <p className='text-xs leading-none text-muted-foreground'>{user.email}</p>
+                        <p className='text-sm font-medium leading-none'>{activeUser.name}</p>
+                        <p className='text-xs leading-none text-muted-foreground'>{activeUser.email}</p>
                     </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
@@ -53,22 +62,28 @@ export function UserNav({ user }: UserNavProps) {
                 <DropdownMenuSeparator />
 
                 <DropdownMenuItem
-                    className='cursor-pointer text-red-600 focus:text-red-600'
-                    onSelect={async () => {
-                        await signOut({
-                            fetchOptions: {
-                                onSuccess: () => {
-                                    window.location.href = '/';
-                                    router.push('/');
-                                    router.refresh();
-                                }
-                            }
-                        });
-                    }}
-                >
-                    <LogOut className='mr-2 h-4 w-4' />
-                    <span>Sign out</span>
-                </DropdownMenuItem>
+    className='cursor-pointer text-red-600 focus:text-red-600'
+    onSelect={async (e) => {
+        e.preventDefault(); 
+        
+        await authClient.signOut();
+        
+        if (typeof window !== 'undefined' && 'caches' in window) {
+            try {
+                const cacheKeys = await caches.keys();
+                await Promise.all(cacheKeys.map(key => caches.delete(key)));
+                console.log('Cleared SW cache for logout');
+            } catch (err) {
+                console.error('Failed to clear cache', err);
+            }
+        }
+        
+        window.location.href = '/';
+    }}
+>
+    <LogOut className='mr-2 h-4 w-4' />
+    <span>Sign out</span>
+</DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
     );

@@ -21,18 +21,16 @@ export const useAuthSession = () => {
     const contextSession = useContext(SessionContext);
     const betterAuthSession = authClient.useSession();
 
-    // If better-auth is still loading (isPending = true), use the contextSession (Server Data).
-    // If better-auth is done (isPending = false), use the betterAuthSession (Client Data).
-    // This ensures instant loading BUT allows the client to update (ex on logout).
+    // Only use the SSR session if the client has NEVER successfully fetched yet.
+    // Once it has fetched (even if the result is null/signed-out), trust the client.
+    const hasResolved = !betterAuthSession.isPending || betterAuthSession.data !== undefined;
 
-    const isActuallyPending = betterAuthSession.isPending && !contextSession;
-    const effectiveData = betterAuthSession.isPending
-        ? betterAuthSession.data || contextSession
-        : betterAuthSession.data;
+    const effectiveData = hasResolved
+        ? betterAuthSession.data
+        : (contextSession ?? betterAuthSession.data);
 
     return {
         ...betterAuthSession,
         data: effectiveData,
-        isPending: isActuallyPending
     };
 };

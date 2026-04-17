@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { signIn } from '@/src/lib/auth-client';
+import { authClient } from '@/src/lib/auth-client';
 import { Button } from '@/src/components/ui/button';
 import { Input } from '@/src/components/ui/input';
 import { Label } from '@/src/components/ui/label';
@@ -18,27 +18,38 @@ export function SignInForm() {
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         setError(null);
-
         setIsLoading(true);
         const isEmail = identifier.includes('@');
 
         try {
             const response = isEmail
-                ? await signIn.email({
-                      email: identifier,
-                      password
-                  })
-                : await signIn.username({
-                      username: identifier,
-                      password
-                  });
+                ? await authClient.signIn.email({
+                    email: identifier,
+                    password,
+                    fetchOptions: {
+                        onSuccess: () => {
+                            // strictly wait for the cookie, THEN redirect
+                            window.location.href = '/dashboard';
+                        }
+                    }
+                })
+                : await authClient.signIn.username({
+                    username: identifier,
+                    password,
+                    fetchOptions: {
+                        onSuccess: () => {
+                            // strictly wait for the cookie, THEN redirect
+                            window.location.href = '/dashboard';
+                        }
+                    }
+                });
 
             if (response.error) {
                 setError(response.error.message || 'Invalid credentials.');
                 setLoginAttempts((p) => p + 1);
-            } else {
-                window.location.href = '/dashboard';
-            }
+            } 
+            // REMOVE THE `else` BLOCK THAT WAS HERE!
+
         } catch (err) {
             setError('Network error. Please try again.');
         } finally {

@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { signUp, authClient } from '@/src/lib/auth-client';
+import { authClient } from '@/src/lib/auth-client';
 import { Button } from '@/src/components/ui/button';
 import { Input } from '@/src/components/ui/input';
 import { Label } from '@/src/components/ui/label';
@@ -48,7 +48,7 @@ export function SignUpForm() {
         if (usernameAvailable === false) return setError('Username is taken');
 
         try {
-            const response = await signUp.email({
+            const response = await authClient.signUp.email({
                 email,
                 password,
                 username,

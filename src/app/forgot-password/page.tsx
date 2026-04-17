@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { Button } from '@/src/components/ui/button';
-import { requestPasswordReset } from '@/src/lib/auth-client';
+import { authClient } from '@/src/lib/auth-client';
 
 export default function ForgotPasswordPage() {
     const [email, setEmail] = useState('');
@@ -15,7 +15,7 @@ export default function ForgotPasswordPage() {
         setMessage(null);
 
         try {
-            const response = await requestPasswordReset({
+            const response = await authClient.requestPasswordReset({
                 email,
                 redirectTo: '/reset-password'
             });
