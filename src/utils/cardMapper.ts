@@ -110,6 +110,11 @@ export function mapPrismaCardToDenormalized(
             ? { name: card.ancientTraitName, text: card.ancientTraitText || '' }
             : null,
 
-        price: price
+        price: price,
+
+        hasNormal: card.hasNormal,
+        hasHolo: card.hasHolo,
+        hasReverse: card.hasReverse,
+        hasFirstEdition: card.hasFirstEdition
     };
 }

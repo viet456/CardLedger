@@ -13,12 +13,13 @@ export interface SearchSuggestion {
 }
 
 export function useLocalSearch(query: string) {
-    const { ufInstance, searchHaystack, cards, sets } = useCardStore(
+    const { ufInstance, searchHaystack, cards, sets, names } = useCardStore(
         useShallow((state) => ({
             ufInstance: state.ufInstance,
             searchHaystack: state.searchHaystack,
             cards: state.cards,
-            sets: state.sets
+            sets: state.sets,
+            names: state.names
         }))
     );
 
@@ -45,7 +46,7 @@ export function useLocalSearch(query: string) {
 
             return {
                 id: card.id,
-                name: card.n,
+                name: names[card.n],
                 number: card.num,
                 set: {
                     name: setInfo ? setInfo.name : 'Unknown Set',
@@ -53,7 +54,7 @@ export function useLocalSearch(query: string) {
                 }
             };
         });
-    }, [query, ufInstance, searchHaystack, cards, sets]);
+    }, [query, ufInstance, searchHaystack, cards, sets, names]);
 
     return {
         suggestions,

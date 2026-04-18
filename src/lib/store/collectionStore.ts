@@ -29,6 +29,7 @@ export type CollectionStoreState = PersistedState & {
     updateEntry: (entryId: string, updates: Partial<FrontendCollectionEntry>) => Promise<void>;
     removeEntry: (entryId: string) => Promise<void>;
     setEntries: (entries: FrontendCollectionEntry[]) => void;
+    clearStore: () => void;
 };
 
 const indexedDbStorage: PersistStorage<PersistedState> = {
@@ -61,6 +62,16 @@ export const useCollectionStore = create<CollectionStoreState>()(
                 });
             },
 
+            clearStore: () => {
+                set({
+                    userId: null,
+                    entries: [],
+                    lastSynced: null,
+                    version: null,
+                    status: 'idle'
+                });
+            },
+
             // Checks for local cards in Indexeddb and compares to fetched version
             initialize: async (userId: string) => {
 
@@ -76,11 +87,14 @@ export const useCollectionStore = create<CollectionStoreState>()(
                         status: 'loading'
                     });
                 } else {
-                    // Prevent double-fetching only if it's the SAME user
-                    if (get().status === 'loading' || get().status.startsWith('ready')) {
-                        return;
+                    // STALE-WHILE-REVALIDATE LOGIC
+                    // If we already have entries from IDB, don't revert to loading.
+                    // Just let the background fetch happen silently.
+                    if (get().entries.length > 0) {
+                        set({ status: 'ready_from_cache' }); 
+                    } else if (get().status !== 'loading' && !get().status.startsWith('ready')) {
+                        set({ status: 'loading' });
                     }
-                    set({ status: 'loading' });
                 }
 
                 try {

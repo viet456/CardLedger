@@ -4,17 +4,15 @@ import { FilterState } from '@/src/lib/store/searchStore';
 import { SortableKey } from '@/src/services/pokemonCardValidator';
 import { CardPrices } from '../shared-types/price-api';
 
-type LookupsForDenorm = Omit<LookupTables, 'weaknesses' | 'resistances'>;
-
 // Combines normalized cards with prices into DenormalizedCard type
 // Applies sorting to this type
 
 export function denormalizeSingleCard(
     card: NormalizedCard,
-    lookups: Omit<LookupTables, 'weaknesses' | 'resistances'>,
+    lookups: LookupTables,
     prices: Record<string, CardPrices> = {}
 ): DenormalizedCard {
-    const { artists, rarities, sets, types, subtypes, supertypes, abilities, attacks, rules } =
+    const { artists, rarities, sets, types, subtypes, supertypes, abilities, attacks, rules, names} =
         lookups;
     const priceData = prices[card.id];
 
@@ -29,7 +27,7 @@ export function denormalizeSingleCard(
 
     return {
         id: card.id,
-        n: card.n,
+        n: names[card.n],
         description: card.d,
         hp: card.hp,
         num: card.num,
@@ -49,14 +47,18 @@ export function denormalizeSingleCard(
         ancientTrait: card.aT ? { name: card.aT.n, text: card.aT.t } : null,
         rules: (card.ru || []).map((id) => rules[id]),
         attacks: (card.ak || []).map((id) => attacks[id]),
-        evolvesFrom: card.eF,
-        evolvesTo: card.eT || [],
+        evolvesFrom: card.eF !== null ? names[card.eF] : null, 
+        evolvesTo: (card.eT || []).map((id) => names[id]), 
         legalities: {
             standard: card.leg?.s,
             expanded: card.leg?.e,
             unlimited: card.leg?.u
         },
         price: effectivePrice,
-        variants: priceData
+        variants: priceData,
+        hasNormal: card.hasNormal,
+        hasHolo: card.hasHolo,
+        hasReverse: card.hasReverse,
+        hasFirstEdition: card.hasFirstEdition
     };
 }

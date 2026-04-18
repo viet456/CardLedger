@@ -3,17 +3,17 @@ import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { r2 } from '../src/lib/r2';
 import crypto from 'crypto';
 import zlib from 'zlib';
-import { SetObject, AbilityObject } from '../src/shared-types/card-index';
+import { NormalizedCard, SetObject, AbilityObject, AttackObject } from '../src/shared-types/card-index';
 
 const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
 const prisma = new PrismaClient();
 const BUCKET_NAME = 'cardledger';
 
 // Helper function to get or create an ID from a lookup map
-function getOrCreateId(
+function getOrCreateId<T extends string | {id: string}>(
     map: Map<string, number>,
-    array: (string | SetObject)[],
-    value: string | SetObject
+    array: T[],
+    value: T
 ) {
     const key = typeof value === 'string' ? value : value.id;
     if (!map.has(key)) {
@@ -33,7 +33,21 @@ function getOrCreateAbilityId(
         map.set(key, array.length);
         array.push(value);
     }
-    return map.get(key);
+    return map.get(key)!;
+}
+
+function getOrCreateAttackId(
+    map: Map<string, number>,
+    array: AttackObject[],
+    value: AttackObject
+) {
+    // Create a unique hash for the attack to deduplicate it
+    const key = `${value.name}|${value.damage}|${value.text}`;
+    if (!map.has(key)) {
+        map.set(key, array.length);
+        array.push(value);
+    }
+    return map.get(key)!;
 }
 
 function sanitizePublicId(id: string): string {
@@ -64,7 +78,7 @@ async function generateCardIndex() {
             series: true,
             releaseDate: true,
             ptcgoCode: true,
-            // Fetch all cards belonging to this set!
+            // Fetch all cards belonging to this set
             cards: {
                 select: {
                     id: true,
@@ -82,15 +96,41 @@ async function generateCardIndex() {
                     imageKey: true,
                     releaseDate: true,
                     pokedexNumberSort: true,
-                    abilities: true
+                    abilities: true,
+                    hasNormal: true,
+                    hasHolo: true,
+                    hasReverse: true,
+                    hasFirstEdition: true,
+                    description: true,
+                    rules: true,
+                    evolvesFrom: true,
+                    evolvesTo: true,
+                    standard: true,
+                    expanded: true,
+                    unlimited: true,
+                    nationalPokedexNumbers: true,
+                    ancientTraitName: true,
+                    ancientTraitText: true,
+                    attacks: {
+                        select: {
+                            name: true,
+                            damage: true,
+                            text: true,
+                            cost: { select: { type: { select: { name: true } } } }
+                        }
+                    }
+                
                 }
             }
         }
     });
-    const normalizedCards = [];
+    const normalizedCards: NormalizedCard[] = [];
     console.log(` -> Found ${allSetsFromDb.length} sets to process.`);
 
     // Create lookup tables and maps to hold the unique values and their integer IDs.
+    const nameMap = new Map<string, number>();
+    const names: string[] = [];
+
     const supertypeMap = new Map<string, number>();
     const supertypes: string[] = [];
 
@@ -111,6 +151,12 @@ async function generateCardIndex() {
 
     const abilityMap = new Map<string, number>();
     const abilities: AbilityObject[] = [];
+
+    const ruleMap = new Map<string, number>();
+    const rules: string[] = [];
+
+    const attackMap = new Map<string, number>();
+    const attacks: AttackObject[] = [];
 
     // Post-process the cards for the client by pruning and flattening
     for (const set of allSetsFromDb) {
@@ -137,11 +183,15 @@ async function generateCardIndex() {
             if (aIsNum && bIsNum) return numA - numB; // numeric vs numeric
             if (aIsNum) return -1; // numeric before non-numeric
             if (bIsNum) return 1;
-            return a.number.localeCompare(b.number); // string fallback
+            return a.number.localeCompare(b.number, undefined, { numeric: true }); // string fallback
         });
 
         // Normalize the cards and push them to the final flat array
         for (const card of set.cards) {
+            const nameId = getOrCreateId(nameMap, names, card.name);
+            const evolvesFromId = card.evolvesFrom ? getOrCreateId(nameMap, names, card.evolvesFrom) : null;
+            const evolvesToIds = card.evolvesTo.map(name => getOrCreateId(nameMap, names, name));
+
             const supertypeId = getOrCreateId(supertypeMap, supertypes, card.supertype);
             const artistId = card.artist
                 ? getOrCreateId(artistMap, artists, card.artist.name)
@@ -171,10 +221,20 @@ async function generateCardIndex() {
                 })
             );
 
+            const ruleIds = card.rules.map(r => getOrCreateId(ruleMap, rules, r));
+            
+            // Map the attacks
+            const attackIds = card.attacks.map(a => getOrCreateAttackId(attackMap, attacks, {
+                name: a.name,
+                damage: a.damage,
+                text: a.text,
+                cost: a.cost.map(c => c.type.name)
+            }));
+
             // Push to our flat array
             normalizedCards.push({
                 id: card.id,
-                n: card.name,
+                n: nameId,
                 hp: card.hp,
                 num: card.number,
                 img: card.imageKey,
@@ -188,7 +248,23 @@ async function generateCardIndex() {
                 sb: subtypeIds,
                 w: weaknessObjects,
                 rs: resistanceObjects,
-                ab: abilityIds
+                ab: abilityIds,
+                hasNormal: card.hasNormal,
+                hasHolo: card.hasHolo,
+                hasReverse: card.hasReverse,
+                hasFirstEdition: card.hasFirstEdition,
+                d: card.description,
+                ru: ruleIds,
+                ak: attackIds,
+                eF: evolvesFromId,
+                eT: evolvesToIds,
+                leg: {
+                    s: (card.standard as string) || undefined,
+                    e: (card.expanded as string) || undefined,
+                    u: (card.unlimited as string) || undefined
+                },
+                pdx: card.nationalPokedexNumbers.length > 0 ? card.nationalPokedexNumbers : null,
+                aT: card.ancientTraitName ? { n: card.ancientTraitName, t: card.ancientTraitText || '' } : null,
             });
         }
     }
@@ -205,9 +281,13 @@ async function generateCardIndex() {
         subtypes: subtypes,
         artists: artists,
         abilities: abilities,
+        rules: rules,
+        attacks: attacks,
+        names: names,
         cards: normalizedCards
     };
     const jsonData = JSON.stringify(finalJsonObject);
+    console.log(` -> RAW JSON size: ${(Buffer.byteLength(jsonData) / 1024 / 1024).toFixed(2)} MB`);
     const compressedData = zlib.brotliCompressSync(jsonData);
 
     // Browser automatically decompresses brotli files,
