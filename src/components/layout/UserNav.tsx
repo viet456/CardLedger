@@ -14,6 +14,7 @@ import { authClient } from '@/src/lib/auth-client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthSession } from '@/src/providers/SessionProvider';
+import { useCollectionStore } from '@/src/lib/store/collectionStore';
 
 interface UserNavProps {
     user: {
@@ -62,28 +63,30 @@ export function UserNav({ user: serverUser }: UserNavProps) {
                 <DropdownMenuSeparator />
 
                 <DropdownMenuItem
-    className='cursor-pointer text-red-600 focus:text-red-600'
-    onSelect={async (e) => {
-        e.preventDefault(); 
-        
-        await authClient.signOut();
-        
-        if (typeof window !== 'undefined' && 'caches' in window) {
-            try {
-                const cacheKeys = await caches.keys();
-                await Promise.all(cacheKeys.map(key => caches.delete(key)));
-                console.log('Cleared SW cache for logout');
-            } catch (err) {
-                console.error('Failed to clear cache', err);
-            }
-        }
-        
-        window.location.href = '/';
-    }}
->
-    <LogOut className='mr-2 h-4 w-4' />
-    <span>Sign out</span>
-</DropdownMenuItem>
+                    className='cursor-pointer text-red-600 focus:text-red-600'
+                    onSelect={async (e) => {
+                        e.preventDefault(); 
+                        
+                        await authClient.signOut();
+                        
+                        if (typeof window !== 'undefined' && 'caches' in window) {
+                            try {
+                                const cacheKeys = await caches.keys();
+                                await Promise.all(cacheKeys.map(key => caches.delete(key)));
+                                console.log('Cleared SW cache for logout');
+                            } catch (err) {
+                                console.error('Failed to clear cache', err);
+                            }
+                        }
+                        // Clear collection store
+                        useCollectionStore.getState().clearStore();
+                        
+                        window.location.href = '/';
+                    }}
+                >
+                    <LogOut className='mr-2 h-4 w-4' />
+                    <span>Sign out</span>
+                </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
     );

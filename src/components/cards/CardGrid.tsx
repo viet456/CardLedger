@@ -52,7 +52,8 @@ export function CardGrid({ cards, totalCount }: CardGridProps) {
             supertypes: state.supertypes,
             abilities: state.abilities,
             attacks: state.attacks,
-            rules: state.rules
+            rules: state.rules,
+            names: state.names
         }))
     );
     const prices = useMarketStore((state) => state.prices);

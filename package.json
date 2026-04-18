@@ -9,6 +9,7 @@
         "start": "next start",
         "test": "vitest",
         "lint": "eslint",
+        "typecheck": "tsc --noEmit",
         "prepare": "husky install",
         "prettier": "prettier --write .",
         "db:generate": "prisma generate",

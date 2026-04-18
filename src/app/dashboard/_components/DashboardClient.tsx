@@ -50,7 +50,8 @@ export function DashboardClient() {
             supertypes: state.supertypes,
             abilities: state.abilities,
             attacks: state.attacks,
-            rules: state.rules
+            rules: state.rules,
+            names: state.names
         }))
     );
     const prices = useMarketStore((state) => state.prices);
@@ -88,7 +89,7 @@ export function DashboardClient() {
                 createdAt: entry.createdAt,
                 variant: entry.variant,
                 card: {
-                    name: localCard.n,
+                    name: lookups.names[localCard.n],
                     imageKey: localCard.img ?? '',
                     set: { name: lookups.sets[localCard.s].name },
                     variants: denormalized.variants || null

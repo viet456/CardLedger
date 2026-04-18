@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { Input } from '@/src/components/ui/input';
 import { useCollectionStore } from '@/src/lib/store/collectionStore';
 import { toast } from 'sonner';
-import { Pencil } from 'lucide-react';
+    import { Pencil, Check } from 'lucide-react';
+import { Button } from '@/src/components/ui/button';
 
 export function EditablePriceInput({ id, initialPrice }: { id: string; initialPrice: number }) {
     const [value, setValue] = useState(initialPrice);
@@ -28,15 +29,24 @@ export function EditablePriceInput({ id, initialPrice }: { id: string; initialPr
 
     if (isEditing) {
         return (
-            <Input
-                autoFocus
-                type='number'
-                value={value}
-                onChange={(e) => setValue(Number(e.target.value))}
-                onBlur={onSave}
-                onKeyDown={(e) => e.key === 'Enter' && onSave()}
-                className='h-8 w-24'
-            />
+            <div className="flex items-center gap-2">
+                <Input
+                    autoFocus
+                    type='number'
+                    value={value}
+                    onChange={(e) => setValue(Number(e.target.value))}
+                    onKeyDown={(e) => e.key === 'Enter' && onSave()}
+                    className='h-8 w-24'
+                />
+                <Button 
+                    size="icon" 
+                    variant="outline" 
+                    className="h-8 w-8 text-green-500 hover:text-green-600 hover:bg-green-500/10 hover:bg-accent border border-border border-accent-foreground hover:border-accent"
+                    onClick={onSave}
+                >
+                    <Check className="h-4 w-4" />
+                </Button>
+            </div>
         );
     }
 

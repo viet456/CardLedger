@@ -103,7 +103,11 @@ async function getCardDataRaw(cardId: string): Promise<DenormalizedCard | null> 
             rawCard.ancientTraitName && rawCard.ancientTraitText
                 ? { name: rawCard.ancientTraitName, text: rawCard.ancientTraitText }
                 : null,
-        price: null
+        price: null,
+        hasNormal: rawCard.hasNormal,
+        hasHolo: rawCard.hasHolo,
+        hasReverse: rawCard.hasReverse,
+        hasFirstEdition: rawCard.hasFirstEdition
     };
     return denormalizedCard;
 }

@@ -98,7 +98,7 @@ function buildIndexes(fullData: FullCardData) {
     const weaknessIndex: IndexMap = new Map();
     const resistanceIndex: IndexMap = new Map();
 
-    const { rarities, sets, types, subtypes, artists } = fullData;
+    const { rarities, sets, types, subtypes, artists, names } = fullData;
 
     const searchHaystack: string[] = [];
 
@@ -119,7 +119,7 @@ function buildIndexes(fullData: FullCardData) {
         
         // uFuzzy only returns name matches,
         // so we add in the cards' IDs
-        searchHaystack.push(`${card.n} ${card.id}`);
+        searchHaystack.push(`${names[card.n]} ${card.id}`);
 
         if (card.r !== null) {
             addToIndex(rarityIndex, rarities[card.r], card.id);
@@ -189,12 +189,11 @@ export const useCardStore = create<CardStoreState>()(
             types: [],
             subtypes: [],
             artists: [],
+            names: [],
             cards: [],
             abilities: [],
             attacks: [],
             rules: [],
-            weaknesses: [],
-            resistances: [],
             ufInstance: null,
             searchHaystack: [],
             version: null,
@@ -275,6 +274,7 @@ export const useCardStore = create<CardStoreState>()(
             name: 'card-data-storage',
             storage: indexedDbStorage,
             partialize: (state): PersistedState => ({
+                names: state.names,
                 artists: state.artists,
                 rarities: state.rarities,
                 sets: state.sets,
@@ -285,8 +285,6 @@ export const useCardStore = create<CardStoreState>()(
                 abilities: state.abilities,
                 attacks: state.attacks,
                 rules: state.rules,
-                weaknesses: state.weaknesses,
-                resistances: state.resistances,
                 version: state.version
             }),
             // Build indexes after rehydration from storage

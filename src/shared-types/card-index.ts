@@ -44,6 +44,7 @@ export type SetObject = {
 };
 
 export type LookupTables = {
+    names: string[];
     supertypes: string[];
     rarities: string[];
     sets: SetObject[];
@@ -53,17 +54,15 @@ export type LookupTables = {
     abilities: AbilityObject[];
     attacks: AttackObject[];
     rules: string[];
-    weaknesses: WeaknessResistanceObject[];
-    resistances: WeaknessResistanceObject[];
 };
 
 export type NormalizedCard = {
     id: string;
-    n: string; // name
+    n: number; // name
     d: string | null;
     hp: number | null;
     num: string;
-    img: string | null; //image key
+    img: string | null; //image key 
     pS: number | null; // pokedex number
     cRC: number | null; // converted retreat cost
     st: number; // supertype id
@@ -77,11 +76,16 @@ export type NormalizedCard = {
     ab: number[];
     ru: number[]; // rules
     ak: number[]; // attacks
-    eF: string | null; // evolvesFrom
-    eT: string[]; // evolvesTo
+    eF: number | null; // evolvesFrom
+    eT: number[]; // evolvesTo
     leg: { s?: string; e?: string; u?: string }; // legalities
     pdx: number[] | null; // pokedexNumbers
     aT: { n: string; t: string } | null; // ancientTrait
+    // Card variants
+    hasNormal: boolean;
+    hasHolo: boolean;
+    hasReverse: boolean;
+    hasFirstEdition: boolean;
 };
 
 export type DenormalizedCard = {
@@ -118,6 +122,11 @@ export type DenormalizedCard = {
     } | null;
     price: number | null;
     variants?: CardPrices | null;
+    // Card variants
+    hasNormal: boolean;
+    hasHolo: boolean;
+    hasReverse: boolean;
+    hasFirstEdition: boolean;
 };
 
 export type PointerFile = {

@@ -59,7 +59,8 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
         weaknessIndex,
         resistanceIndex,
         ufInstance,
-        searchHaystack
+        searchHaystack,
+        names
     } = useCardStore(
         useShallow((state) => ({
             cards: state.cards,
@@ -73,7 +74,8 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
             weaknessIndex: state.weaknessIndex,
             resistanceIndex: state.resistanceIndex,
             ufInstance: state.ufInstance,
-            searchHaystack: state.searchHaystack
+            searchHaystack: state.searchHaystack,
+            names: state.names
         }))
     );
 
@@ -211,7 +213,7 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
                     return sortOrder === 'desc' ? priceB - priceA : priceA - priceB;
 
                 case 'n':
-                    const nameDiff = a.n.localeCompare(b.n);
+                    const nameDiff = names[a.n].localeCompare(names[b.n]);
                     if (nameDiff !== 0) return nameDiff;
                     return setReleaseDateMap.get(a.s)! - setReleaseDateMap.get(b.s)!;
 
@@ -246,7 +248,7 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
             cardsToSort.reverse();
         }
         return cardsToSort;
-    }, [filteredCards, filters.sortBy, filters.search, filters.sortOrder, sets, prices]);
+    }, [filteredCards, filters.sortBy, filters.search, filters.sortOrder, sets, prices, names]);
 
     return { filteredCards: sortedAndFilteredCards };
 }
