@@ -26,7 +26,7 @@ export type CollectionStoreState = PersistedState & {
     status: 'idle' | 'loading' | 'ready_from_cache' | 'ready_from_network' | 'error';
     initialize: (userId: string) => Promise<void>;
     addEntry: (entry: CollectionEntryInput) => Promise<void>;
-    updateEntry: (entryId: string, updates: Partial<CollectionEntry>) => Promise<void>;
+    updateEntry: (entryId: string, updates: Partial<FrontendCollectionEntry>) => Promise<void>;
     removeEntry: (entryId: string) => Promise<void>;
     setEntries: (entries: FrontendCollectionEntry[]) => void;
 };
@@ -63,9 +63,6 @@ export const useCollectionStore = create<CollectionStoreState>()(
 
             // Checks for local cards in Indexeddb and compares to fetched version
             initialize: async (userId: string) => {
-                if (get().status.startsWith('loading') || get().status.startsWith('ready')) {
-                    return;
-                }
 
                 // Checks that cached user matches current user
                 const cachedUserId = get().userId;
@@ -79,6 +76,10 @@ export const useCollectionStore = create<CollectionStoreState>()(
                         status: 'loading'
                     });
                 } else {
+                    // Prevent double-fetching only if it's the SAME user
+                    if (get().status === 'loading' || get().status.startsWith('ready')) {
+                        return;
+                    }
                     set({ status: 'loading' });
                 }
 

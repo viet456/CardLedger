@@ -6,7 +6,7 @@ import { cn } from '@/src/lib/utils';
 import { Button } from '@/src/components/ui/button';
 import { Calendar } from '@/src/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/src/components/ui/popover';
-import { trpc } from '@/src/utils/trpc';
+import { useCollectionStore } from '@/src/lib/store/collectionStore';
 import { toast } from 'sonner';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -17,35 +17,25 @@ interface EditableDateProps {
 }
 
 export function EditableDate({ id, date }: EditableDateProps) {
-    const router = useRouter();
     const [currentDate, setCurrentDate] = useState<Date>(new Date(date));
     const [isOpen, setIsOpen] = useState(false);
+    const updateEntry = useCollectionStore((state) => state.updateEntry);
 
-    const utils = trpc.useUtils();
-
-    const mutation = trpc.collection.updateEntry.useMutation({
-        onSuccess: (data, variables) => {
-            toast.success('Acquisition date updated');
-            utils.collection.getCollection.invalidate();
-            setIsOpen(false);
-            router.refresh();
-        },
-        onError: (error) => {
-            toast.error('Failed to update date');
-            // Revert on error
-            setCurrentDate(new Date(date));
-        }
-    });
-
-    const handleSelect = (newDate: Date | undefined) => {
+    const handleSelect = async (newDate: Date | undefined) => {
         if (!newDate) return;
-        setCurrentDate(newDate);
-        mutation.mutate({
-            entryId: id,
-            // You might need to add 'purchasedAt' or 'createdAt' to your schema/router if not there yet
-            createdAt: newDate
-        });
-    };
+        
+        const previousDate = currentDate;
+        setCurrentDate(newDate); // Optimistic local state update
+        setIsOpen(false);
+        
+        try {
+            await updateEntry(id, { createdAt: newDate });
+            toast.success('Acquisition date updated');
+        } catch (error) {
+            toast.error('Failed to update date');
+            setCurrentDate(previousDate); // Revert on error
+        }
+    }
 
     return (
         <Popover open={isOpen} onOpenChange={setIsOpen}>

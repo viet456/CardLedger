@@ -1,32 +1,29 @@
 'use client';
 import { useState } from 'react';
 import { Input } from '@/src/components/ui/input';
-import { trpc } from '@/src/utils/trpc';
+import { useCollectionStore } from '@/src/lib/store/collectionStore';
 import { toast } from 'sonner';
 import { Pencil } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 export function EditablePriceInput({ id, initialPrice }: { id: string; initialPrice: number }) {
-    const router = useRouter();
     const [value, setValue] = useState(initialPrice);
     const [isEditing, setIsEditing] = useState(false);
-    const utils = trpc.useUtils();
+    const updateEntry = useCollectionStore((state) => state.updateEntry);
 
-    const mutation = trpc.collection.updateEntry.useMutation({
-        onSuccess: () => {
-            toast.success('Price updated');
-            setIsEditing(false);
-            utils.collection.getCollection.invalidate(); // Refreshes both Modal and Ledger
-            router.refresh();
-        }
-    });
-
-    const onSave = () => {
+    const onSave = async () => {
         if (value === initialPrice) {
             setIsEditing(false);
             return;
         }
-        mutation.mutate({ entryId: id, purchasePrice: Number(value) });
+        
+        try {
+            await updateEntry(id, { purchasePrice: Number(value) });
+            toast.success('Price updated');
+            setIsEditing(false);
+        } catch (error) {
+            toast.error('Failed to update price');
+            setValue(initialPrice); // Revert on error
+        }
     };
 
     if (isEditing) {

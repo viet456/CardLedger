@@ -13,7 +13,7 @@ import {
 } from '@/src/components/ui/alert-dialog';
 import { Button } from '@/src/components/ui/button';
 import { Trash2, Loader2 } from 'lucide-react';
-import { trpc } from '@/src/utils/trpc';
+import { useCollectionStore } from '@/src/lib/store/collectionStore';
 import { toast } from 'sonner';
 
 interface SafeDeleteButtonProps {
@@ -23,19 +23,23 @@ interface SafeDeleteButtonProps {
 
 export function SafeDeleteButton({ id, onDelete }: SafeDeleteButtonProps) {
     const [open, setOpen] = useState(false);
-    const utils = trpc.useUtils();
+    const [isDeleting, setIsDeleting] = useState(false);
+    const removeEntry = useCollectionStore((state) => state.removeEntry);
 
-    const mutation = trpc.collection.removeFromCollection.useMutation({
-        onSuccess: () => {
+    const handleDelete = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        setIsDeleting(true);
+        try {
+            await removeEntry(id); // This handles the optimistic UI update AND the tRPC call
             toast.success('Card removed');
-            utils.collection.getCollection.invalidate();
             setOpen(false);
             onDelete?.();
-        },
-        onError: (err) => {
+        } catch (err: any) {
             toast.error(`Error: ${err.message}`);
+        } finally {
+            setIsDeleting(false);
         }
-    });
+    };
 
     return (
         <AlertDialog open={open} onOpenChange={setOpen}>
@@ -46,7 +50,7 @@ export function SafeDeleteButton({ id, onDelete }: SafeDeleteButtonProps) {
                     className='hover:text-destructive h-8 w-auto text-muted-foreground'
                     onClick={(e) => e.stopPropagation()}
                 >
-                    {mutation.isPending ? (
+                    {isDeleting ? (
                         <Loader2 className='h-4 w-4 animate-spin' />
                     ) : (
                         <span className='flex items-center gap-2 px-3'>
@@ -67,12 +71,9 @@ export function SafeDeleteButton({ id, onDelete }: SafeDeleteButtonProps) {
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction
                         className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
-                        onClick={(e) => {
-                            e.preventDefault();
-                            mutation.mutate({ entryId: id });
-                        }}
+                        onClick={handleDelete}
                     >
-                        {mutation.isPending ? 'Deleting...' : 'Delete'}
+                        {isDeleting ? 'Deleting...' : 'Delete'}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
