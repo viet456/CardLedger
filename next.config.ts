@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import { withSerwist } from "@serwist/turbopack";
 
 const nextConfig: NextConfig = {
     cacheComponents: true,
@@ -17,4 +18,4 @@ const nextConfig: NextConfig = {
         // unoptimized: false,
     }
 };
-export default nextConfig;
+export default withSerwist(nextConfig);
