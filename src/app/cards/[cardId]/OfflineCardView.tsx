@@ -287,7 +287,7 @@ export function OfflineCardView({ cardId }: { cardId: string }) {
                                         <div className='col-span-3'>
                                             <p className='font-semibold'>{attack.name}</p>
                                             <p className='mt-1 text-sm text-muted-foreground leading-relaxed'>
-                                                {attack.text}
+                                                {attack.text && <FormattedText text={attack.text} />}
                                             </p>
                                         </div>
                                         <div className='col-span-1 flex flex-col items-end gap-1'>
@@ -315,7 +315,9 @@ export function OfflineCardView({ cardId }: { cardId: string }) {
                                         <p className='font-semibold'>
                                             {ability.name} <span className='text-sm text-muted-foreground'>({ability.type})</span>
                                         </p>
-                                        <p className='mt-1 text-sm text-muted-foreground'>{ability.text}</p>
+                                        <div className='mt-1 text-sm text-muted-foreground'>
+                                            <FormattedText text={ability.text} />
+                                        </div>
                                     </div>
                                 ))}
                             </section>
