@@ -4,7 +4,7 @@
 
 import { defaultCache } from "@serwist/turbopack/worker";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
-import { Serwist } from "serwist";
+import { NetworkFirst, NetworkOnly, Serwist } from "serwist";
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -19,7 +19,18 @@ const serwist = new Serwist({
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: true,
-  runtimeCaching: defaultCache,
+  runtimeCaching: [
+    {
+      matcher: ({ request }) => request.mode === "navigate",
+      // Use NetworkFirst with a timeout. 
+      // If the network takes > 3s, it "bails" and triggers the offline UI.
+      handler: new NetworkFirst({
+        networkTimeoutSeconds: 3, 
+        cacheName: "pages-cache",
+      }), 
+    },
+    ...defaultCache,
+  ],
   fallbacks: {
     entries: [
       {
