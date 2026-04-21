@@ -8,6 +8,7 @@ import { SessionProvider } from './SessionProvider';
 import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CollectionDataInitializer } from '../components/CollectionDataInitializer';
+import { OfflineProvider } from './OfflineProvider';
 
 export function ProvidersWrapper({
     children,
@@ -28,8 +29,10 @@ export function ProvidersWrapper({
                         disableTransitionOnChange
                     >
                         <TooltipProvider>
-                            <CollectionDataInitializer />
-                            {children}
+                            <OfflineProvider>
+                                <CollectionDataInitializer />
+                                {children}
+                            </OfflineProvider>
                         </TooltipProvider>
                         <Toaster />
                     </ThemeProvider>

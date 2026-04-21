@@ -11,7 +11,8 @@ import { Header } from '../components/layout/Header';
 import { Suspense } from 'react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Analytics } from '@vercel/analytics/next';
-import { SerwistProvider } from './serwist'; // <-- Import the new provider
+import { SerwistProvider } from './serwist'; 
+import { GlobalOfflineBanner } from '../components/layout/GlobalOfflineBanner';
 
 const inter = Inter({
     subsets: ['latin'],
@@ -34,7 +35,7 @@ export const metadata: Metadata = {
     description: APP_DESCRIPTION,
     appleWebApp: {
         capable: true,
-        statusBarStyle: 'black-translucent', // Optimized for your dark theme
+        statusBarStyle: 'black-translucent', 
         title: APP_NAME,
     },
     formatDetection: {
@@ -62,7 +63,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
     width: 'device-width',
     initialScale: 1,
-    themeColor: '#000000', // Matches your manifest.json for a seamless native look
+    themeColor: '#000000',
 };
 
 async function AppContent({ children }: { children: React.ReactNode }) {
@@ -74,6 +75,7 @@ async function AppContent({ children }: { children: React.ReactNode }) {
         <ProvidersWrapper session={session}>
             <CardDataInitializer />
             <Header />
+            <GlobalOfflineBanner />
             <main className='flex-grow'>{children}</main>
             <Footer />
             <ScrollToTopButton />
@@ -91,7 +93,6 @@ export default function RootLayout({
             <body
                 className={`flex min-h-screen flex-col bg-background font-sans text-foreground antialiased`}
             >
-                {/* Wrap your app in the SerwistProvider pointing to your dynamic route */}
                 <SerwistProvider swUrl="/serwist/sw.js">
                     <Suspense fallback={<div className='min-h-screen bg-background' />}>
                         <AppContent>
