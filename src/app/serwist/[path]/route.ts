@@ -16,7 +16,11 @@ import { createSerwistRoute } from "@serwist/turbopack";
 const revision = crypto.randomUUID();
 
 export const { dynamic, dynamicParams, revalidate, generateStaticParams, GET } = createSerwistRoute({
-  additionalPrecacheEntries: [{ url: "/~offline", revision }],
+  additionalPrecacheEntries: [
+    { url: "/~offline", revision },
+    { url: "/", revision },
+    { url: "/about", revision },
+  ],
   swSrc: "src/app/sw.ts",
   // nextConfig,
   // If set to `false`, Serwist will attempt to use `esbuild-wasm`.
