@@ -50,17 +50,17 @@ export function SetClient({ groupedSets }: SetClientProps) {
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                     {searchQuery && (
-    <Button
-    type='button'
-    variant='ghost'
-    size='icon'
-    onClick={() => setSearchQuery('')}
-    aria-label='Clear search'
-    className='absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 !hover:bg-transparent text-gray-400 hover:text-card-foreground transition-colors !shadow-none'
->
-    <X className='h-4 w-4' />
-</Button>
-)}
+                        <Button
+                        type='button'
+                        variant='ghost'
+                        size='icon'
+                        onClick={() => setSearchQuery('')}
+                        aria-label='Clear search'
+                        className='absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 !hover:bg-transparent text-gray-400 hover:text-card-foreground transition-colors !shadow-none'
+                    >
+                        <X className='h-4 w-4' />
+                    </Button>
+                    )}
                 </form>
             </div>
 

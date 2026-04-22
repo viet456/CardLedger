@@ -176,7 +176,7 @@ export async function CardDetails({ cardId }: { cardId: string }) {
                                     <p className='font-semibold'>{attack.name}</p>
                                 </div>
                                 <p className='mt-1 text-sm text-muted-foreground leading-relaxed'>
-                                    {attack.text}
+                                    {attack.text && <FormattedText text={attack.text} />}
                                 </p>
                             </div>
                             
@@ -218,7 +218,9 @@ export async function CardDetails({ cardId }: { cardId: string }) {
                                     ({ability.type})
                                 </span>
                             </p>
-                            <p className='mt-1 text-sm text-muted-foreground'>{ability.text}</p>
+                            <div className='mt-1 text-sm text-muted-foreground'>
+                                <FormattedText text={ability.text} />
+                            </div>
                         </div>
                     ))}
                 </section>
