@@ -1,36 +1,58 @@
 'use client';
 
 import { WifiOff } from 'lucide-react';
-import { OfflineCardView } from '../cards/[cardId]/OfflineCardView';
+import { OfflineCardView } from './OfflineCardView';
 import CardPageView from '../cards/CardPageView';
+import { OfflineSetDetailView } from './OfflineSetDetailView';
+import { OfflineSetsView } from './OfflineSetsView';
 
 function getRouteInfo() {
     if (typeof window === 'undefined') {
-        return { type: 'generic' as const, cardId: null };
+        return { type: 'generic' as const, id: null };
     }
     
     const path = window.location.pathname;
+
+    // /cards routing 
     if (path.startsWith('/cards/') && path.length > 7) {
-        const cardId = path.split('/')[2];
-        if (cardId) return { type: 'card' as const, cardId };
+        const id = path.split('/')[2];
+        if (id) return { type: 'card' as const, id };
     }
-    if (path === '/cards') return { type: 'grid' as const, cardId: null };
-    return { type: 'generic' as const, cardId: null };
+    if (path === '/cards') return { type: 'cardGrid' as const, id: null };
+
+    // /sets routing
+    if (path.startsWith('/sets/') && path.length > 6) {
+        const id = path.split('/')[2];
+        if (id) return { type: 'setDetail' as const, id };
+    }
+    if (path === '/sets') return { type: 'setGrid' as const, id: null };
+
+    return { type: 'generic' as const, id: null };
 }
 
-export default function OfflineFallback() {
-    const { type, cardId } = getRouteInfo();
 
-    if (type === 'card' && cardId) {
-        return <OfflineCardView cardId={cardId} />;
+export default function OfflineFallback() {
+    const { type, id } = getRouteInfo();
+
+    // Cards
+    if (type === 'card' && id) {
+        return <OfflineCardView cardId={id} />;
     }
 
-    if (type === 'grid') {
+    if (type === 'cardGrid') {
         return (
             <div className="flex flex-col min-h-screen">
                 <CardPageView />
             </div>
         );
+    }
+
+    // Sets
+    if (type === 'setDetail' && id) {
+        return <OfflineSetDetailView setId={id} />;
+    }
+    if (type === 'setGrid') {
+        return <OfflineSetsView />;
     }
 
     return (

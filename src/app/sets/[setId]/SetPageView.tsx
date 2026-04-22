@@ -144,8 +144,10 @@ export function SetPageView({ setInfo, cards, filterOptions }: SetPageViewProps)
                 params.set(key, String(value));
             }
         });
-        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    }, [filters, pathname, router]);
+        window.history.replaceState(null, '', `${pathname}?${params.toString()}`);
+    }, [filters, 
+        pathname,
+    ]);
 
     // Cleanup
     useEffect(() => {

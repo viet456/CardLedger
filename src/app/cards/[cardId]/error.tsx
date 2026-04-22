@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { OfflineCardView } from './OfflineCardView';
+import { OfflineCardView } from '../../~offline/OfflineCardView';
 
 export default function CardError({ error, reset }: { error: Error; reset: () => void }) {
     const params = useParams();

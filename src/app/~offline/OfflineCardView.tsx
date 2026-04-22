@@ -2,14 +2,14 @@
 
 import { useCardStore } from '@/src/lib/store/cardStore';
 import { useMarketStore } from '@/src/lib/store/marketStore'; 
-import { CardImageDisplay } from './CardImageDisplay';
+import { CardImageDisplay } from '../cards/[cardId]/CardImageDisplay';
 import { AlertTriangle, WifiOff, TrendingUp, ChevronRight } from 'lucide-react';
 import { FormattedText } from '@/src/components/cards/FormattedText';
 import { EnergyIcon } from '@/src/components/cards/EnergyIcon';
 import Link from 'next/link';
 import { FilterLink } from '@/src/app/cards/[cardId]/FilterLink';
 import { useHasHydrated } from '@/hooks/useHasHydrated';
-import { BreadcrumbSkeleton, ImageSkeleton, PriceHeroSkeleton, DetailsSkeleton } from './Skeletons';
+import { BreadcrumbSkeleton, ImageSkeleton, PriceHeroSkeleton, DetailsSkeleton } from '../cards/[cardId]/Skeletons';
 
 const DetailItem = ({ label, children }: { label: string; children: React.ReactNode }) => (
     <div>
@@ -91,10 +91,9 @@ export function OfflineCardView({ cardId }: { cardId: string }) {
     const mappedRules = card.ru.map(idx => rules[idx]);
 
     return (
-        // The missing padding wrapper! Matches page.tsx perfectly.
         <main className='container mx-auto max-w-6xl p-4 sm:p-6 lg:p-8'>
             
-            {/* Breadcrumbs Parity */}
+            {/* Breadcrumbs Links */}
             <nav className='mb-6 flex items-center space-x-2 text-sm text-muted-foreground'>
                 <Link href='/sets' className='hover:underline'>
                     Sets
@@ -129,7 +128,7 @@ export function OfflineCardView({ cardId }: { cardId: string }) {
                                         <span>(Offline)</span>
                                     </div>
                                 </div>
-                                {/* The Last Synced Indicator! */}
+                                {/* The Last Synced Indicator */}
                                 <span className="text-[10px] font-medium text-muted-foreground opacity-70">
                                     Last synced: {syncDate}
                                 </span>
