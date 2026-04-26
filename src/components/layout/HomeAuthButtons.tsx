@@ -8,14 +8,14 @@ export function HomeAuthButtons() {
 
     if (session) {
         return (
-            <Button asChild size='lg' variant='default' className='text-lg'>
+            <Button asChild size='lg' variant='default' className='text-lg w-48'>
                 <Link href='/dashboard'>Go to Dashboard</Link>
             </Button>
         );
     }
 
     return (
-        <Button asChild size='lg' variant='default' className='text-lg'>
+        <Button asChild size='lg' variant='default' className='text-lg w-48'>
             <Link href='/sign-in'>Get Started</Link>
         </Button>
     );

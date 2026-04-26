@@ -53,7 +53,7 @@ export default function Home() {
                     <Button
                         asChild
                         variant={'secondary'}
-                        className='h-10 border border-border bg-accent px-6 text-sm font-medium text-accent-foreground hover:bg-muted/80 hover:text-muted-foreground'
+                        className='h-10 w-48 border border-border bg-accent px-6 text-sm font-medium text-accent-foreground hover:bg-muted/80 hover:text-muted-foreground'
                     >
                         <Link href='/cards'>
                             Search Database <Search className='ml-2 h-4 w-4' />
