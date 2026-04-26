@@ -5,6 +5,7 @@ import { OfflineCardView } from './OfflineCardView';
 import CardPageView from '../cards/CardPageView';
 import { OfflineSetDetailView } from './OfflineSetDetailView';
 import { OfflineSetsView } from './OfflineSetsView';
+import { DashboardClient } from '../dashboard/_components/DashboardClient';
 
 function getRouteInfo() {
     if (typeof window === 'undefined') {
@@ -12,6 +13,9 @@ function getRouteInfo() {
     }
     
     const path = window.location.pathname;
+
+    // /dashboard routing
+    if (path === '/dashboard') return { type: 'dashboard' as const, id: null };
 
     // /cards routing 
     if (path.startsWith('/cards/') && path.length > 7) {
@@ -34,7 +38,16 @@ function getRouteInfo() {
 export default function OfflineFallback() {
     const { type, id } = getRouteInfo();
 
-    // Cards
+    // Dashboard page
+    if (type === 'dashboard') {
+        return (
+            <div className="flex min-h-screen flex-col">
+                <DashboardClient />
+            </div>
+        );
+    }
+
+    // Cards page
     if (type === 'card' && id) {
         return <OfflineCardView cardId={id} />;
     }
@@ -47,7 +60,7 @@ export default function OfflineFallback() {
         );
     }
 
-    // Sets
+    // Sets page
     if (type === 'setDetail' && id) {
         return <OfflineSetDetailView setId={id} />;
     }
