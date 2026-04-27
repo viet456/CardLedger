@@ -35,37 +35,39 @@ export const useAuthSession = () => {
         return null;
     });
 
-    // Sync valid online sessions to the cache
+    // Session cache updates
     useEffect(() => {
-        // Only update the cache if we are online and the auth client has finished checking
         if (!isOffline && !betterAuthSession.isPending) {
             if (betterAuthSession.data) {
-                // User is actively logged in
+                // Legitimate active session
                 localStorage.setItem(CACHE_KEY, JSON.stringify(betterAuthSession.data));
                 // eslint-disable-next-line react-hooks/set-state-in-effect
                 setCachedSession(betterAuthSession.data);
-            } else if (betterAuthSession.data === null) {
-                // User explicitly signed out while online -> wipe the cache
+                
+            } else if (betterAuthSession.data === null && !betterAuthSession.error) {
+                // Only wipe cache if data is null AND there is NO network error.
+                // This means the server explicitly confirmed the user is logged out.
                 localStorage.removeItem(CACHE_KEY);
                 // eslint-disable-next-line react-hooks/set-state-in-effect
                 setCachedSession(null);
             }
         }
-    }, [betterAuthSession.data, betterAuthSession.isPending, isOffline]);
+    }, [betterAuthSession.data, betterAuthSession.isPending, betterAuthSession.error, isOffline]);
 
-    if (isOffline) {
+    // Offline / error interception
+    // If the browser says we are offline, OR if BetterAuth throws a fetch error:
+    if (isOffline || betterAuthSession.error) {
         return {
             ...betterAuthSession,
-            data: cachedSession || contextSession, // Serve the cached identity
-            isPending: false,                      // Force resolve to prevent UI loading spinners
-            error: null                            // Suppress Better-Auth's internal network failure errors
+            data: cachedSession || contextSession, // Serve the cached identity immediately
+            isPending: false,                      
+            error: null                            
         };
     }
 
-    // Only use the SSR session if the client has NEVER successfully fetched yet.
-    // Once it has fetched (even if the result is null/signed-out), trust the client.
     const hasResolved = !betterAuthSession.isPending || betterAuthSession.data !== undefined;
 
+    // Optimistic session fallback 
     const effectiveData = hasResolved
         ? betterAuthSession.data
         : (contextSession ?? cachedSession ?? betterAuthSession.data);
