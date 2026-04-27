@@ -88,8 +88,20 @@ export const collectionRouter = router({
             if (!targetUserId) {
                 return { entries: [], lastModified: Date.now() };
             }
-            const entries = await prisma.collectionEntry.findMany({
+
+            // Get the TRUE last modified date (including tombstones)
+            const latestEntry = await prisma.collectionEntry.findFirst({
                 where: { userId: targetUserId },
+                orderBy: { updatedAt: 'desc' },
+                select: { updatedAt: true }
+            });
+            const lastModified = latestEntry ? latestEntry.updatedAt.getTime() : Date.now();
+
+            const entries = await prisma.collectionEntry.findMany({
+                where: { 
+                    userId: targetUserId,
+                    deletedAt: null 
+                },
                 include: {
                     card: {
                         include: {
@@ -115,10 +127,6 @@ export const collectionRouter = router({
                 },
                 orderBy: { createdAt: 'desc' }
             });
-            const lastModified =
-                entries.length > 0
-                    ? Math.max(...entries.map((e) => e.createdAt.getTime()))
-                    : Date.now();
 
             return {
                 entries: entries.map((entry) => {
@@ -158,13 +166,14 @@ export const collectionRouter = router({
     addToCollection: protectedProcedure
         .input(
             z.object({
+                id: z.string(),
                 cardId: z.string(),
                 purchasePrice: z.number().min(0, 'Price cannot be negative'),
                 variant: z.nativeEnum(CardVariant)
             })
         )
         .mutation(async ({ input, ctx }) => {
-            const { cardId, purchasePrice, variant } = input;
+            const { id, cardId, purchasePrice, variant } = input;
             const userId = ctx.user.id;
             // Fetch the Card first to validate capabilities
             const card = await prisma.card.findUnique({
@@ -182,6 +191,7 @@ export const collectionRouter = router({
 
             const newEntry = await prisma.collectionEntry.create({
                 data: {
+                    id,
                     userId,
                     cardId,
                     purchasePrice,
@@ -202,6 +212,9 @@ export const collectionRouter = router({
                     }
                 }
             });
+            // SSE:
+            // Tells Postgres to broadcast a message to anyone listening
+            await prisma.$executeRaw`SELECT pg_notify('sync_channel', ${ctx.user.id})`
             const variants = mapMarketStatsToVariants(newEntry.card.marketStats);
             return {
                 ...newEntry,
@@ -222,35 +235,44 @@ export const collectionRouter = router({
                 entryId: z.string(), // The ID of the CollectionEntry
                 purchasePrice: z.number().optional(),
                 variant: z.nativeEnum(CardVariant).optional(),
-                createdAt: z.date().optional()
+                createdAt: z.date().optional(),
+                clientTimestamp: z.number()
             })
         )
         .mutation(async ({ input, ctx }) => {
-            const { entryId, ...dataToUpdate } = input;
-            const updateData: any = { ...dataToUpdate };
+            const { entryId, clientTimestamp, ...dataToUpdate } = input;
+
+            const entry = await prisma.collectionEntry.findFirst({
+                where: { id: entryId, userId: ctx.user.id },
+                include: { card: true }
+            });
+            if (!entry) throw new TRPCError({ code: 'NOT_FOUND', message: 'Entry not found' });
+
+            // LWW check:
+            // If the database has a newer timestamp than the client's offline action, ignore the client
+            if (entry.updatedAt.getTime() > clientTimestamp) {
+                return { success: true, ignored: true, message: 'Stale write ignored' };
+            }
+
+            const updateData: any = { 
+                ...dataToUpdate,
+            };
+
             // If updating variant, validate it against the Card
             if (dataToUpdate.variant) {
-                // Fetch existing entry + card info
-                const entry = await prisma.collectionEntry.findUnique({
-                    where: { id: entryId, userId: ctx.user.id },
-                    include: { card: true }
-                });
-
-                if (!entry) {
-                    throw new TRPCError({ code: 'NOT_FOUND', message: 'Entry not found' });
-                }
-
-                // Auto-correct the variant
                 updateData.variant = validateVariant(entry.card, dataToUpdate.variant);
             }
 
-            await prisma.collectionEntry.updateMany({
+            await prisma.collectionEntry.update({
                 where: {
-                    id: entryId,
-                    userId: ctx.user.id
+                    id: entryId
                 },
                 data: updateData
             });
+
+            // SSE:
+            // Tells Postgres to broadcast a message to anyone listening
+            await prisma.$executeRaw`SELECT pg_notify('sync_channel', ${ctx.user.id})`         
             return {
                 success: true,
                 variant: updateData.variant ?? dataToUpdate.variant
@@ -261,15 +283,91 @@ export const collectionRouter = router({
      * Protected to ensure only the owner can delete it.
      */
     removeFromCollection: protectedProcedure
-        .input(z.object({ entryId: z.string() }))
+        .input(z.object({ 
+            entryId: z.string(),
+            clientTimestamp: z.number() 
+        }))
         .mutation(async ({ input, ctx }) => {
-            const { entryId } = input;
-            await prisma.collectionEntry.deleteMany({
+            const { entryId, clientTimestamp } = input;
+
+            const entry = await prisma.collectionEntry.findFirst({
                 where: { id: entryId, userId: ctx.user.id }
             });
+
+            if (!entry) return { success: true };
+
+            // LWW conflict referee
+            // If a card was updated AFTER deletion, exit
+            if (entry.updatedAt.getTime() > clientTimestamp) {
+                return { success: true, ignored: true, message: 'Card was updated more recently' };
+            }
+
+            // Creating the tombstone
+            await prisma.collectionEntry.update({
+                where: { id: entryId },
+                data: { 
+                    deletedAt: new Date(clientTimestamp),
+                }
+            });
+
+            // SSE:
+            // Tells Postgres to broadcast a message to anyone listening
+            await prisma.$executeRaw`SELECT pg_notify('sync_channel', ${ctx.user.id})`         
             return { success: true };
         }),
     getPortfolioHistory: protectedProcedure.query(async ({ ctx }) => {
         return await getPortfolioValue(ctx.user.id);
-    })
+    }),
+    pullChanges: protectedProcedure
+        .input(z.object({ lastSynced: z.number() }))
+        .query(async ({ input, ctx }) => {
+            const changes = await prisma.collectionEntry.findMany({
+                where: {
+                    userId: ctx.user.id,
+                    updatedAt: { gt: new Date(input.lastSynced) }
+                },
+                include: {
+                    card: {
+                        include: {
+                            set: true,
+                            rarity: true,
+                            marketStats: true,
+                            artist: true,
+                            types: { include: { type: true } },
+                            subtypes: { include: { subtype: true } },
+                            weaknesses: { include: { type: true } },
+                            resistances: { include: { type: true } }
+                        }
+                    }
+                }
+            });
+
+            // Find the exact highest DB timestamp in the returned rows
+            const newTimestamp = changes.length > 0 
+                ? Math.max(...changes.map(c => c.updatedAt.getTime()))
+                : input.lastSynced; // If no changes, keep the cursor where it is
+
+            return {
+                changes: changes.map((entry) => {
+                    const variants = mapMarketStatsToVariants(entry.card.marketStats);
+                    const defaultPrice = variants ? (variants.tcgNearMint ?? variants.tcgNormal ?? 0) : 0;
+
+                    return {
+                        ...entry,
+                        purchasePrice: Number(entry.purchasePrice),
+                        variant: entry.variant || CardVariant.Normal,
+                        card: {
+                            ...entry.card,
+                            price: defaultPrice,
+                            variants: variants,
+                            hasNormal: entry.card.hasNormal,
+                            hasHolo: entry.card.hasHolo,
+                            hasReverse: entry.card.hasReverse,
+                            hasFirstEdition: entry.card.hasFirstEdition
+                        }
+                    };
+                }),
+                timestamp: newTimestamp
+            };
+        }),
 });

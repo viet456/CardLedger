@@ -5,6 +5,9 @@ import { CollectionEntry, CardVariant } from '@prisma/client';
 import { trpcClient } from '@/src/utils/trpc';
 import { toast } from 'sonner';
 
+let isPulling = false;
+let pendingPull = false;
+
 export type FrontendCollectionEntry = Omit<CollectionEntry, 'purchasePrice'> & {
     purchasePrice: number;
 };
@@ -32,6 +35,7 @@ export type CollectionStoreState = PersistedState & {
     setEntries: (entries: FrontendCollectionEntry[]) => void;
     clearStore: () => void;
     processQueue: () => Promise<void>;
+    pullChanges: () => Promise<void>;
 };
 
 const indexedDbStorage: PersistStorage<PersistedState> = {
@@ -67,7 +71,6 @@ export const useCollectionStore = create<CollectionStoreState>()(
             setEntries: (entries) => {
                 set({
                     entries: entries,
-                    lastSynced: Date.now(),
                     status: 'ready_from_network'
                 });
             },
@@ -154,16 +157,16 @@ export const useCollectionStore = create<CollectionStoreState>()(
                 const { cardId, purchasePrice, variant } = entryInput;
                 const previousEntries = get().entries;
 
-                // Create a temporary optimistic entry
-                // tempId is both a React key and entryId
-                const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                const permanentId = crypto.randomUUID();
                 const optimisticEntry: FrontendCollectionEntry = {
-                    id: tempId,
+                    id: permanentId,
                     userId: get().userId || 'optimistic-user',
                     cardId,
                     purchasePrice,
                     variant: variant || 'Normal',
-                    createdAt: new Date() // Pretend it happened right now
+                    createdAt: new Date(), // Pretend it happened right now,
+                    updatedAt: new Date(),
+                    deletedAt: null
                 };
 
                 // Instantly update the store -- The UI will react immediately.
@@ -173,7 +176,7 @@ export const useCollectionStore = create<CollectionStoreState>()(
 
                 const mutationRecord: OfflineMutation = {
                     type: 'ADD',
-                    tempId,
+                    tempId: permanentId,
                     payload: entryInput,
                     timestamp: Date.now()
                 };
@@ -189,22 +192,12 @@ export const useCollectionStore = create<CollectionStoreState>()(
                 try {
                     // Fire the actual network request in the background
                     const newEntry = await trpcClient.collection.addToCollection.mutate({
+                        id: permanentId,
                         cardId: entryInput.cardId,
                         purchasePrice: entryInput.purchasePrice,
                         variant: entryInput.variant || 'Normal'
                     });
 
-                    // Success! - Swap the temporary ID with the real Postgres ID silently
-                    set((state) => ({
-                        entries: state.entries.map((e) =>
-                            // Overrides only the ID and timestamp of the local entry
-                            // with that of the DB
-                            e.id === tempId
-                                ? { ...e, id: newEntry.id, createdAt: newEntry.createdAt }
-                                : e
-                        ),
-                        lastSynced: Date.now()
-                    }));
                 } catch (error: any) {
                     // Check if tRPC threw a network/connection error
                     const isNetworkError = 
@@ -273,10 +266,10 @@ export const useCollectionStore = create<CollectionStoreState>()(
                         entryId,
                         purchasePrice,
                         variant,
-                        createdAt
+                        createdAt,
+                        clientTimestamp: mutationRecord.timestamp
                     });
 
-                    set({ lastSynced: Date.now() });
                 } catch (error: any) {
                     // Check if tRPC threw a network/connection error
                     const isNetworkError = 
@@ -323,10 +316,10 @@ export const useCollectionStore = create<CollectionStoreState>()(
 
                 try {
                     await trpcClient.collection.removeFromCollection.mutate({
-                        entryId
+                        entryId,
+                        clientTimestamp: mutationRecord.timestamp
                     });
 
-                    set({ lastSynced: Date.now() });
                     //console.log('[CollectionStore]: ✅ Entry removed successfully');
                 } catch (error: any) {
                     // Check if tRPC threw a network/connection error
@@ -357,13 +350,13 @@ export const useCollectionStore = create<CollectionStoreState>()(
 
                 //console.log(`[Sync Engine] processQueue triggered. Items in Outbox: ${offline_mutations.length}`);
                 if (offline_mutations.length === 0) return;
-
-                // Track temp IDs mapped to real Database IDs as they are created
-                const idMap = new Map<string, string>();
                 
                 // Clone state so we can mutate safely inside the loop
                 let currentMutations = [...offline_mutations];
                 let currentEntries = [...entries];
+                
+                // Track if the server overrules us
+                let needsPull = false; 
 
                 // Process sequentially to maintain strict chronological order
                 while (currentMutations.length > 0) {
@@ -372,25 +365,32 @@ export const useCollectionStore = create<CollectionStoreState>()(
 
                     try {
                         if (mutation.type === 'ADD') {
-                            const result = await trpcClient.collection.addToCollection.mutate({...mutation.payload, variant: mutation.payload.variant || 'Normal'});
-                            idMap.set(mutation.tempId, result.id);
-                            
-                            // Swap tempId for real DB ID in local state
+                            const result = await trpcClient.collection.addToCollection.mutate({
+                                id: mutation.tempId,
+                                ...mutation.payload,
+                                variant: mutation.payload.variant || 'Normal'
+                            });
+                            // Update createdAt to perfectly match the server's database time
                             currentEntries = currentEntries.map((e) => 
-                                e.id === mutation.tempId ? { ...e, id: result.id, createdAt: result.createdAt } : e
+                                e.id === mutation.tempId ? { ...e, createdAt: new Date(result.createdAt) } : e
                             );
                         } 
                         else if (mutation.type === 'UPDATE') {
-                            // If this was added offline, use the new real ID. Otherwise, use existing ID.
-                            const targetId = idMap.get(mutation.entryId) || mutation.entryId;
-                            await trpcClient.collection.updateEntry.mutate({ 
-                                entryId: targetId, 
-                                ...mutation.payload 
+                            const result = await trpcClient.collection.updateEntry.mutate({ 
+                                entryId: mutation.entryId, 
+                                ...mutation.payload,
+                                clientTimestamp: mutation.timestamp
                             });
+                            // Server rejected our edit
+                            if (result.ignored) needsPull = true;
                         } 
                         else if (mutation.type === 'DELETE') {
-                            const targetId = idMap.get(mutation.entryId) || mutation.entryId;
-                            await trpcClient.collection.removeFromCollection.mutate({ entryId: targetId });
+                            const result = await trpcClient.collection.removeFromCollection.mutate({ 
+                                entryId: mutation.entryId, 
+                                clientTimestamp: mutation.timestamp 
+                            });
+                            // Server rejected our deletion
+                            if (result.ignored) needsPull = true;
                         }
 
                         // Success: Remove from queue and update store
@@ -418,7 +418,70 @@ export const useCollectionStore = create<CollectionStoreState>()(
                 // If we cleared the queue completely, update our sync timestamp
                 if (get().offline_mutations.length === 0) {
                     // console.log('[Sync Engine] All offline mutations synced successfully!');
-                    set({ lastSynced: Date.now() });
+                    // If we were overruled, instantly pull the true state to fix the UI
+                    if (needsPull) {
+                        get().pullChanges();
+                    }
+                }
+            },
+            pullChanges: async () => {
+                const { lastSynced, userId, entries } = get();
+                if (!userId || !lastSynced) return;
+
+                if (isPulling) {
+                    // console.log('[Sync] Pull in progress. Flagging for a follow-up sweep.');
+                    pendingPull = true; 
+                    return;
+                }
+                isPulling = true; // Lock the door
+
+                try {
+                    // Ask the server ONLY for what changed since our last sync
+                    // Subtract 5000ms to create the overlap buffer for slow transactions
+                    const safeCursor = lastSynced > 5000 ? lastSynced - 5000 : 0;
+                    // Ask the server ONLY for what changed since our last sync
+                    const result = await trpcClient.collection.pullChanges.query({ 
+                        lastSynced: safeCursor
+                    });
+
+                    const { changes, timestamp } = result;
+
+                    if (changes.length > 0) {
+                        const entryMap = new Map(entries.map((e) => [e.id, e]));
+
+                        changes.forEach((change: any) => {
+                            // Tombstone check
+                            if (change.deletedAt !== null) {
+                                entryMap.delete(change.id);
+                            } else {
+                                entryMap.set(change.id, {
+                                    ...change,
+                                    purchasePrice: Number(change.purchasePrice),
+                                    variant: change.variant || 'Normal'
+                                });
+                            }
+                        });
+
+                        set({
+                            entries: Array.from(entryMap.values()),
+                            lastSynced: timestamp // The true high-water mark from the server
+                        });
+                    } else {
+                        // Even if no changes, update cursor if server gave us a newer one
+                        if (timestamp > lastSynced) {
+                            set({ lastSynced: timestamp });
+                        }
+                    }
+                } catch (error) {
+                    console.error('[Sync] Failed to pull changes:', error);
+                } finally {
+                    isPulling = false;
+                    // If any pings bounced off the door while we were locked,
+                    // we immediately turn around and sweep them up.
+                    if (pendingPull) {
+                        pendingPull = false;
+                        get().pullChanges(); 
+                    }
                 }
             }
         }),
@@ -446,7 +509,13 @@ export const useCollectionStore = create<CollectionStoreState>()(
                             // Wait 1.5s for DNS/Routers to stabilize, then flush
                             setTimeout(() => {
                                 // console.log('[Store] Network looks online. Triggering rehydration flush...');
-                                useCollectionStore.getState().processQueue();
+                                if (state.offline_mutations && state.offline_mutations.length > 0) {
+                                    useCollectionStore.getState().processQueue();
+                                } else {
+                                    // Rehydration Guard: If no queue, ping the server for any 
+                                    // changes/tombstones that happened while the tab was closed
+                                    useCollectionStore.getState().pullChanges();
+                                }
                             }, 1500);
                         }
                     }
