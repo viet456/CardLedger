@@ -19,10 +19,7 @@ export function CollectionDataInitializer() {
     useEffect(() => {
         if (!session?.user?.id) return;
 
-        // Note: Chrome blocks HTTP connections from HTTPS websites (Mixed Content).
-        // For local development (http://localhost:3000), connecting to http://23.95.113.183:8080 works perfectly.
-        // For production, switch to Nginx reverse proxy with SSL (eg https://sync.cardledger.io).
-        const vpsUrl = `http://23.95.113.183:8080/stream?userId=${session.user.id}`;
+        const vpsUrl = `https://sync.cardledger.io/stream?userId=${session.user.id}`;
         const eventSource = new EventSource(vpsUrl);
 
         // Debouncer
