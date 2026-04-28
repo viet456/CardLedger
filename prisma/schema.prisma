@@ -351,6 +351,9 @@ model CollectionEntry {
     id        String   @id @default(cuid())
     createdAt DateTime @default(now())
 
+    updatedAt DateTime @default(now()) @updatedAt
+    deletedAt DateTime?
+
     userId String
     user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
     cardId String
@@ -362,4 +365,5 @@ model CollectionEntry {
 
     @@index([userId])
     @@index([cardId])
+    @@index([updatedAt])
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { useCollectionStore } from '../lib/store/collectionStore';
 
 const OfflineContext = createContext(false);
 const STORAGE_KEY = 'was-offline';
@@ -8,10 +9,15 @@ const STORAGE_KEY = 'was-offline';
 async function checkConnectivity(): Promise<boolean> {
     if (!navigator.onLine) return true;
     try {
-        await fetch(`/favicon.ico?_=${Date.now()}`, { method: 'HEAD', cache: 'no-store' });
-        return false;
+        // Ping an API path instead of an image. Service Workers rarely cache API routes.
+        await fetch(`/api/ping-network?_=${Date.now()}`, { 
+            method: 'HEAD', 
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+        });
+        return false; // Fetch succeeded, we are Online!
     } catch {
-        return true;
+        return true; // Fetch failed, we are Offline!
     }
 }
 
@@ -42,9 +48,30 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
 
         const handleOnline = () => {
             if (onlineTimeoutRef.current) clearTimeout(onlineTimeoutRef.current);
-            onlineTimeoutRef.current = setTimeout(() => {
-                checkConnectivity().then(updateOfflineState);
-            }, 1000);
+            
+            // Optimistically hide the offline banner instantly for a snappy UI
+            updateOfflineState(false);
+
+            // Create a retry loop because DNS takes a few seconds to establish
+            const verifyConnection = (attemptsLeft: number) => {
+                checkConnectivity().then((isActuallyOffline) => {
+                    if (!isActuallyOffline) {
+                        // Confirmed! We have real internet. Flush the queue.
+                        updateOfflineState(false);
+                        useCollectionStore.getState().processQueue();
+                    } else if (attemptsLeft > 0 && navigator.onLine) {
+                        // OS says online, but fetch failed (router is still waking up). 
+                        // Wait 2 seconds and retry.
+                        onlineTimeoutRef.current = setTimeout(() => verifyConnection(attemptsLeft - 1), 2000);
+                    } else {
+                        // We gave up, or the OS said offline again (eg connected to a router with no internet).
+                        updateOfflineState(true);
+                    }
+                });
+            };
+
+            // Start the first real ping after 1.5 seconds, and try up to 5 times
+            onlineTimeoutRef.current = setTimeout(() => verifyConnection(5), 1500);
         };
 
         window.addEventListener('offline', handleOffline);
