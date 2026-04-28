@@ -13,12 +13,11 @@ export default function About() {
                 <h1>About CardLedger: Engineering a Modern TCG Platform</h1>
                 <p>
                     CardLedger began with a strict engineering constraint: handle massive,
-                    relationship-heavy datasets (21,000+ cards and 3.4M+ price records) over the
+                    relationship-heavy datasets (21,000+ cards and 4M+ price records) over the
                     web, but make the experience feel as instant and fluid as a locally installed
                     desktop app. Born from the frustration of slow, pagination-heavy web interfaces,
                     it serves as both a functional TCG collection manager and a technical case study
-                    in building a high-performance, type-safe, and scalable architecture from the
-                    ground up.
+                    in building a high-performance, local-first architecture from the ground up.
                 </p>
                 <p>
                     For a deeper dive into the architectural decisions,{' '}
@@ -32,70 +31,56 @@ export default function About() {
                     </a>
                 </p>
 
-                <h2>The Backend & Data Foundation</h2>
-                <p>
-                    The foundation of CardLedger is a custom-built{' '}
-                    <b>Extract, Transform, Load (ETL)</b> pipeline designed to turn raw API data
-                    into a high-performance relational asset.
-                </p>
+                <h2>The Backend & Real-Time Infrastructure</h2>
                 <ul>
                     <li>
-                        <b>The Ingestion Engine</b>: A Node.js pipeline extracts raw API data and
-                        normalizes it into a relational schema, breaking flat responses into
-                        distinct entities. Sequential processing with retry logic and circuit
-                        breakers ensures resilience against API rate limits, while Prisma&apos;s
-                        idempotent upserts allow the script to run daily via GitHub Actions without
-                        manual intervention.
+                        <b>The ETL Ingestion Engine</b>: A Node.js pipeline extracts raw API data and
+                        normalizes it into a relational schema. Sequential processing with retry logic 
+                        and circuit breakers ensures resilience against API rate limits, while Prisma&apos;s
+                        idempotent upserts allow daily automation via GitHub Actions.
                     </li>
                     <li>
-                        <b>Prisma & Advanced Filtering</b>: The normalized data is managed by{' '}
-                        <b>Prisma ORM</b>. By leveraging Prisma&apos;s powerful relation filtering,
-                        the backend can execute complex, multi-parameter queries that would be
-                        impossible with the source APIs alone, managing over 3.4 million price
-                        history records.
+                        <b>Backend Analytics vs. Local Search</b>: Prisma manages the 4M+ price history records 
+                        on the backend to execute complex analytical queries. However, to make catalog browsing 
+                        instant, the entire 21,000+ card dataset is indexed client-side. Using uFuzzy and custom 
+                        intersection maps, filtering executes in sub-milliseconds without ever hitting the server.
+                    </li>
+                    <li>
+                        <b>Postgres Pub/Sub & SSE Tower</b>: To achieve real-time cross-device sync, 
+                        database mutations trigger <code>pg_notify</code> channels. A dedicated Node.js 
+                        VPS running behind an Nginx reverse proxy listens to the raw Postgres TCP stream 
+                        and broadcasts Server-Sent Events (SSE) to specific clients.
                     </li>
                 </ul>
 
-                <h2>The Frontend Architecture: A Local-First Approach</h2>
+                <h2>A Local-First, Offline-Capable Architecture</h2>
                 <p>
-                    Delivering 21,000+ cards without sacrificing performance required a highly
-                    optimized data strategy:
+                    To achieve a zero-latency &ldquo;native app&rdquo; feel regardless of network conditions, 
+                    the application completely decouples the UI from the network layer.
                 </p>
                 <ul>
                     <li>
-                        <b>Dictionary Compression & Sync</b>: To bypass traditional DB query
-                        latency, data is aggregated into dictionary-indexed JSON streams. This
-                        normalization reduces the raw payload from <b>8MB to 3.5MB</b>, halving
-                        JSON.parse() blocking time and saving ~20MB of JS heap memory to ensure the
-                        main thread remains unblocked on low-end devices. A smart versioning
-                        protocol then compresses it further for network delivery.
+                        <b>Offline PWA Routing</b>: A custom Service Worker intercepts network requests. 
+                        If the connection is flaky, slow, or completely offline, the app seamlessly falls 
+                        back to a locally cached router, keeping the entire catalog searchable in airplane mode.
                     </li>
                     <li>
-                        <b>Local-First Search</b>: To achieve a &ldquo;native app&rdquo; feel, the
-                        application uses a client-side indexing strategy. Data is cached locally
-                        with <b>IndexedDB</b> and queried via <b>Zustand</b> and <b>uFuzzy</b>. By
-                        utilizing a highly optimized micro-library alongside custom pre-calculated
-                        intersection maps, the app achieves 0.3ms filtering latency, eliminating
-                        network wait times and making browsing 21,000+ cards feel instantaneous.
+                        <b>Static CDN Delivery & Dictionary Compression</b>: To bypass traditional database latency, 
+                        read-only catalog data is pre-generated as versioned JSON files and hosted on Cloudflare R2. 
+                        These files utilize dictionary compression to reduce payloads from 10MB to 3.5MB, halving parse 
+                        times and saving ~20MB of JS heap memory.
                     </li>
                     <li>
-                        <b>JIT Rendering Pipeline</b>: To prevent main-thread blocking during rapid
-                        scrolling, the UI leverages <b>JIT denormalization</b> via react-virtuoso.
-                        By deferring complex object construction until viewport entry, the
-                        application eliminates 20-30ms UI freezes and maintains a perfectly fluid
-                        frame rate.
+                        <b>The Outbox Mutation Engine</b>: Collection interactions update instantly via 
+                        client-side UUID generation. If the network drops, changes are queued in a local Outbox. 
+                        To prevent data loss on captive portals (like coffee shop Wi-Fi), a custom network guard 
+                        verifies true internet connectivity before silently syncing the queue in the background.
                     </li>
                     <li>
-                        <b>Optimistic UI Patterns</b>: Collection interactions—adding or removing
-                        cards—update instantly in the UI while <b>tRPC</b> handles database
-                        synchronization in the background. Automatic state rollback ensures data
-                        consistency during network failures.
-                    </li>
-                    <li>
-                        <b>On-Demand Invalidation</b>: To bridge the gap between Static Site
-                        Generation (SSG) and real-time data, the backend triggers targeted cache
-                        purges via a secure webhook whenever the ETL pipeline updates prices. This
-                        ensures users always see fresh data without nuking the entire CDN cache.
+                        <b>Conflict Resolution & Delta Syncs</b>: The server acts as a Last-Write-Wins (LWW) 
+                        referee to gracefully handle stale offline edits. Devices sync efficiently by requesting 
+                        only what changed since their last update. To prevent missing data from slow asynchronous 
+                        database saves, the sync cursor automatically overlaps by a few seconds to catch delayed transactions.
                     </li>
                 </ul>
 
@@ -103,16 +88,14 @@ export default function About() {
                 <ul>
                     <li>
                         <b>Robust Authentication</b>: Security is handled via Better Auth (Google,
-                        Discord, Email). The implementation focuses on{' '}
-                        <b>Server-Side Authentication</b> to eliminate layout shifts and ensure a
-                        premium, flicker-free user experience.
+                        Discord, Email). The implementation focuses on Server-Side Authentication to 
+                        eliminate layout shifts and ensure a stutter-free user experience.
                     </li>
                     <li>
-                        <b>Cost-Optimized Asset Pipeline</b>: A custom <b>Node.js/Sharp</b> script
+                        <b>Cost-Optimized Asset Pipeline</b>: A custom Node.js/Sharp script
                         processes card images into highly optimized AVIF formats stored in
-                        Cloudflare R2. This pipeline eliminates runtime image transformation costs
-                        and proactively generates variants for all target breakpoints to prevent
-                        hydration errors.
+                        Cloudflare R2, proactively generating variants for all target breakpoints 
+                        to prevent runtime processing costs.
                     </li>
                 </ul>
 
