@@ -4,7 +4,7 @@ import { CheckCircle2, Database, Zap, Clock } from 'lucide-react';
 import { PokemonCard } from '../cards/PokemonCard';
 
 const STATS = [
-    { value: '20,000+', label: 'Cards', icon: Database },
+    { value: '21,000+', label: 'Cards', icon: Database },
     { value: '24hrs', label: 'Price Updates', icon: Clock },
     { value: '1998', label: 'Earliest Set', icon: Zap }
 ];

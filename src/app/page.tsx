@@ -14,6 +14,7 @@ import {
 import { HeroAssetInspector } from '../components/layout/HeroAssetInspector';
 import PortfolioShowcase from '../components/layout/PortfolioShowcase';
 import DatabaseShowcase from '../components/layout/DatabaseShowcase';
+import { SyncShowcase } from '../components/layout/SyncShowcase';
 
 export const metadata: Metadata = {
     title: 'CardLedger: Your Pokémon TCG Collection Manager',
@@ -147,6 +148,48 @@ export default function Home() {
                 {/* Visual Placeholder */}
                 <div className='relative overflow-hidden rounded-xl border border-border bg-background shadow-lg md:order-first'>
                     <PortfolioShowcase />
+                </div>
+            </section>
+
+            {/* Features Section 3: Offline & Sync */}
+            <section className='border-y border-border bg-muted/30'>
+                <div className='container mx-auto grid gap-8 px-4 py-16 md:grid-cols-2 md:items-center md:gap-12'>
+                    <div className='flex flex-col gap-5'>
+                        <div className='flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/10 text-green-600'>
+                            <CheckCircle2 className='h-5 w-5' />
+                        </div>
+                        <h2 className='text-2xl font-bold tracking-tight md:text-3xl'>
+                            Flawless offline mode.
+                            <br />
+                            <span className='text-muted-foreground'>
+                                Built for the convention floor.
+                            </span>
+                        </h2>
+                        <p className='text-base text-muted-foreground'>
+                            Cell service dead at the card show? No problem. CardLedger is engineered 
+                            with a local-first architecture. Browse the entire 21,000+ card catalog and
+                            manage your portfolio completely offline. 
+                        </p>
+                        <ul className='grid gap-2'>
+                            {[
+                                'Zero-latency local search and filtering',
+                                'Make edits offline; auto-sync when connected',
+                                'Real-time cross-device updates'
+                            ].map((item) => (
+                                <li
+                                    key={item}
+                                    className='flex items-center gap-2 text-sm md:text-base'
+                                >
+                                    <CheckCircle2 className='h-4 w-4 text-green-600' />
+                                    <span>{item}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                    {/* Visual Placeholder */}
+                    <div className='relative overflow-hidden rounded-xl border border-border bg-background shadow-lg'>
+                        <SyncShowcase />
+                    </div>
                 </div>
             </section>
 
