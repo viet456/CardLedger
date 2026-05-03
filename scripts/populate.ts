@@ -11,6 +11,9 @@ const BUCKET_NAME = process.env.R2_BUCKET_NAME!;
 // Block Digital-Only & Virtual Sets
 const BLOCKED_SERIES = ['tcgp', 'pocket'];
 
+// Block incomplete/bad sets with broken dates
+const BLOCKED_SETS = ['mee', 'mfb', '2024sv', '2023sv', '2022swsh'];
+
 // --- Helper Functions ---
 
 function sanitizePublicId(id: string): string {
@@ -226,6 +229,8 @@ async function syncSeriesAndSets() {
         if (!details) continue;
 
         for (const set of details.sets) {
+            // Ignore blocked sets
+            if (BLOCKED_SETS.includes(set.id)) continue;
             // 🛠️ Spelling Fix
             const correctedName = set.name.replace("Macdonald's", "McDonald's");
 
@@ -283,7 +288,13 @@ async function syncSeriesAndSets() {
 
 async function syncCards() {
     console.log('🃏 Syncing Cards (Smart Skip Mode)...');
-    const dbSets = await prisma.set.findMany({ where: { seriesId: { notIn: BLOCKED_SERIES } } });
+    const dbSets = await prisma.set.findMany({ 
+        where: { 
+            // Don't sync cards in blocked series and sets
+            seriesId: { notIn: BLOCKED_SERIES },
+            id: { notIn: BLOCKED_SETS }
+        } 
+    });
 
     for (const dbSet of dbSets) {
         const existing = await prisma.card.findMany({
