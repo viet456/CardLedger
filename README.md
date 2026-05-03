@@ -3,57 +3,63 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/viet456/CardLedger/CI.yml?style=for-the-badge)](https://github.com/viet456/CardLedger/actions/workflows/CI.yml)
 [![Live Demo](https://img.shields.io/badge/Live-Demo-blue?style=for-the-badge)](https://cardledger.io/)
 
-CardLedger is a production-grade platform for cataloging and tracking Pokémon TCG collections. It differentiates itself through a **local-first** architecture that utilizes client-side indexing and heavy caching (IndexedDB) to deliver near-instant interactions, independent of network latency.
+CardLedger is a production-grade platform for cataloging and tracking Pokémon TCG collections. It differentiates itself through a **local-first** architecture that utilizes client-side indexing, background mutation queues, and real-time syncing to deliver near-instant interactions, completely independent of network latency.
 
 ## Core Features
 
+- **📶 Offline-First & Real-Time Sync:** Add or edit collection entries without an internet connection. Changes are queued locally and automatically reconciled across multi-device sessions in real-time via Server-Sent Events (SSE) when connectivity is restored.
 - **📊 Portfolio Analytics:** Tracks acquisition date and cost basis vs. current market value. Visualizes portfolio performance over time with aggregate "Cost vs. Value" charts and percentage growth metrics.
-- **⚡ Optimistic Mutation Protocol:** Implements immediate UI updates for collection actions (e.g., card counts increment instantly). Uses **tRPC** to handle background synchronization and automatically rolls back state if the database transaction fails.
 - **🔍 Instant Search:** Performs zero-latency filtering across 21,000+ cards using pre-calculated intersection maps and persisted client-side indexes.
 - **📱 Infinite Grid:** Features a highly optimized, infinite-scrolling virtualized grid for browsing massive card sets without pagination lag.
 
 ## Engineering Highlights
 
-### 💾 Bandwidth-Efficient Sync Architecture
+### 📡 Event-Driven Sync & Conflict Resolution
+To transition the app from a simple CRUD interface to a highly concurrent real-time system, I engineered a custom background sync engine:
+- **IndexedDB Outbox:** Client mutations are intercepted and stored in a local outbox queue, enabling an optimistic UI that never silently fails on flaky connections.
+- **Strict Last-Write-Wins (LWW):** To handle multi-device race conditions (eg editing a card on a phone while deleting it on a laptop), the server acts as a timestamp referee, rejecting stale writes and preserving data integrity.
+- **Zero-Polling SSE Tower:** Provisioned a dedicated Node.js/Linux VPS running an Nginx reverse proxy to listen directly to Postgres `pg_notify` channels. This broadcasts Server-Sent Events (SSE) to connected clients, triggering targeted delta-syncs without the overhead of HTTP polling.
+- **Read-Omission Safety:** Engineered a 5-second overlapping cursor window during delta-syncs to ensure slow, out-of-order database transaction commits are successfully caught by the client.
 
-To bypass the latency of traditional DB queries, I engineered a "Local-First" data strategy:
+### ⚡ Progressive Web App (PWA) & Offline Routing
+To guarantee the application shell and UI load without a network connection, the platform is configured as an installable PWA with intelligent client-side routing:
+- **Service Worker Fallback:** Utilized `@serwist/turbopack` to generate a Service Worker with a `NetworkFirst` strategy. It intercepts failed page navigations and gracefully routes users to a pre-cached `~offline` Next.js boundary.
+- **Dynamic Offline Router:** The fallback boundary parses the URL path and dynamically mounts the correct local-first view (Dashboard, Card Details, or Sets Grid), hydrating the UI entirely from the local IndexedDB stores.
+- **JIT Asset Caching:** To preserve user bandwidth and local storage, card images are strictly cached at runtime upon first view, while the core JSON catalog is deterministically pre-fetched.
 
-- **Dictionary Compression:** Separate daily scripts aggregate card and price data into dictionary-indexed JSON streams. This compresses the raw payload from **8MB down to ~350KB**.
-- **Smart Versioning Protocol:** Implemented a "Pointer File" mechanism. The client first fetches a tiny JSON pointer to compare the remote version against the local IndexedDB version. It initiates a data download _only_ if the versions mismatch, verifying integrity via checksum before committing to local storage.
+### 💾 Bandwidth-Efficient Data Pipeline
+To bypass the latency of traditional DB queries for the read-only catalog:
+- **Dictionary Compression:** Separate daily scripts aggregate card and price data into dictionary-indexed JSON streams. This compresses the raw payload from **10MB down to ~3.5MB**, saving ~20MB of JS heap memory on mobile devices.
+- **Smart Versioning Protocol:** The client fetches a tiny JSON pointer file to compare the remote version against the local IndexedDB version, verifying integrity via checksum before initiating a data download.
 - **Client-Side Merging:** Decoupled data streams (Metadata vs. Market Data) are fetched in parallel and merged via a custom hook, populating a unified **Zustand** store for instant UI access.
 
 ### 🔄 Cross-API Data Synthesis & Integrity
-
 The platform synthesizes data from disparate sources (TCGDex API + PokemonPriceTracker API) that lack shared foreign keys.
-
 - **Fuzzy Matching Pipeline:** Built an ETL process running on GitHub Actions that normalizes and links pricing data to card records via name/number heuristics, upserting daily market data into a history table.
 - **Scale:** Successfully backfilled and currently manages **3.4 million+ price history records** using efficient batching strategies.
-- **Relational Optimization:** Database schema utilizes efficient nested relations (e.g., shared `Types` tables referenced by `Attacks`) to minimize storage footprint and simplify join logic.
+- **Relational Optimization:** Database schema utilizes efficient nested relations (eg shared `Types` tables referenced by `Attacks`) to minimize storage footprint and simplify join logic.
 
 ### 🖼️ Cost-Optimized Asset Pipeline
-
-- **Infrastructure Migration:** Replaced expensive managed image optimization services with a custom **Node.js/Sharp** solution hosted on R2, significantly reducing monthly infrastructure overhead while maintaining high performance.
-- **Self-Healing State:** The asset pipeline tracks an `isOptimized` state for every card in the database, making the synchronization script fully idempotent (re-runnable without side effects).
-- **Frontend Contract Enforcement:** To prevent hydration errors, the pipeline proactively generates image variants for all target breakpoints.
+- **Infrastructure Migration:** Replaced expensive managed image optimization services with a custom **Node.js/Sharp** solution hosted on Cloudflare R2, zeroing monthly image serving costs for 80,000+ assets.
+- **Frontend Contract Enforcement:** A custom image loader dynamically serves the exact AVIF resolution variant matching the client's viewport width to prevent over-fetching.
 
 ### 🚀 On-Demand ISR (Incremental Static Regeneration)
-
 - **Smart Cache Invalidation:** Individual Card Details pages utilize Next.js ISR. A secure webhook allows the daily data script to surgically invalidate/revalidate specific pages only when their underlying data changes.
 
 ## Tech Stack
 
 ### Application
-
-- **Framework:** Next.js 16 (App Router) / React 19.2
+- **Framework:** Next.js 16 (App Router) / React
 - **Language:** TypeScript
-- **State & Data Fetching:** tRPC, TanStack Query, Zustand, IndexedDB
+- **State & Data Fetching:** Zustand, tRPC, IndexedDB
+- **PWA & Caching:** Serwist, Turbopack, Service Workers
 - **Auth:** Better Auth (Google, Discord, Email/Pass)
 - **Styling:** Tailwind CSS, Shadcn UI
 
 ### Infrastructure & Automation
-
-- **Database:** Neon (PostgreSQL)
-- **CI/CD:** Jest/Vitest, GitHub Actions (Linting, Type Safety, Daily ETL Cron Jobs)
+- **Database:** PostgreSQL, Prisma ORM
+- **Sync Server:** Linux VPS, Nginx, PM2, Server-Sent Events (SSE)
+- **CI/CD:** GitHub Actions (Linting, Daily ETL Cron Jobs)
 - **Asset Storage:** Cloudflare R2
 
 ## Project Goals
@@ -68,12 +74,10 @@ This project was started on September 15, 2025.
 
 ## Running Locally
 
-1.  Clone the repository:
-    `git clone https://github.com/viet456/CardLedger`
-2.  Install dependencies:
-    `pnpm install`
-3.  Set up your environment variables in a `.env` file.
-4.  Run the development server:
-    `pnpm run dev`
+1. Clone the repository: `git clone https://github.com/viet456/CardLedger`
+2. Install dependencies: `pnpm install`
+3. Set up your environment variables in a `.env` file.
+4. Populate your DB: `pnpm run db:populate`
+5. Run the development server: `pnpm run dev`
 
 Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
