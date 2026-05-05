@@ -231,7 +231,7 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
                     const dateB = setReleaseDateMap.get(b.s)!;
 
                     if (dateA !== dateB) {
-                        return dateA - dateB;
+                        return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
                     }
 
                     // Tie-breaker: Set Size (prevents interweaving on ascending sort)
