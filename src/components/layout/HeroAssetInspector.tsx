@@ -45,15 +45,17 @@ interface AssetCardProps {
 
 export function HeroAssetInspector() {
     return (
-        <div className='relative -mx-4 overflow-hidden sm:-mx-8 md:py-12'>
+        <div className='relative -mx-4 overflow-y-clip  sm:-mx-8 md:py-12'>
             {/* 3D BACKGROUND LAYER */}
-            <div className='pointer-events-none absolute -top-[12%] left-1/2 -z-10 w-[150%] max-w-none -translate-x-1/2 select-none bg-zinc-900 opacity-100'>
+            <div className='pointer-events-none absolute -top-[12%] left-1/2 -z-10 w-[150vw] max-w-none -translate-x-1/2 select-none bg-zinc-900 opacity-100'>
                 {' '}
                 <div
                     className='relative aspect-[1/2.2] w-full origin-top transform-gpu md:aspect-[2/1]'
                     style={{
                         // Perspective + Rotation
-                        transform: 'perspective(1200px) rotateX(10deg)  scale(0.65)'
+                        transform: 'perspective(1200px) rotateX(10deg) scale(0.65)',
+                        width: '100%',
+                        minWidth: '100vw'
                     }}
                 >
                     {/* The Image */}
