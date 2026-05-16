@@ -3,10 +3,12 @@
 import { useAuthSession } from '@/src/providers/SessionProvider';
 import { useEffect } from 'react';
 import { useCollectionStore } from '../lib/store/collectionStore';
+import { trpc } from '../utils/trpc';
 
 export function CollectionDataInitializer() {
     const { data: session } = useAuthSession();
     const initialize = useCollectionStore((state) => state.initialize);
+    const utils = trpc.useUtils();
 
     // Initialize collection
     useEffect(() => {
@@ -32,10 +34,15 @@ export function CollectionDataInitializer() {
                 // Cancel the previous pull if another ping arrives instantly
                 clearTimeout(syncTimeout);
 
-                // Wait 150ms for the user to finish clicking, then pull once
+                // Wait 150ms for the user to finish clicking, then pull data into local DB
                 syncTimeout = setTimeout(() => {
                     // console.log('[SSE] Dust settled. Executing batched pull.');
                     useCollectionStore.getState().pullChanges();
+
+                    // Invalidate collection's chart history
+                    // This forces the UI to recalculate the portfolio chart
+                    // based on whatever just synced from the database.
+                    utils.collection.getPortfolioHistory.invalidate();
                 }, 150);
             }
         };
@@ -50,7 +57,7 @@ export function CollectionDataInitializer() {
             clearTimeout(syncTimeout);
             eventSource.close(); 
         };
-    }, [session?.user?.id]);
+    }, [session?.user?.id, utils]);
 
     return null;
 }
