@@ -95,14 +95,6 @@ function SummaryCard({
 }
 
 export function PortfolioView({ history, entries }: PortfolioViewProps) {
-    const currentStats = history[history.length - 1] || { price: 0, costBasis: 0 };
-    const totalValue = currentStats.price;
-    const totalCost = currentStats.costBasis;
-    const totalProfit = totalValue - totalCost;
-    const profitPercent = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
-
-    const TrendIcon = profitPercent >= 0 ? TrendingUp : TrendingDown;
-
     const tableData: PortfolioRow[] = entries.map((entry) => {
         let currentPrice = 0;
         const variants = entry.card.variants;
@@ -136,6 +128,13 @@ export function PortfolioView({ history, entries }: PortfolioViewProps) {
             gainPercent: percent
         };
     });
+
+    const totalValue = tableData.reduce((sum, row) => sum + row.currentPrice, 0);
+    const totalCost = tableData.reduce((sum, row) => sum + row.purchasePrice, 0);
+    const totalProfit = totalValue - totalCost;
+    const profitPercent = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
+
+    const TrendIcon = profitPercent >= 0 ? TrendingUp : TrendingDown;
 
     return (
         <div className='space-y-8'>
