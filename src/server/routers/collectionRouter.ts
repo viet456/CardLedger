@@ -343,6 +343,8 @@ export const collectionRouter = router({
             });
 
             // Find the exact highest DB timestamp in the returned rows
+            // We strictly use the DB's timestamps instead of Date.now() to prevent 
+            // clock-drift issues between the Node server and Postgres.
             const newTimestamp = changes.length > 0 
                 ? Math.max(...changes.map(c => c.updatedAt.getTime()))
                 : input.lastSynced; // If no changes, keep the cursor where it is
@@ -354,6 +356,7 @@ export const collectionRouter = router({
 
                     return {
                         ...entry,
+                        // Prisma returns Decimal objects; convert to standard JS Number for JSON serialization
                         purchasePrice: Number(entry.purchasePrice),
                         variant: entry.variant || CardVariant.Normal,
                         card: {

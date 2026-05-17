@@ -436,10 +436,13 @@ export const useCollectionStore = create<CollectionStoreState>()(
                 isPulling = true; // Lock the door
 
                 try {
-                    // Ask the server ONLY for what changed since our last sync
-                    // Subtract 5000ms to create the overlap buffer for slow transactions
+                    // Ask the server ONLY for what changed since our last sync.
+                    // We subtract 5000ms to create an overlap buffer. This prevents a race condition 
+                    // where a slow mutation finishes after a faster one. Without the buffer, the fast 
+                    // mutation advances the sync cursor, causing the slower mutation to be permanently 
+                    // skipped and never appear in the UI.
                     const safeCursor = lastSynced > 5000 ? lastSynced - 5000 : 0;
-                    // Ask the server ONLY for what changed since our last sync
+                    // Return every row where `updatedAt` is greater/newer than safeCursor
                     const result = await trpcClient.collection.pullChanges.query({ 
                         lastSynced: safeCursor
                     });
