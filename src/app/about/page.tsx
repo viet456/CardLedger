@@ -20,16 +20,30 @@ export default function About() {
                     in building a high-performance, local-first architecture from the ground up.
                 </p>
                 <p>
-                    For a deeper dive into the architectural decisions,{' '}
-                    <a
-                        href='https://www.vietle.me/blog/cardledger-architecture'
-                        target='_blank'
-                        rel='noopener noreferrer'
-                        className='hover:text-foreground hover:text-foreground/70'
-                    >
-                        read the full technical breakdown.
-                    </a>
+                    For a deeper dive into the architectural decisions, I published a two-part engineering series detailing the backend infrastructure and client-side state management:
                 </p>
+                <ul>
+                    <li>
+                        <a
+                            href='https://www.vietle.me/blog/cardledger-architecture'
+                            target='_blank'
+                            rel='noopener noreferrer'
+                            className='hover:text-foreground hover:text-foreground/70 font-medium'
+                        >
+                            Part 1: Data Ingestion & Static API Routing
+                        </a>
+                    </li>
+                    <li>
+                        <a
+                            href='https://www.vietle.me/blog/cardledger-architecture-pt2'
+                            target='_blank'
+                            rel='noopener noreferrer'
+                            className='hover:text-foreground hover:text-foreground/70 font-medium'
+                        >
+                            Part 2: Local-First Data Integrity & Offline Sync
+                        </a>
+                    </li>
+                </ul>
 
                 <h2>The Backend & Real-Time Infrastructure</h2>
                 <ul>
@@ -56,7 +70,16 @@ export default function About() {
                 <h2>A Local-First, Offline-Capable Architecture</h2>
                 <p>
                     To achieve a zero-latency &ldquo;native app&rdquo; feel regardless of network conditions, 
-                    the application completely decouples the UI from the network layer.
+                    the application completely decouples the UI from the network layer. I break down the mechanics 
+                    of this custom sync engine in{' '}
+                    <a
+                        href='https://www.vietle.me/blog/cardledger-architecture-pt2'
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        className='hover:text-foreground hover:text-foreground/70 underline underline-offset-4'
+                    >
+                        Part 2 of the architecture series.
+                    </a>
                 </p>
                 <ul>
                     <li>
