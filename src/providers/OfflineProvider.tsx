@@ -26,6 +26,23 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
     const onlineTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
+        // Request Persistent Storage
+        // Asks the OS not to silently delete our 3 IDB stores if the phone gets full.
+        const requestPersistentStorage = async () => {
+            if (navigator.storage && navigator.storage.persist) {
+                const isPersisted = await navigator.storage.persist();
+                // Only log the storage status in non-production environments
+                if (process.env.NODE_ENV !== 'production') {
+                    if (isPersisted) {
+                        console.log('[Storage] Persistent storage granted by browser.');
+                    } else {
+                        console.log('[Storage] Running in temporary best-effort mode.');
+                    }
+                }
+            }
+        };
+        requestPersistentStorage();
+
         const updateOfflineState = (offline: boolean) => {
             sessionStorage.setItem(STORAGE_KEY, String(offline));
             setIsOffline(offline);
