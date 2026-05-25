@@ -51,8 +51,8 @@ async function doesImageExistInR2(key: string): Promise<boolean> {
 
 async function uploadImageToR2(url: string, key: string): Promise<boolean> {
     try {
-        const exists = await doesImageExistInR2(key);
-        if (exists) return false;
+        // const exists = await doesImageExistInR2(key);
+        // if (exists) return false;
 
         const res = await fetch(url);
         if (!res.ok) return false;
@@ -71,7 +71,8 @@ async function uploadImageToR2(url: string, key: string): Promise<boolean> {
         );
         return true;
     } catch (e) {
-        return false;
+        console.error(`\n    ⚠️ R2 Upload Error for ${key}:`, (e as Error).message);
+        throw e;
     }
 }
 
@@ -108,10 +109,19 @@ async function processCard(cardRef: any, dbSet: any, cardsWithImages: Set<string
 
         if (card.image) {
             const sanitizedId = sanitizePublicId(card.id);
-            imageKey = `cards/${sanitizedId}.png`;
+            const expectedImageKey = `cards/${sanitizedId}.png`;
             if (!cardsWithImages.has(card.id)) {
                 const srcUrl = card.image.endsWith('.png') ? card.image : `${card.image}/high.png`;
-                imageUploaded = await uploadImageToR2(srcUrl, imageKey);
+                try {
+                    imageUploaded = await uploadImageToR2(srcUrl, expectedImageKey);
+                    imageKey = expectedImageKey; // Only assign to the DB variable if upload succeeded
+                } catch (uploadError) {
+                    console.warn(`    ⚠️ Upload failed for ${card.id}. Saving card data with null imageKey.`);
+                    imageKey = null; // Explicitly ensure it stays null for the DB
+                }
+            } else {
+                // We already have the image in R2 from a previous run
+                imageKey = expectedImageKey;
             }
         }
 
@@ -216,7 +226,10 @@ async function syncSeriesAndSets() {
     const seriesList = await tcgdex.fetch('series');
     if (!seriesList) return;
 
-    for (const s of seriesList) {
+    // Update from newest to oldest series
+    const reversedSeries = [...seriesList].reverse();
+
+    for (const s of reversedSeries) {
         if (BLOCKED_SERIES.includes(s.id)) continue;
 
         await prisma.series.upsert({
@@ -228,9 +241,15 @@ async function syncSeriesAndSets() {
         const details = await tcgdex.fetch('series', s.id);
         if (!details) continue;
 
-        for (const set of details.sets) {
+        // Reverse the sets within the series
+        const reversedSets = [...details.sets].reverse();
+
+        for (const set of reversedSets) {
             // Ignore blocked sets
             if (BLOCKED_SETS.includes(set.id)) continue;
+
+            console.log(`  Processing set: ${set.name}...`);
+
             // 🛠️ Spelling Fix
             const correctedName = set.name.replace("Macdonald's", "McDonald's");
 
@@ -242,16 +261,24 @@ async function syncSeriesAndSets() {
             if (set.logo) {
                 const key = `sets/${set.id}-logo.png`;
                 // Try to upload. If returns true, it means we uploaded a NEW file.
-                const uploaded = await uploadImageToR2(set.logo + '.png', key);
-                logoImageKey = key;
-                if (uploaded) imagesUpdated = true;
+                try {
+                    const uploaded = await uploadImageToR2(set.logo + '.png', key);
+                    logoImageKey = key; // Only assign if upload succeeds
+                    if (uploaded) imagesUpdated = true;
+                } catch (e) {
+                    console.warn(`    ⚠️ Logo upload failed for ${set.id}. Saving set with null logoImageKey.`);
+                }
             }
 
             if (set.symbol) {
                 const key = `sets/${set.id}-symbol.png`;
-                const uploaded = await uploadImageToR2(set.symbol + '.png', key);
-                symbolImageKey = key;
-                if (uploaded) imagesUpdated = true;
+                try {
+                    const uploaded = await uploadImageToR2(set.symbol + '.png', key);
+                    symbolImageKey = key; // Only assign if upload succeeds
+                    if (uploaded) imagesUpdated = true;
+                } catch (e) {
+                    console.warn(`    ⚠️ Symbol upload failed for ${set.id}. Saving set with null symbolImageKey.`);
+                }
             }
             // ------------------------
 
@@ -316,7 +343,7 @@ async function syncCards() {
         }
 
         console.log(`\n🚀 ${dbSet.name}: Processing ${toProcess.length} missing cards...`);
-        const chunks = chunkArray(toProcess, 20);
+        const chunks = chunkArray(toProcess, 5);
         for (const chunk of chunks) {
             await Promise.all(chunk.map((c) => processCard(c, dbSet, completed)));
         }
