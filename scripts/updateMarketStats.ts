@@ -7,9 +7,32 @@ const prisma = new PrismaClient({
 });
 const tcgdex = new TCGdex('en');
 
+// Global exchange rate for converting Cardmarket (EUR) to USD. Default fallback is 1.08.
+let eurToUsdExchangeRate = 1.08;
+
 // Parallel processing config
 const CARD_BATCH_SIZE = 5; // Paced to process ~21,000 cards over 40-50 minutes to avoid hitting rate limits
 const SET_BATCH_SIZE = 1; // Process one set at a time to be very safe during migration
+
+async function fetchExchangeRate(): Promise<number> {
+    const DEFAULT_RATE = 1.08;
+    try {
+        console.log('Fetching current EUR to USD exchange rate...');
+        const response = await axios.get('https://open.er-api.com/v6/latest/EUR', { timeout: 5000 });
+        const rate = response.data?.rates?.USD;
+        if (typeof rate === 'number') {
+            console.log(`✅ Fetched active EUR to USD exchange rate: ${rate}`);
+            return rate;
+        }
+        console.warn(`⚠️ Unexpected exchange rate response format. Using fallback: ${DEFAULT_RATE}`);
+        return DEFAULT_RATE;
+    } catch (error) {
+        console.warn(
+            `⚠️ Failed to fetch exchange rate (${error instanceof Error ? error.message : error}). Using fallback: ${DEFAULT_RATE}`
+        );
+        return DEFAULT_RATE;
+    }
+}
 
 async function revalidateNextCache() {
     const token = process.env.REVALIDATION_TOKEN;
@@ -78,10 +101,19 @@ async function upsertCardMarketStats(cardId: string, pricingFull: any) {
     const tcg1stEd = tcg?.firstEdition?.market ?? tcg?.firstEdition?.marketPrice ?? tcg?.['1st Edition']?.marketPrice ?? tcg?.['1stEditionHolofoil']?.marketPrice ?? tcg?.['1st-edition-holofoil']?.marketPrice ?? tcg?.['1st-edition']?.marketPrice ?? null;
 
     // Extract Cardmarket prices (which use different key structures)
-    const cmNormal = cm?.avg ?? cm?.trend ?? null;
-    const cmHolo = cm?.['avg-holo'] ?? cm?.['trend-holo'] ?? null;
-    const cmReverse = cm?.['avg-reverse'] ?? cm?.['trend-reverse'] ?? cmNormal; // Cardmarket often lumps reverse into normal
-    const cm1stEd = cm?.['avg-1st'] ?? cm?.['trend-1st'] ?? null;
+    let cmNormal = cm?.avg ?? cm?.trend ?? null;
+    let cmHolo = cm?.['avg-holo'] ?? cm?.['trend-holo'] ?? null;
+    let cmReverse = cm?.['avg-reverse'] ?? cm?.['trend-reverse'] ?? cmNormal; // Cardmarket often lumps reverse into normal
+    let cm1stEd = cm?.['avg-1st'] ?? cm?.['trend-1st'] ?? null;
+
+    // Convert EUR Cardmarket prices to USD if needed (we're storing all in USD)
+    const isEur = cm?.unit === 'EUR';
+    if (isEur) {
+        if (cmNormal !== null) cmNormal = Math.round(cmNormal * eurToUsdExchangeRate * 100) / 100;
+        if (cmHolo !== null) cmHolo = Math.round(cmHolo * eurToUsdExchangeRate * 100) / 100;
+        if (cmReverse !== null) cmReverse = Math.round(cmReverse * eurToUsdExchangeRate * 100) / 100;
+        if (cm1stEd !== null) cm1stEd = Math.round(cm1stEd * eurToUsdExchangeRate * 100) / 100;
+    }
 
     // Blend: Use TCGPlayer if available, else Cardmarket
     const pNormal = tcgNormal ?? cmNormal;
@@ -208,6 +240,9 @@ async function processSet(set: { id: string, tcgdexId: string | null, name: stri
 async function main() {
     const START_TIME = Date.now();
     const MAX_RUNTIME_MS = 60 * 60 * 1000; // 60 mins
+
+    // Fetch exchange rate once on startup
+    eurToUsdExchangeRate = await fetchExchangeRate();
 
     const dbSets = await prisma.set.findMany({
         where: {
