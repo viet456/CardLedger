@@ -1,29 +1,15 @@
-import { PrismaClient, Card } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
+import TCGdex from '@tcgdex/sdk';
 import axios from 'axios';
-import { ApiCard } from '../src/shared-types/price-api';
 
-const POKEPRICETRACKER_KEY = process.env.POKEPRICETRACKER_KEY;
 const prisma = new PrismaClient({
     log: ['error']
 });
-const API_BASE_URL = 'https://www.pokemonpricetracker.com/api/v2/cards/';
+const tcgdex = new TCGdex('en');
 
-// Track active DB operations to prevent memory overflow
-const MAX_PENDING_DB_BATCHES = 3;
-const pendingBatches: Promise<any>[] = [];
-
-function normalizePokemonName(name: string): string {
-    return name
-        .toLowerCase()
-        .replace(/lv\.x/g, 'levelx') // Handle Lv.X variations
-        .replace(/ ★/g, 'star') // Handle Star symbol
-        .replace(/ δ/g, 'deltaspecies') // Handle Delta Species symbol
-        .normalize('NFD') // Remove accents
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^\w\s]|_/g, '') // Remove punctuation and spaces
-        .replace(/\s+/g, '') // Collapse multiple spaces
-        .trim();
-}
+// Parallel processing config
+const CARD_BATCH_SIZE = 5; // Paced to process ~21,000 cards over 40-50 minutes to avoid hitting rate limits
+const SET_BATCH_SIZE = 1; // Process one set at a time to be very safe during migration
 
 async function revalidateNextCache() {
     const token = process.env.REVALIDATION_TOKEN;
@@ -41,7 +27,10 @@ async function revalidateNextCache() {
         const response = await axios.post(
             `${appUrl}/api/revalidate-cards?token=${token}`,
             {},
-            { timeout: 10000 }
+            { 
+                timeout: 10000,
+                headers: { 'Content-Type': 'application/json' }
+            }
         );
         if (response.status === 200) {
             console.log(`✅ Successfully revalidated Next.js cache.`);
@@ -62,12 +51,10 @@ async function warmSetCaches(setsToProcess: { id: string, name: string }[]) {
 
     console.log(`-- Warming Next.js cache for ${setsToProcess.length} sets to prevent DB trickle...`);
     
-    // Process in batches of 10 so we don't overwhelm the Vercel edge network
     for (let i = 0; i < setsToProcess.length; i += 10) {
         const batch = setsToProcess.slice(i, i + 10);
         await Promise.all(
             batch.map(set => 
-                // A simple GET request forces Next.js to rebuild and cache the page
                 axios.get(`${appUrl}/sets/${set.id}`).catch(() => {}) 
             )
         );
@@ -75,198 +62,133 @@ async function warmSetCaches(setsToProcess: { id: string, name: string }[]) {
     console.log('✅ Cache warming complete.');
 }
 
-async function getCardPage(setId: string, limit: number, offset: number) {
-    try {
-        const response = await axios.get(`${API_BASE_URL}`, {
-            headers: {
-                Authorization: `Bearer ${POKEPRICETRACKER_KEY}`
-            },
-            params: {
-                setId: `${setId}`,
-                limit: limit,
-                offset: offset
-            },
-            timeout: 60000
-        });
-        return response.data;
-    } catch (error) {
-        const msg = axios.isAxiosError(error) ? error.message : String(error);
-        console.error(` ❌ FAILED to fetch data for ${setId} at offset ${offset}:`, msg);
-        throw error;
-    }
-}
+async function upsertCardMarketStats(cardId: string, pricingData: any) {
+    if (!pricingData) return;
 
-async function upsertCardMarketStats(myCardId: string, apiCard: ApiCard) {
-    const printings = apiCard.printingsAvailable || [];
-    const variantsData = apiCard.variants || {};
-    const prices = apiCard.prices;
-    const getVariantPrice = (keysToCheck: string[]) => {
-        for (const key of keysToCheck) {
-            const data = variantsData[key];
-            if (data && data.marketPrice != null) {
-                return data.marketPrice;
-            }
-        }
-        return null;
-    };
-    const pNormal = getVariantPrice(['Normal']);
-    const pHolo = getVariantPrice(['Holofoil']);
-    const pReverse = getVariantPrice(['Reverse Holofoil', 'Reverse']);
-    const p1stEd = getVariantPrice(['1st Edition', '1st Edition Holofoil']);
+    const pNormal = pricingData.normal?.market ?? pricingData.normal?.marketPrice ?? null;
+    const pHolo = pricingData.holo?.market ?? pricingData.holo?.marketPrice ?? pricingData.holofoil?.marketPrice ?? null;
+    const pReverse = pricingData.reverse?.market ?? pricingData.reverse?.marketPrice ?? pricingData['reverse-holofoil']?.marketPrice ?? pricingData.reverseHolofoil?.marketPrice ?? null;
+    const p1stEd = pricingData.firstEdition?.market ?? pricingData.firstEdition?.marketPrice ?? pricingData['1st Edition']?.marketPrice ?? pricingData['1stEditionHolofoil']?.marketPrice ?? null;
 
-    let basePrice: number | null = null;
-    const primaryKey = apiCard.prices?.primaryPrinting;
-    if (primaryKey && variantsData[primaryKey]) {
-        basePrice = variantsData[primaryKey].marketPrice;
-    } else {
-        basePrice = pNormal ?? pHolo ?? pReverse ?? p1stEd;
-    }
+    const basePrice = pNormal ?? pHolo ?? pReverse ?? p1stEd;
+    if (basePrice === null) return; // No pricing data at all
 
-    const tcgLastUpdatedAt = apiCard.prices?.lastUpdated;
+    const tcgLastUpdatedAt = pricingData.updated;
+    const historyTimestamp = tcgLastUpdatedAt ? new Date(tcgLastUpdatedAt) : new Date();
+    historyTimestamp.setHours(0, 0, 0, 0);
+
     const validTcgUpdatedAt = tcgLastUpdatedAt ? new Date(tcgLastUpdatedAt) : undefined;
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const upsertMarketStats = prisma.marketStats.upsert({
-        where: { cardId: myCardId },
-        update: {
-            tcgNearMintLatest: basePrice, // Display price
-            tcgNormalLatest: pNormal,
-            tcgHoloLatest: pHolo,
-            tcgReverseLatest: pReverse,
-            tcgFirstEditionLatest: p1stEd,
-            tcgPlayerUpdatedAt: validTcgUpdatedAt
-        },
-        create: {
-            cardId: myCardId,
-            tcgNearMintLatest: basePrice,
-            tcgNormalLatest: pNormal,
-            tcgHoloLatest: pHolo,
-            tcgReverseLatest: pReverse,
-            tcgFirstEditionLatest: p1stEd,
-            tcgPlayerUpdatedAt: validTcgUpdatedAt ?? new Date()
-        }
-    });
-
-    const upsertPriceHistory = prisma.priceHistory.upsert({
-        where: {
-            cardId_timestamp: {
-                cardId: myCardId,
-                timestamp: today
-            }
-        },
-        update: {
-            tcgNearMint: basePrice,
-            tcgNormal: pNormal,
-            tcgHolo: pHolo,
-            tcgReverse: pReverse,
-            tcgFirstEdition: p1stEd
-        },
-        create: {
-            cardId: myCardId,
-            timestamp: today,
-            tcgNearMint: basePrice,
-            tcgNormal: pNormal,
-            tcgHolo: pHolo,
-            tcgReverse: pReverse,
-            tcgFirstEdition: p1stEd
-        }
-    });
-
-    const [marketStatsResult, priceHistoryResult] = await Promise.allSettled([
-        upsertMarketStats,
-        upsertPriceHistory
-    ]);
-
-    if (marketStatsResult.status === 'rejected') {
-        console.error(
-            ` ❌ FAILED to upsert MarketStats for ${myCardId}:`,
-            marketStatsResult.reason
-        );
-    }
-    if (priceHistoryResult.status === 'rejected') {
-        console.error(` ❌ FAILED to write history for ${myCardId}:`, priceHistoryResult.reason);
+    try {
+        await prisma.$transaction([
+            prisma.marketStats.upsert({
+                where: { cardId: cardId },
+                update: {
+                    tcgNearMintLatest: basePrice, 
+                    tcgNormalLatest: pNormal,
+                    tcgHoloLatest: pHolo,
+                    tcgReverseLatest: pReverse,
+                    tcgFirstEditionLatest: p1stEd,
+                    tcgPlayerUpdatedAt: validTcgUpdatedAt
+                },
+                create: {
+                    cardId: cardId,
+                    tcgNearMintLatest: basePrice,
+                    tcgNormalLatest: pNormal,
+                    tcgHoloLatest: pHolo,
+                    tcgReverseLatest: pReverse,
+                    tcgFirstEditionLatest: p1stEd,
+                    tcgPlayerUpdatedAt: validTcgUpdatedAt ?? new Date()
+                }
+            }),
+            prisma.priceHistory.upsert({
+                where: {
+                    cardId_timestamp: {
+                        cardId: cardId,
+                        timestamp: historyTimestamp
+                    }
+                },
+                update: {
+                    tcgNearMint: basePrice,
+                    tcgNormal: pNormal,
+                    tcgHolo: pHolo,
+                    tcgReverse: pReverse,
+                    tcgFirstEdition: p1stEd
+                },
+                create: {
+                    cardId: cardId,
+                    timestamp: historyTimestamp,
+                    tcgNearMint: basePrice,
+                    tcgNormal: pNormal,
+                    tcgHolo: pHolo,
+                    tcgReverse: pReverse,
+                    tcgFirstEdition: p1stEd
+                }
+            })
+        ]);
+        return true;
+    } catch (error) {
+        console.error(` ❌ FAILED to write DB for ${cardId}:`, error);
+        return false;
     }
 }
 
-async function processBatch(apiCards: ApiCard[], dbCards: Pick<Card, 'id' | 'number' | 'name'>[]) {
-    const upsertPromises: Promise<void>[] = [];
+async function processSet(set: { id: string, tcgdexId: string | null, name: string }) {
+    console.log(`Processing set: ${set.name} (${set.id})`);
+    
+    try {
+        const setDetails = await tcgdex.fetch('sets', set.tcgdexId!);
+        if (!setDetails || !setDetails.cards) return 0;
 
-    // Create a generic number map
-    const dbCardMap = new Map<string, (typeof dbCards)[0]>();
-    const processedCardIds = new Set<string>();
+        let updatedCount = 0;
+        const cards = setDetails.cards;
 
-    for (const card of dbCards) {
-        const normalizedDbNumber = card.number.split('/')[0].replace(/^0+/, '').trim();
-        dbCardMap.set(normalizedDbNumber, card);
-    }
-
-    for (const apiCard of apiCards) {
-        const apiCardNumberRaw = String(apiCard.cardNumber);
-        const normalizedApiNumberString = apiCardNumberRaw.split('/')[0].replace(/^0+/, '').trim();
-        const apiCardName = apiCard.name;
-
-        // Find by number first
-        const myCard = dbCardMap.get(normalizedApiNumberString);
-
-        if (!myCard) {
-            // console.log(` - ℹ️  No match found for API card number: '${apiCardNumberRaw}' (${apiCardName})`);
-            continue;
-        }
-
-        // --- ROBUST NAME MATCHING ---
-        // Strip suffixes like "(Alternate Art Secret)" or "(Promo)"
-        const apiNameClean = apiCardName.replace(/\s*\([^)]*\)\s*/g, '').trim();
-        const dbNameClean = myCard.name.replace(/\s*\([^)]*\)\s*/g, '').trim();
-
-        const normalizedApiCardName = normalizePokemonName(apiNameClean);
-        const normalizedDbCardName = normalizePokemonName(dbNameClean);
-
-        let cardMatchIsValid = false;
-
-        // Perform loose validation
-        if (
-            normalizedDbCardName.includes(normalizedApiCardName) ||
-            normalizedApiCardName.includes(normalizedDbCardName)
-        ) {
-            cardMatchIsValid = true;
-        } else {
-            // Only log significant name mismatches
-            console.log(
-                `  - ⚠️  Number match (${myCard.number}), but names differ greatly: DB='${normalizedDbCardName}' vs API='${normalizedApiCardName}'`
-            );
-        }
-
-        if (cardMatchIsValid) {
-            if (processedCardIds.has(myCard.id)) {
-                // console.log(`Skipping duplicate update for ${myCard.id} in same batch`);
-                continue;
-            }
-            processedCardIds.add(myCard.id);
-
-            upsertPromises.push(
-                upsertCardMarketStats(myCard.id, apiCard).catch((error) => {
-                    console.error(
-                        `❌ Error processing card ${apiCard.cardNumber} (${apiCardName}):`,
-                        error
-                    );
+        // Process cards in small batches to respect rate limits and memory
+        for (let i = 0; i < cards.length; i += CARD_BATCH_SIZE) {
+            const batch = cards.slice(i, i + CARD_BATCH_SIZE);
+            const results = await Promise.all(
+                batch.map(async (cardRef) => {
+                    try {
+                        const fullCard = await tcgdex.fetch('cards', cardRef.id) as any;
+                        if (fullCard) {
+                            // TCGdex pricing data can be under 'tcgplayer' or 'pricing.tcgplayer'
+                            const pricingData = fullCard.tcgplayer || fullCard.pricing?.tcgplayer;
+                            if (pricingData) {
+                                const success = await upsertCardMarketStats(fullCard.id, pricingData);
+                                return success ? 1 : 0;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn(`\n    ⚠️ Failed to fetch pricing for card ${cardRef.id}`);
+                    }
+                    return 0;
                 })
             );
+            updatedCount += (results as number[]).reduce((a, b) => a + b, 0);
+            
+            const processed = Math.min(i + CARD_BATCH_SIZE, cards.length);
+            process.stdout.write(`\r    ⏳ Progress: ${processed} / ${cards.length} cards checked (${updatedCount} updated)`);
         }
+        
+        console.log(`\n -> Finished ${set.name}: Updated ${updatedCount}/${cards.length} cards.`);
+        return updatedCount;
+    } catch (error) {
+        console.error(` -> Failed to fetch TCGdex data for set ${set.name}:`, error);
+        return 0;
     }
-
-    await Promise.all(upsertPromises);
 }
 
 async function main() {
     const START_TIME = Date.now();
-    const MAX_RUNTIME_MS = 90 * 60 * 1000; // 90 mins
+    const MAX_RUNTIME_MS = 60 * 60 * 1000; // 60 mins
 
     const dbSets = await prisma.set.findMany({
+        where: {
+            tcgdexId: { not: null }
+        },
         select: {
             id: true,
-            tcgPlayerNumericId: true,
+            tcgdexId: true,
             name: true
         },
         orderBy: {
@@ -274,120 +196,31 @@ async function main() {
         }
     });
 
-    // Latest sets to always be updated
-    const highPrioritySets = dbSets.slice(0, 16);
+    console.log(`Starting MarketStats update via TCGdex for ${dbSets.length} sets...`);
 
-    // Starts day count from Jan 1 1970, Unix Epoch
-    const msPerDay = 1000 * 60 * 60 * 24;
-    const daysSinceEpoch = Math.floor(Date.now() / msPerDay);
-    const isEvenDay = daysSinceEpoch % 2 === 0;
+    let totalUpdated = 0;
 
-    const alternatingSets = dbSets.filter((_, index) => {
-        return (index % 2 === 0) === isEvenDay;
-    });
-
-    const desiredSetIds = new Set([
-        ...highPrioritySets.map((s) => s.id),
-        ...alternatingSets.map((s) => s.id)
-    ]);
-    const setsToProcess = dbSets.filter((set) => desiredSetIds.has(set.id));
-
-    console.log(`Starting daily MarketStats update for ${setsToProcess.length} sets...`);
-
-    for (const set of setsToProcess) {
+    // Process all sets one by one for safety
+    for (let i = 0; i < dbSets.length; i += SET_BATCH_SIZE) {
         if (Date.now() - START_TIME > MAX_RUNTIME_MS) {
-            console.warn('⚠️ Max runtime reached. Stopping set processing early.');
+            console.warn('⚠️ Max runtime reached. Stopping early.');
             break;
         }
-        if (!set.tcgPlayerNumericId) {
-            console.log(`Skipping set ${set.name} (missing numeric tcgPlayerId)`);
-            continue;
-        }
-        console.log(`Processing set: ${set.name} (${set.id})`);
 
-        const dbCards = await prisma.card.findMany({
-            where: {
-                setId: set.id
-            },
-            select: {
-                id: true,
-                number: true,
-                name: true
-            }
-        });
-
-        const PAGE_SIZE = 50;
-        let currentOffset = 0;
-        let keepFetching = true;
-
-        while (keepFetching) {
-            let pageData;
-
-            try {
-                pageData = await getCardPage(
-                    String(set.tcgPlayerNumericId),
-                    PAGE_SIZE,
-                    currentOffset
-                );
-            } catch (error) {
-                if (axios.isAxiosError(error) && error.response?.status === 429) {
-                    console.log(`- ⚠️ Got 429. Waiting 60 seconds to retry...`);
-                    await new Promise((resolve) => setTimeout(resolve, 60000));
-                    continue;
-                } else {
-                    console.log(` -> Fetch failed, skipping rest of set ${set.name}.`);
-                    break;
-                }
-            }
-
-            if (!pageData || !pageData.data || pageData.data.length === 0) {
-                keepFetching = false;
-                break;
-            }
-
-            const apiCards: ApiCard[] = pageData.data;
-
-            const waitTimeInSeconds = Math.ceil(PAGE_SIZE / 10) + 4;
-            const timerPromise = new Promise((resolve) =>
-                setTimeout(resolve, waitTimeInSeconds * 1000)
-            );
-
-            const batchPromise = processBatch(apiCards, dbCards).catch((error) =>
-                console.error('Batch failed', error)
-            );
-            pendingBatches.push(batchPromise);
-
-            if (pendingBatches.length > MAX_PENDING_DB_BATCHES) {
-                const oldestBatch = pendingBatches.shift();
-                await oldestBatch;
-            }
-
-            await timerPromise;
-
-            console.log(
-                ` -> Fetched ${apiCards.length} cards. (Queue: ${pendingBatches.length} active batches)`
-            );
-
-            currentOffset += PAGE_SIZE;
-            if (apiCards.length < PAGE_SIZE) {
-                keepFetching = false;
-            }
-        }
-        console.log(` -> Finished processing set: ${set.name}.`);
+        const batch = dbSets.slice(i, i + SET_BATCH_SIZE);
+        const results = await Promise.all(batch.map(set => processSet(set)));
+        totalUpdated += results.reduce((a, b) => a + b, 0);
     }
 
-    console.log('Waiting for final DB writes...');
-    await Promise.all(pendingBatches);
-
-    console.log('✅ Daily MarketStats update complete.');
+    console.log(`✅ Daily MarketStats update complete. Total cards updated: ${totalUpdated}`);
     await revalidateNextCache();
-    await warmSetCaches(setsToProcess);
+    await warmSetCaches(dbSets);
 }
 
 main()
     .catch((e) => {
         console.error(e);
-        process.exit(1);
+        process.exit(1)
     })
     .finally(async () => {
         await prisma.$disconnect();
