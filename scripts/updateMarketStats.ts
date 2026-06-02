@@ -62,22 +62,49 @@ async function warmSetCaches(setsToProcess: { id: string, name: string }[]) {
     console.log('✅ Cache warming complete.');
 }
 
-async function upsertCardMarketStats(cardId: string, pricingData: any) {
-    if (!pricingData) return;
+async function upsertCardMarketStats(cardId: string, pricingFull: any) {
+    if (!pricingFull) return;
 
-    const pNormal = pricingData.normal?.market ?? pricingData.normal?.marketPrice ?? null;
-    const pHolo = pricingData.holo?.market ?? pricingData.holo?.marketPrice ?? pricingData.holofoil?.marketPrice ?? null;
-    const pReverse = pricingData.reverse?.market ?? pricingData.reverse?.marketPrice ?? pricingData['reverse-holofoil']?.marketPrice ?? pricingData.reverseHolofoil?.marketPrice ?? null;
-    const p1stEd = pricingData.firstEdition?.market ?? pricingData.firstEdition?.marketPrice ?? pricingData['1st Edition']?.marketPrice ?? pricingData['1stEditionHolofoil']?.marketPrice ?? null;
+    // Prefer TCGPlayer, fallback to Cardmarket
+    const tcg = pricingFull.tcgplayer;
+    const cm = pricingFull.cardmarket;
+
+    if (!tcg && !cm) return; // No pricing data at all
+
+    // Extract TCGPlayer prices
+    const tcgNormal = tcg?.normal?.market ?? tcg?.normal?.marketPrice ?? tcg?.unlimited?.marketPrice ?? null;
+    const tcgHolo = tcg?.holo?.market ?? tcg?.holo?.marketPrice ?? tcg?.holofoil?.marketPrice ?? tcg?.['unlimited-holofoil']?.marketPrice ?? null;
+    const tcgReverse = tcg?.reverse?.market ?? tcg?.reverse?.marketPrice ?? tcg?.['reverse-holofoil']?.marketPrice ?? tcg?.reverseHolofoil?.marketPrice ?? null;
+    const tcg1stEd = tcg?.firstEdition?.market ?? tcg?.firstEdition?.marketPrice ?? tcg?.['1st Edition']?.marketPrice ?? tcg?.['1stEditionHolofoil']?.marketPrice ?? tcg?.['1st-edition-holofoil']?.marketPrice ?? tcg?.['1st-edition']?.marketPrice ?? null;
+
+    // Extract Cardmarket prices (which use different key structures)
+    const cmNormal = cm?.avg ?? cm?.trend ?? null;
+    const cmHolo = cm?.['avg-holo'] ?? cm?.['trend-holo'] ?? null;
+    const cmReverse = cm?.['avg-reverse'] ?? cm?.['trend-reverse'] ?? cmNormal; // Cardmarket often lumps reverse into normal
+    const cm1stEd = cm?.['avg-1st'] ?? cm?.['trend-1st'] ?? null;
+
+    // Blend: Use TCGPlayer if available, else Cardmarket
+    const pNormal = tcgNormal ?? cmNormal;
+    const pHolo = tcgHolo ?? cmHolo;
+    const pReverse = tcgReverse ?? cmReverse;
+    const p1stEd = tcg1stEd ?? cm1stEd;
 
     const basePrice = pNormal ?? pHolo ?? pReverse ?? p1stEd;
-    if (basePrice === null) return; // No pricing data at all
+    if (basePrice === null) return; 
 
-    const tcgLastUpdatedAt = pricingData.updated;
-    const historyTimestamp = tcgLastUpdatedAt ? new Date(tcgLastUpdatedAt) : new Date();
+    // Determine the updated timestamp (prefer TCGPlayer's date if we used TCGPlayer data)
+    const activeProvider = tcgNormal ?? tcgHolo ?? tcgReverse ?? tcg1stEd ? tcg : cm;
+    const lastUpdatedAt = activeProvider?.updated;
+    
+    // If the API does not provide a valid timestamp for this price, do not assume today's date.
+    // We strictly rely on the API's reported update time. If missing, we abort to prevent 
+    // polluting the database with unverified or duplicate historical points.
+    if (!lastUpdatedAt) return;
+
+    const validUpdatedAt = new Date(lastUpdatedAt);
+    
+    const historyTimestamp = new Date(lastUpdatedAt);
     historyTimestamp.setHours(0, 0, 0, 0);
-
-    const validTcgUpdatedAt = tcgLastUpdatedAt ? new Date(tcgLastUpdatedAt) : undefined;
 
     try {
         await prisma.$transaction([
@@ -89,7 +116,7 @@ async function upsertCardMarketStats(cardId: string, pricingData: any) {
                     tcgHoloLatest: pHolo,
                     tcgReverseLatest: pReverse,
                     tcgFirstEditionLatest: p1stEd,
-                    tcgPlayerUpdatedAt: validTcgUpdatedAt
+                    tcgPlayerUpdatedAt: validUpdatedAt
                 },
                 create: {
                     cardId: cardId,
@@ -98,7 +125,7 @@ async function upsertCardMarketStats(cardId: string, pricingData: any) {
                     tcgHoloLatest: pHolo,
                     tcgReverseLatest: pReverse,
                     tcgFirstEditionLatest: p1stEd,
-                    tcgPlayerUpdatedAt: validTcgUpdatedAt ?? new Date()
+                    tcgPlayerUpdatedAt: validUpdatedAt
                 }
             }),
             prisma.priceHistory.upsert({
@@ -151,10 +178,10 @@ async function processSet(set: { id: string, tcgdexId: string | null, name: stri
                     try {
                         const fullCard = await tcgdex.fetch('cards', cardRef.id) as any;
                         if (fullCard) {
-                            // TCGdex pricing data can be under 'tcgplayer' or 'pricing.tcgplayer'
-                            const pricingData = fullCard.tcgplayer || fullCard.pricing?.tcgplayer;
-                            if (pricingData) {
-                                const success = await upsertCardMarketStats(fullCard.id, pricingData);
+                            // Pass the entire pricing object which contains both tcgplayer and cardmarket
+                            const pricingFull = fullCard.pricing || { tcgplayer: fullCard.tcgplayer, cardmarket: fullCard.cardmarket };
+                            if (pricingFull) {
+                                const success = await upsertCardMarketStats(fullCard.id, pricingFull);
                                 return success ? 1 : 0;
                             }
                         }
