@@ -33,10 +33,10 @@ To bypass the latency of traditional DB queries for the read-only catalog:
 - **Smart Versioning Protocol:** The client fetches a tiny JSON pointer file to compare the remote version against the local IndexedDB version, verifying integrity via checksum before initiating a data download.
 - **Client-Side Merging:** Decoupled data streams (Metadata vs. Market Data) are fetched in parallel and merged via a custom hook, populating a unified **Zustand** store for instant UI access.
 
-### 🔄 Cross-API Data Synthesis & Integrity
-The platform synthesizes data from disparate sources (TCGDex API + PokemonPriceTracker API) that lack shared foreign keys.
-- **Fuzzy Matching Pipeline:** Built an ETL process running on GitHub Actions that normalizes and links pricing data to card records via name/number heuristics, upserting daily market data into a history table.
-- **Scale:** Successfully backfilled and currently manages **3.4 million+ price history records** using efficient batching strategies.
+### 🔄 Automated Market Data Pipeline
+The platform maintains a continuously updating local database of card market values and historical trends.
+- **Daily Market Sync:** Built an ETL process running on GitHub Actions that queries the TCGdex API to seamlessly fetch and upsert current market data into a relational history table.
+- **Scale:** Tracks daily price fluctuations across tens of thousands of cards, managing millions of price history records through optimized batching strategies.
 - **Relational Optimization:** Database schema utilizes efficient nested relations (eg shared `Types` tables referenced by `Attacks`) to minimize storage footprint and simplify join logic.
 
 ### 🖼️ Cost-Optimized Asset Pipeline
@@ -67,7 +67,7 @@ The platform synthesizes data from disparate sources (TCGDex API + PokemonPriceT
 The objective was to engineer a high-performance application that delivers **instant user feedback** through local-first caching and optimistic UI mutations. Key architectural goals included:
 
 - **Secure Authentication:** Implementing a robust user account system with social providers.
-- **Reliable Data Synchronization:** Designing idempotent pipelines to sanitize and merge inconsistent data from multiple third-party APIs.
+- **Reliable Data Synchronization:** Designing idempotent pipelines to continuously ingest, sanitize, and validate massive datasets from upstream APIs.
 - **Zero-Latency Interaction:** Achieving native-app responsiveness through optimistic UI updates and client-side persistence.
 
 This project was started on September 15, 2025.
