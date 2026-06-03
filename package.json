@@ -24,6 +24,7 @@
         "db:sync": "pnpm run db:populate && pnpm run images:migrate",
         "index:cards": "tsx scripts/generateCardIndex.ts",
         "index:market": "tsx scripts/generateMarketIndex.ts",
+        "index:history": "tsx scripts/generateHistoryIndex.ts",
         "optimize:images": "tsx scripts/optimizeImages.ts",
         "maintain-images": "tsx scripts/imgMaintenance.ts"
     },

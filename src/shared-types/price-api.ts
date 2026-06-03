@@ -81,6 +81,23 @@ export interface MarketStats {
     prices: Record<string, CardPrices>;
 }
 
+// History Index
+export interface HistoryIndex {
+    version: string;
+    dates: string[];
+    offsets: Record<string, Record<string, number>>;
+}
+
+export interface HistoryPointerFile {
+    version: string;
+    indexUrl: string;
+    dataUrl: string;
+    indexCheckSum: string;
+    dataCheckSum: string;
+    cardCount: number;
+    updatedAt: string;
+}
+
 // Variant Mapping Helpers
 
 export type PriceColumn = 'tcgNormal' | 'tcgHolo' | 'tcgReverse' | 'tcgFirstEdition';

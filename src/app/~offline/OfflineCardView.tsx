@@ -3,6 +3,7 @@
 import { useCardStore } from '@/src/lib/store/cardStore';
 import { useMarketStore } from '@/src/lib/store/marketStore'; 
 import { CardImageDisplay } from '../cards/[cardId]/CardImageDisplay';
+import { PriceHistoryChart } from '@/src/components/cards/PriceHistoryChart';
 import { AlertTriangle, WifiOff, TrendingUp, ChevronRight } from 'lucide-react';
 import { FormattedText } from '@/src/components/cards/FormattedText';
 import { EnergyIcon } from '@/src/components/cards/EnergyIcon';
@@ -163,15 +164,10 @@ export function OfflineCardView({ cardId }: { cardId: string }) {
                                     <span>Offline Snapshot</span>
                                 </div>
                             </div>
-                            <div className="flex h-[300px] flex-col items-center justify-center rounded-md bg-muted/30 p-6 text-center">
-                                <TrendingUp className="h-10 w-10 text-muted-foreground/50 mb-3" />
-                                <p className="text-sm font-medium text-muted-foreground">
-                                    Historical charts require a network connection.
-                                </p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    Current prices are pulled from your local cache, last updated on <span className="font-semibold">{syncDate}</span>.
-                                </p>
-                            </div>
+                            <PriceHistoryChart cardId={cardId} />
+                            <p className="text-xs text-muted-foreground mt-4 text-center">
+                                Prices are pulled from your local cache, last updated on <span className="font-semibold">{syncDate}</span>.
+                            </p>
                         </section>
 
                         {/* Details Grid */}

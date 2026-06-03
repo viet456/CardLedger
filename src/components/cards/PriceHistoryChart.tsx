@@ -16,23 +16,67 @@ export function PriceHistoryChart({ cardId }: { cardId: string }) {
     const [activeRange, setActiveRange] = useState<TimeRange>('All');
 
     useEffect(() => {
-        fetch(`/api/prices/${cardId}`)
-            .then(res => res.json())
-            .then(data => {
-                setInitialData(data);
-                
-                // Calculate the default range here, once we actually have the data
-                if (data && data.length > 0) {
-                    const earliest = new Date(data[0].timestamp).getTime();
-                    const now = new Date().getTime();
-                    const diffDays = (now - earliest) / (1000 * 60 * 60 * 24);
+        const processData = (data: PriceHistoryDataPoint[]) => {
+            setInitialData(data);
+            if (data && data.length > 0) {
+                const earliest = new Date(data[0].timestamp).getTime();
+                const now = new Date().getTime();
+                const diffDays = (now - earliest) / (1000 * 60 * 60 * 24);
 
-                    if (diffDays >= 90) setActiveRange('3m');
-                    else if (diffDays >= 30) setActiveRange('1m');
-                    else setActiveRange('All');
+                if (diffDays >= 90) setActiveRange('3m');
+                else if (diffDays >= 30) setActiveRange('1m');
+                else setActiveRange('All');
+            }
+        };
+
+        const loadData = async () => {
+            try {
+                const res = await fetch(`/api/prices/${cardId}`);
+                if (!res.ok) throw new Error('Network response was not ok');
+                const data = await res.json();
+                processData(data);
+            } catch (err) {
+                console.warn("Failed to fetch price history from network, attempting offline store...", err);
+                try {
+                    const { useHistoryStore } = await import('@/src/lib/store/historyStore');
+                    const store = useHistoryStore.getState();
+                    
+                    if (store.status === 'idle') {
+                        await store.initialize();
+                    }
+
+                    let finalStore = useHistoryStore.getState();
+                    
+                    if (finalStore.status === 'loading') {
+                        await new Promise<void>((resolve) => {
+                            const unsub = useHistoryStore.subscribe((state) => {
+                                if (state.status !== 'loading') {
+                                    unsub();
+                                    finalStore = state;
+                                    resolve();
+                                }
+                            });
+                        });
+                    }
+
+                    if (finalStore.status.startsWith('ready')) {
+                        const offlineData = finalStore.getAllHistory(cardId);
+                        if (offlineData) {
+                            console.log("Successfully loaded offline price history.");
+                            processData(offlineData);
+                            return;
+                        }
+                    }
+                } catch (storeErr) {
+                    console.error("Failed to load offline history:", storeErr);
                 }
-            })
-            .catch(err => console.error("Failed to fetch price history:", err));
+
+                console.error("No price history available.");
+                setInitialData([]);
+            }
+        };
+
+        loadData();
     }, [cardId]);
 
     const filteredData = useMemo(() => {
@@ -77,7 +121,13 @@ export function PriceHistoryChart({ cardId }: { cardId: string }) {
             if (!chartRef.current || !filteredData || filteredData.length === 0) {
                 return;
             }
-            const hasData = filteredData.some((d) => d.tcgNearMint !== null);
+            const hasData = filteredData.some((d) => 
+                d.tcgNearMint !== null || 
+                d.tcgNormal !== null || 
+                d.tcgHolo !== null || 
+                d.tcgReverse !== null || 
+                d.tcgFirstEdition !== null
+            );
             if (!hasData) {
                 if (chartInstanceRef.current) {
                     chartInstanceRef.current.destroy();
@@ -236,7 +286,13 @@ export function PriceHistoryChart({ cardId }: { cardId: string }) {
         };
     }, []);
 
-    const hasData = filteredData.some((d) => d.tcgNearMint !== null);
+    const hasData = filteredData.some((d) => 
+        d.tcgNearMint !== null || 
+        d.tcgNormal !== null || 
+        d.tcgHolo !== null || 
+        d.tcgReverse !== null || 
+        d.tcgFirstEdition !== null
+    );
     const now = new Date();
     const cutoffs = {
         '1m': new Date(new Date().setMonth(now.getMonth() - 1)),
