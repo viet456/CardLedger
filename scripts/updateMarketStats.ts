@@ -85,7 +85,8 @@ async function warmSetCaches(setsToProcess: { id: string, name: string }[]) {
     console.log('✅ Cache warming complete.');
 }
 
-async function upsertCardMarketStats(cardId: string, pricingFull: any) {
+async function upsertCardMarketStats(cardId: string, fullCard: any) {
+    const pricingFull = fullCard?.pricing || { tcgplayer: fullCard?.tcgplayer, cardmarket: fullCard?.cardmarket };
     if (!pricingFull) return;
 
     // Prefer TCGPlayer, fallback to Cardmarket
@@ -100,11 +101,56 @@ async function upsertCardMarketStats(cardId: string, pricingFull: any) {
     const tcgReverse = tcg?.reverse?.market ?? tcg?.reverse?.marketPrice ?? tcg?.['reverse-holofoil']?.marketPrice ?? tcg?.reverseHolofoil?.marketPrice ?? null;
     const tcg1stEd = tcg?.firstEdition?.market ?? tcg?.firstEdition?.marketPrice ?? tcg?.['1st Edition']?.marketPrice ?? tcg?.['1stEditionHolofoil']?.marketPrice ?? tcg?.['1st-edition-holofoil']?.marketPrice ?? tcg?.['1st-edition']?.marketPrice ?? null;
 
-    // Extract Cardmarket prices (which use different key structures)
-    let cmNormal = cm?.avg ?? cm?.trend ?? null;
-    let cmHolo = cm?.['avg-holo'] ?? cm?.['trend-holo'] ?? null;
-    let cmReverse = cm?.['avg-reverse'] ?? cm?.['trend-reverse'] ?? cmNormal; // Cardmarket often lumps reverse into normal
-    let cm1stEd = cm?.['avg-1st'] ?? cm?.['trend-1st'] ?? null;
+    // Cardmarket fallback sequence keys
+    const cmFallback = (base: string) => {
+        const prefix = base ? `-${base}` : '';
+        return cm?.[`avg${prefix}`] ?? 
+               cm?.[`trend${prefix}`] ?? 
+               cm?.[`avg1${prefix}`] ?? 
+               cm?.[`avg7${prefix}`] ?? 
+               cm?.[`avg30${prefix}`] ?? 
+               cm?.[`low${prefix}`] ?? null;
+    };
+
+    // Extract Cardmarket prices with robust fallback
+    let cmNormal = cmFallback('');
+    let cmHolo = cmFallback('holo');
+    let cmReverse = cmFallback('reverse');
+    let cm1stEd = cmFallback('1st');
+
+    // Determine exactly which variants truly exist.
+    // TCGPlayer is our trusted source of truth because API top-level boolean variants are unreliable.
+    // If TCGPlayer has no data, we fall back to trusting the API booleans.
+    const isValidNormal = tcg ? tcgNormal !== null : !!fullCard?.variants?.normal;
+    const isValidHolo = tcg ? tcgHolo !== null : !!fullCard?.variants?.holo;
+    const isValidReverse = tcg ? tcgReverse !== null : !!fullCard?.variants?.reverse;
+    const isValid1stEd = tcg ? tcg1stEd !== null : !!fullCard?.variants?.firstEdition;
+
+    // Smart mapping: Cardmarket variants can be unreliable and often lump default variants into the generic "avg" (cmNormal) keys.
+    // For example, their "holo" property might be present as a ghost variant, or their generic price represents the only valid variant.
+    // So we look back to the confirmed valid variants (prioritizing TCGPlayer or the API) to check which variant Cardmarket truly represents.
+    // If the card is known to NOT have a normal variant, we map cmNormal to the primary valid variant.
+    if (!isValidNormal && cmNormal !== null) {
+        if (isValidHolo && cmHolo === null) {
+            cmHolo = cmNormal;
+        } else if (isValidReverse && cmReverse === null) {
+            cmReverse = cmNormal;
+        } else if (isValid1stEd && cm1stEd === null) {
+            cm1stEd = cmNormal;
+        }
+        cmNormal = null;
+    }
+
+    // Prevent Cardmarket from introducing "ghost" variants that TCGPlayer doesn't support.
+    if (!isValidNormal) cmNormal = null;
+    if (!isValidHolo) cmHolo = null;
+    if (!isValidReverse) cmReverse = null;
+    if (!isValid1stEd) cm1stEd = null;
+
+    // Cardmarket often lumps reverse into normal if both exist and reverse is unspecified
+    if (isValidReverse && cmReverse === null && cmNormal !== null) {
+        cmReverse = cmNormal;
+    }
 
     // Convert EUR Cardmarket prices to USD if needed (we're storing all in USD)
     const isEur = cm?.unit === 'EUR';
@@ -139,7 +185,15 @@ async function upsertCardMarketStats(cardId: string, pricingFull: any) {
     historyTimestamp.setHours(0, 0, 0, 0);
 
     try {
+        // Prepare cleanup operations for ghost variants in historical data
+        const historyCleanupOps = [];
+        if (!isValidNormal) historyCleanupOps.push(prisma.priceHistory.updateMany({ where: { cardId: cardId, tcgNormal: { not: null } }, data: { tcgNormal: null } }));
+        if (!isValidHolo) historyCleanupOps.push(prisma.priceHistory.updateMany({ where: { cardId: cardId, tcgHolo: { not: null } }, data: { tcgHolo: null } }));
+        if (!isValidReverse) historyCleanupOps.push(prisma.priceHistory.updateMany({ where: { cardId: cardId, tcgReverse: { not: null } }, data: { tcgReverse: null } }));
+        if (!isValid1stEd) historyCleanupOps.push(prisma.priceHistory.updateMany({ where: { cardId: cardId, tcgFirstEdition: { not: null } }, data: { tcgFirstEdition: null } }));
+
         await prisma.$transaction([
+            ...historyCleanupOps,
             prisma.marketStats.upsert({
                 where: { cardId: cardId },
                 update: {
@@ -210,12 +264,8 @@ async function processSet(set: { id: string, tcgdexId: string | null, name: stri
                     try {
                         const fullCard = await tcgdex.fetch('cards', cardRef.id) as any;
                         if (fullCard) {
-                            // Pass the entire pricing object which contains both tcgplayer and cardmarket
-                            const pricingFull = fullCard.pricing || { tcgplayer: fullCard.tcgplayer, cardmarket: fullCard.cardmarket };
-                            if (pricingFull) {
-                                const success = await upsertCardMarketStats(fullCard.id, pricingFull);
-                                return success ? 1 : 0;
-                            }
+                            const success = await upsertCardMarketStats(fullCard.id, fullCard);
+                            return success ? 1 : 0;
                         }
                     } catch (e) {
                         console.warn(`\n    ⚠️ Failed to fetch pricing for card ${cardRef.id}`);
