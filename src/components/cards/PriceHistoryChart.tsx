@@ -104,9 +104,20 @@ export function PriceHistoryChart({ cardId }: { cardId: string }) {
                 break;
             case 'All':
             default:
-                return initialData;
+                break;
         }
-        return initialData.filter((d) => new Date(d.timestamp) >= startDate);
+
+        let filtered = initialData;
+        if (activeRange !== 'All') {
+            filtered = initialData.filter((d) => new Date(d.timestamp) >= startDate);
+        }
+
+        const dayMap = new Map<string, PriceHistoryDataPoint>();
+        for (const d of filtered) {
+            const dayKey = new Date(d.timestamp).toISOString().split('T')[0];
+            dayMap.set(dayKey, d);
+        }
+        return Array.from(dayMap.values());
     }, [initialData, activeRange]);
 
     const earliestDate = useMemo(() => {
@@ -122,7 +133,6 @@ export function PriceHistoryChart({ cardId }: { cardId: string }) {
                 return;
             }
             const hasData = filteredData.some((d) => 
-                d.tcgNearMint !== null || 
                 d.tcgNormal !== null || 
                 d.tcgHolo !== null || 
                 d.tcgReverse !== null || 
@@ -148,13 +158,6 @@ export function PriceHistoryChart({ cardId }: { cardId: string }) {
                     label: 'Normal',
                     data: filteredData.map((d) => d.tcgNormal),
                     borderColor: '#10B981',
-                    tension: 0.1,
-                    spanGaps: true
-                },
-                {
-                    label: 'Raw',
-                    data: filteredData.map((d) => d.tcgNearMint),
-                    borderColor: '#fc4e60', 
                     tension: 0.1,
                     spanGaps: true
                 },
@@ -287,7 +290,6 @@ export function PriceHistoryChart({ cardId }: { cardId: string }) {
     }, []);
 
     const hasData = filteredData.some((d) => 
-        d.tcgNearMint !== null || 
         d.tcgNormal !== null || 
         d.tcgHolo !== null || 
         d.tcgReverse !== null || 
