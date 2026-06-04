@@ -1,6 +1,10 @@
 import { PrismaClient } from '@prisma/client';
 import TCGdex from '@tcgdex/sdk';
 import axios from 'axios';
+import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
+import { r2 } from '../src/lib/r2';
+import zlib from 'zlib';
+import crypto from 'crypto';
 
 const prisma = new PrismaClient({
     log: ['error']
@@ -327,6 +331,177 @@ async function main() {
     console.log(`✅ Daily MarketStats update complete. Total cards updated: ${totalUpdated}`);
     await revalidateNextCache();
     await warmSetCaches(dbSets);
+
+    try {
+        await incrementHistoryIndex();
+    } catch (err) {
+        console.error('❌ Failed to increment history index:', err);
+    }
+}
+
+// Adds current day prices to price history file
+async function incrementHistoryIndex() {
+    console.log('--- Starting Incremental History Update ---');
+    
+    const BUCKET_NAME = 'cardledger';
+    const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
+
+    // 1. Fetch pointer
+    const pointerRes = await fetch(`${R2_PUBLIC_URL}/history/history-index.current.json`);
+    if (!pointerRes.ok) throw new Error('Could not fetch pointer file');
+    const pointer = await pointerRes.json();
+
+    // 2. Fetch Index & Data
+    const indexRes = await fetch(pointer.indexUrl);
+    const dataRes = await fetch(pointer.dataUrl);
+    if (!indexRes.ok || !dataRes.ok) throw new Error('Could not fetch history files');
+
+    const indexData = await indexRes.json();
+    const dataBuffer = await dataRes.arrayBuffer();
+    const oldInt32Array = new Int32Array(dataBuffer);
+
+    // 3. Setup new date
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
+
+    if (indexData.dates[indexData.dates.length - 1] === todayStr) {
+        console.log('History already has today’s date. Skipping increment.');
+        return;
+    }
+
+    // 4. Fetch today's prices
+    console.log('Querying today’s prices from DB...');
+    const todaysPrices = await prisma.priceHistory.findMany({
+        where: { timestamp: { gte: today } },
+        select: {
+            cardId: true,
+            tcgNearMint: true,
+            tcgNormal: true,
+            tcgHolo: true,
+            tcgReverse: true,
+            tcgFirstEdition: true
+        }
+    });
+
+    const priceMap = new Map();
+    for (const row of todaysPrices) {
+        priceMap.set(row.cardId, row);
+    }
+
+    console.log(`Found ${todaysPrices.length} cards updated today.`);
+
+    const variantKeys = ['tcgNearMint', 'tcgNormal', 'tcgHolo', 'tcgReverse', 'tcgFirstEdition'] as const;
+    const oldDatesLen = indexData.dates.length;
+    
+    // Calculate new total variants
+    let totalVariants = 0;
+    const offsetsObj = indexData.offsets as Record<string, Record<string, number>>;
+    for (const card of Object.values(offsetsObj)) {
+        totalVariants += Object.keys(card).length;
+    }
+
+    const newBufferArray = new Int32Array(oldInt32Array.length + totalVariants);
+    const newOffsets: Record<string, Record<string, number>> = {};
+
+    let writeCursor = 0;
+
+    // Iterate through the existing indexData.offsets map,
+    // assuming offsets are correct
+    
+    for (const [cardId, cardOffsets] of Object.entries(offsetsObj)) {
+        newOffsets[cardId] = {};
+        const todayData = priceMap.get(cardId);
+        
+        for (const variant of variantKeys) {
+            const oldStart = cardOffsets[variant];
+            if (oldStart !== undefined) {
+                const newStart = writeCursor;
+                newOffsets[cardId][variant] = newStart;
+                
+                let lastRunningPrice = 0;
+                
+                // Copy old deltas and calculate last known price
+                for (let i = 0; i < oldDatesLen; i++) {
+                    const delta = oldInt32Array[oldStart + i];
+                    newBufferArray[newStart + i] = delta;
+                    lastRunningPrice += delta;
+                }
+                
+                // Determine new price for today
+                let newDelta = 0;
+                if (todayData && (todayData as any)[variant] !== null) {
+                    const currentPriceCents = Math.round(Number((todayData as any)[variant]) * 100);
+                    newDelta = currentPriceCents - lastRunningPrice;
+                }
+                
+                // Append new delta
+                newBufferArray[newStart + oldDatesLen] = newDelta;
+                
+                writeCursor += (oldDatesLen + 1);
+            }
+        }
+    }
+
+    indexData.dates.push(todayStr);
+    indexData.offsets = newOffsets;
+
+    const version = new Date().toISOString().replace(/[-:.]/g, '');
+    indexData.version = version;
+
+    const binaryBufferToUpload = Buffer.from(newBufferArray.buffer);
+    const indexJsonStr = JSON.stringify(indexData);
+
+    const compressedBinary = zlib.brotliCompressSync(binaryBufferToUpload);
+    const compressedIndex = zlib.brotliCompressSync(Buffer.from(indexJsonStr, 'utf-8'));
+
+    const dataCheckSum = crypto.createHash('sha256').update(binaryBufferToUpload).digest('hex');
+    const indexCheckSum = crypto.createHash('sha256').update(indexJsonStr).digest('hex');
+
+    const dataFileName = `history-data.v${version}.bin.br`;
+    const indexFileName = `history-index.v${version}.json.br`;
+
+    console.log(` -> Uploading data artifact to R2: ${dataFileName}`);
+    await r2.send(new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: `history/${dataFileName}`,
+        Body: compressedBinary,
+        ContentType: 'application/octet-stream',
+        ContentEncoding: 'br',
+        CacheControl: 'public, max-age=86400, immutable'
+    }));
+
+    console.log(` -> Uploading index artifact to R2: ${indexFileName}`);
+    await r2.send(new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: `history/${indexFileName}`,
+        Body: compressedIndex,
+        ContentType: 'application/json',
+        ContentEncoding: 'br',
+        CacheControl: 'public, max-age=86400, immutable'
+    }));
+
+    const pointerFile = {
+        version,
+        indexUrl: `${R2_PUBLIC_URL}/history/${indexFileName}`,
+        dataUrl: `${R2_PUBLIC_URL}/history/${dataFileName}`,
+        indexCheckSum,
+        dataCheckSum,
+        cardCount: Object.keys(indexData.offsets).length,
+        updatedAt: new Date().toISOString()
+    };
+
+    const pointerFileName = 'history-index.current.json';
+    console.log(`-> Uploading pointer file to R2: ${pointerFileName}`);
+    await r2.send(new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: `history/${pointerFileName}`,
+        Body: JSON.stringify(pointerFile),
+        ContentType: 'application/json',
+        CacheControl: 'public, max-age=300'
+    }));
+
+    console.log(' -> ✅ Incremental history artifacts uploaded successfully');
 }
 
 main()
