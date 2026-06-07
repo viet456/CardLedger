@@ -313,8 +313,10 @@ async function syncSeriesAndSets() {
     }
 }
 
+const isForce = process.argv.includes('--force');
+
 async function syncCards() {
-    console.log('🃏 Syncing Cards (Smart Skip Mode)...');
+    console.log(isForce ? '🃏 Syncing Cards (Force Mode)...' : '🃏 Syncing Cards (Smart Skip Mode)...');
     const dbSets = await prisma.set.findMany({ 
         where: { 
             // Don't sync cards in blocked series and sets
@@ -335,8 +337,7 @@ async function syncCards() {
             continue;
         }
 
-        const toProcess = setDetails.cards.filter((c) => !completed.has(c.id));
-        // const toProcess = setDetails.cards;
+        const toProcess = isForce ? setDetails.cards : setDetails.cards.filter((c) => !completed.has(c.id));
         if (toProcess.length === 0) {
             console.log(`  ✅ ${dbSet.name} is 100% complete. Moving on...`);
             continue;
