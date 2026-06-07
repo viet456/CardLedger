@@ -302,6 +302,7 @@ async function syncSeriesAndSets() {
                     symbolOptimized: false
                 },
                 update: {
+                    tcgdexId: set.id,
                     total: set.cardCount.total,
                     name: correctedName,
                     ...(logoImageKey ? { logoImageKey } : {}),
