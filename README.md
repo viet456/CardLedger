@@ -77,7 +77,7 @@ This project was started on September 15, 2025.
 1. Clone the repository: `git clone https://github.com/viet456/CardLedger`
 2. Install dependencies: `pnpm install`
 3. Set up your environment variables in a `.env` file.
-4. Populate your DB: `pnpm run db:populate`
+4. Populate your DB: `pnpm run db:populate` (Use `pnpm run db:populate:force` to force an update of all cards without skipping existing ones)
 5. Run the development server: `pnpm run dev`
 
 Open [http://localhost:3000](http://localhost:3000) to view it in your browser.

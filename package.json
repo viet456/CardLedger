@@ -14,6 +14,7 @@
         "prettier": "prettier --write .",
         "db:generate": "prisma generate",
         "db:populate": "pnpm run db:generate && tsx scripts/populate.ts",
+        "db:populate:force": "pnpm run db:generate && tsx scripts/populate.ts --force",
         "db:backfill-pokedex": "tsx scripts/backfillPokedexSort.ts",
         "db:backfill-release-date": "tsx scripts/backfillReleaseDate.ts",
         "db:backfill-tcg": "tsx scripts/backfillTcgPlayerSetIds.ts",
