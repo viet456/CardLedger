@@ -12,7 +12,7 @@ const BUCKET_NAME = process.env.R2_BUCKET_NAME!;
 const BLOCKED_SERIES = ['tcgp', 'pocket'];
 
 // Block incomplete/bad sets with broken dates
-const BLOCKED_SETS = ['mee', 'mfb', '2024sv', '2023sv', '2022swsh'];
+const BLOCKED_SETS = ['mee', 'mfb', '2024sv', '2023sv', '2022swsh', 'jumbo'];
 
 // --- Helper Functions ---
 

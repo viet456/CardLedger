@@ -5,7 +5,7 @@ import { useHasHydrated } from '@/hooks/useHasHydrated';
 import { useMemo } from 'react';
 import { SetObject } from '@/src/shared-types/card-index';
 import { WifiOff } from 'lucide-react';
-import { SetClient } from '../sets/SetClient';
+import { SetClient, GroupedSet } from '../sets/SetClient';
 
 export function OfflineSetsView() {
     const hasHydrated = useHasHydrated();
@@ -13,15 +13,29 @@ export function OfflineSetsView() {
 
     // Group the flat array by series, just like the server does
     const groupedSets = useMemo(() => {
-        if (!sets) return {};
+        if (!sets) return [];
         
-        return sets.reduce((acc, set) => {
-            if (!acc[set.series]) {
-                acc[set.series] = [];
+        const seriesMap = new Map<string, SetObject[]>();
+        for (const set of sets) {
+            if (!seriesMap.has(set.series)) {
+                seriesMap.set(set.series, []);
             }
-            acc[set.series].push(set);
-            return acc;
-        }, {} as Record<string, SetObject[]>);
+            seriesMap.get(set.series)!.push(set);
+        }
+
+        const grouped = Array.from(seriesMap.entries()).map(([series, groupSets]) => {
+            // groupSets is already sorted newest first, so the oldest set is at the end
+            const oldestSet = groupSets[groupSets.length - 1];
+            return {
+                series,
+                sets: groupSets,
+                _startDate: new Date(oldestSet.releaseDate).getTime()
+            };
+        });
+
+        grouped.sort((a, b) => b._startDate - a._startDate);
+
+        return grouped.map(({ _startDate, ...rest }) => rest) as GroupedSet[];
     }, [sets]);
 
     if (!hasHydrated) {
