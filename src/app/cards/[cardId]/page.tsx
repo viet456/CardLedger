@@ -2,7 +2,8 @@ import { Suspense } from 'react';
 import { CardImageDisplay } from './CardImageDisplay';
 import { CardDetails } from './CardDetails';
 import { CardBreadcrumbs } from './CardBreadcrumbs';
-import { BreadcrumbSkeleton, DetailsSkeleton } from './Skeletons';
+import { ClientCachedBreadcrumbFallback } from './ClientCachedBreadcrumbFallback';
+import { ClientCachedDetailsFallback } from './ClientCachedDetailsFallback';
 import { PriceHero } from '@/src/components/cards/PriceHero';
 
 // src/app/cards/[cardId]/page.tsx
@@ -17,7 +18,7 @@ export default async function SingleCardPage({ params, searchParams }: {
 
     return (
         <main className='container mx-auto max-w-6xl p-4 sm:p-6 lg:p-8'>
-            <Suspense fallback={<BreadcrumbSkeleton />}>
+            <Suspense fallback={<ClientCachedBreadcrumbFallback cardId={cardId} />}>
                 <CardBreadcrumbs cardId={cardId} />
             </Suspense>
 
@@ -36,7 +37,7 @@ export default async function SingleCardPage({ params, searchParams }: {
 
                 {/* --- RIGHT COLUMN --- */}
                 <div className='md:col-span-2'>
-                    <Suspense fallback={<DetailsSkeleton />}>
+                    <Suspense fallback={<ClientCachedDetailsFallback cardId={cardId} />}>
                         <CardDetails cardId={cardId} />
                     </Suspense>
                 </div>
