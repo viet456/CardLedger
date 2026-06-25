@@ -7,8 +7,13 @@ import { SetCard } from '@/src/components/SetCard';
 import { X, Search } from 'lucide-react';
 import { Button } from '@/src/components/ui/button';
 
+export interface GroupedSet {
+    series: string;
+    sets: SetObject[];
+}
+
 interface SetClientProps {
-    groupedSets: Record<string, SetObject[]>;
+    groupedSets: GroupedSet[];
 }
 
 export function SetClient({ groupedSets }: SetClientProps) {
@@ -16,19 +21,17 @@ export function SetClient({ groupedSets }: SetClientProps) {
 
     // Filter the grouped sets based on the search query
     const filteredGroups = useMemo(() => {
-    return Object.entries(groupedSets).reduce((acc, [series, sets]) => {
-        const matchedSets = sets.filter((set) =>
-            set.name.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-
-            if (matchedSets.length > 0) {
-                acc[series] = matchedSets;
-            }
-            return acc;
-        }, {} as Record<string, SetObject[]>);
+        return groupedSets
+            .map((group) => {
+                const matchedSets = group.sets.filter((set) =>
+                    set.name.toLowerCase().includes(searchQuery.toLowerCase())
+                );
+                return { ...group, sets: matchedSets };
+            })
+            .filter((group) => group.sets.length > 0);
     }, [searchQuery, groupedSets]);
 
-    const totalResults = Object.values(filteredGroups).flat().length;
+    const totalResults = filteredGroups.reduce((sum, group) => sum + group.sets.length, 0);
 
     return (
         <div>
@@ -70,21 +73,21 @@ export function SetClient({ groupedSets }: SetClientProps) {
             </div>
 
             <div className='space-y-8'>
-                {Object.keys(filteredGroups).length === 0 ? (
+                {filteredGroups.length === 0 ? (
                     <p role="status" className='text-muted-foreground mt-8'>
                         {`No sets found matching "${searchQuery}"`}
                     </p>
                 ) : (
-                    Object.keys(filteredGroups).map((series, seriesIndex) => (
-                        <section key={series} aria-labelledby={`heading-${series}`}>
+                    filteredGroups.map((group, seriesIndex) => (
+                        <section key={group.series} aria-labelledby={`heading-${group.series}`}>
                             <h2 
-                                id={`heading-${series}`}
+                                id={`heading-${group.series}`}
                                 className='mb-4 border-b pb-2 text-2xl font-semibold'
                             >
-                                {series}
+                                {group.series}
                             </h2>
                             <div className='grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5'>
-                                {filteredGroups[series].map((set: SetObject, setIndex: number) => {
+                                {group.sets.map((set: SetObject, setIndex: number) => {
                                     const isPriority = !searchQuery && seriesIndex < 2 && setIndex < 5;
                                     return <SetCard key={set.id} set={set} isPriority={isPriority} />;
                                 })}

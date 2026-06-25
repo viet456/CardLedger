@@ -3,7 +3,7 @@ import { SetObject } from '@/src/shared-types/card-index';
 import { Metadata } from 'next';
 import { cacheLife, cacheTag } from 'next/cache';
 import { type Set as PrismaSet } from '@prisma/client';
-import { SetClient } from './SetClient';
+import { SetClient, GroupedSet } from './SetClient';
 
 export const metadata: Metadata = {
     title: 'All Sets | CardLedger',
@@ -19,17 +19,37 @@ async function getCachedGroupedSets() {
             releaseDate: 'desc'
         }
     });
-    return allSets.reduce((acc: Record<string, SetObject[]>, set: PrismaSet) => {
+    
+    const seriesMap = new Map<string, PrismaSet[]>();
+    for (const set of allSets) {
         const series = set.series;
-        if (!acc[series]) {
-            acc[series] = [];
+        if (!seriesMap.has(series)) {
+            seriesMap.set(series, []);
         }
-        acc[series].push({
+        seriesMap.get(series)!.push(set);
+    }
+
+    const grouped = Array.from(seriesMap.entries()).map(([series, sets]) => {
+        const mappedSets = sets.map(set => ({
             ...set,
             releaseDate: set.releaseDate.toISOString().split('T')[0]
-        });
-        return acc;
-    }, {});
+        }));
+        
+        // Use the oldest set in the series to represent its chronological starting point
+        const oldestSet = sets[sets.length - 1];
+        
+        return {
+            series,
+            sets: mappedSets,
+            _startDate: oldestSet.releaseDate.getTime() // Temporary field for sorting
+        };
+    });
+
+    // Sort series by newest starting date first
+    grouped.sort((a, b) => b._startDate - a._startDate);
+
+    // Remove the temporary sorting field
+    return grouped.map(({ _startDate, ...rest }) => rest) as GroupedSet[];
 }
 
 export default async function SetsPage() {
