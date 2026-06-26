@@ -13,10 +13,10 @@ function toNum(val: number | Decimal | null | undefined): number | null {
     if (typeof val === 'number') return val;
     // Check for Prisma Decimal .toNumber()
     if (val instanceof Decimal || (typeof val === 'object' && 'toNumber' in val)) {
-        return val.toNumber();
+        return Math.round(val.toNumber() * 100) / 100;
     }
     const num = Number(val);
-    return isNaN(num) ? null : num;
+    return isNaN(num) ? null : Math.round(num * 100) / 100;
 }
 
 function mapMarketStatsToVariants(

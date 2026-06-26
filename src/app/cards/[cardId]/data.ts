@@ -19,14 +19,20 @@ export async function getCachedPriceHistory(cardId: string): Promise<PriceHistor
             tcgFirstEdition: true
         }
     });
-    return history.map((row) => ({
+    const dayMap = new Map<string, typeof history[0]>();
+    for (const row of history) {
+        const dayKey = row.timestamp.toISOString().split('T')[0];
+        dayMap.set(dayKey, row);
+    }
+    
+    return Array.from(dayMap.values()).map((row) => ({
         ...row,
         timestamp: row.timestamp.toISOString().split('T')[0],
-        tcgNearMint: row.tcgNearMint?.toNumber() ?? null,
-        tcgNormal: row.tcgNormal?.toNumber() ?? null,
-        tcgHolo: row.tcgHolo?.toNumber() ?? null,
-        tcgReverse: row.tcgReverse?.toNumber() ?? null,
-        tcgFirstEdition: row.tcgFirstEdition?.toNumber() ?? null
+        tcgNearMint: row.tcgNearMint ? Math.round(row.tcgNearMint.toNumber() * 100) / 100 : null,
+        tcgNormal: row.tcgNormal ? Math.round(row.tcgNormal.toNumber() * 100) / 100 : null,
+        tcgHolo: row.tcgHolo ? Math.round(row.tcgHolo.toNumber() * 100) / 100 : null,
+        tcgReverse: row.tcgReverse ? Math.round(row.tcgReverse.toNumber() * 100) / 100 : null,
+        tcgFirstEdition: row.tcgFirstEdition ? Math.round(row.tcgFirstEdition.toNumber() * 100) / 100 : null
     }));
 }
 

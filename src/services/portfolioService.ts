@@ -58,11 +58,11 @@ export async function getCachedBulkPriceHistory(cardIds: string[]) {
     return history.map((row) => ({
         cardId: row.cardId,
         timestamp: row.timestamp.toISOString().split('T')[0],
-        tcgNearMint: row.tcgNearMint?.toNumber() ?? null,
-        tcgNormal: row.tcgNormal?.toNumber() ?? null,
-        tcgHolo: row.tcgHolo?.toNumber() ?? null,
-        tcgReverse: row.tcgReverse?.toNumber() ?? null,
-        tcgFirstEdition: row.tcgFirstEdition?.toNumber() ?? null
+        tcgNearMint: row.tcgNearMint ? Math.round(row.tcgNearMint.toNumber() * 100) / 100 : null,
+        tcgNormal: row.tcgNormal ? Math.round(row.tcgNormal.toNumber() * 100) / 100 : null,
+        tcgHolo: row.tcgHolo ? Math.round(row.tcgHolo.toNumber() * 100) / 100 : null,
+        tcgReverse: row.tcgReverse ? Math.round(row.tcgReverse.toNumber() * 100) / 100 : null,
+        tcgFirstEdition: row.tcgFirstEdition ? Math.round(row.tcgFirstEdition.toNumber() * 100) / 100 : null
     }));
 }
 
