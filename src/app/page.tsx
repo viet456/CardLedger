@@ -10,11 +10,12 @@ import {
     ChartNoAxesCombined,
     ArrowRight
 } from 'lucide-react';
-
 import { HeroAssetInspector } from '../components/layout/HeroAssetInspector';
-import PortfolioShowcase from '../components/layout/PortfolioShowcase';
-import DatabaseShowcase from '../components/layout/DatabaseShowcase';
-import { SyncShowcase } from '../components/layout/SyncShowcase';
+import {
+    PortfolioShowcase,
+    DatabaseShowcase,
+    SyncShowcase
+} from '../components/layout/ShowcaseSections';
 
 export const metadata: Metadata = {
     title: 'CardLedger: Your Pokémon TCG Collection Manager',
