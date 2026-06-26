@@ -12,7 +12,6 @@ import { Suspense } from 'react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Analytics } from '@vercel/analytics/next';
 import { SerwistProvider } from './serwist'; 
-import { GlobalOfflineBanner } from '../components/layout/GlobalOfflineBanner';
 
 const inter = Inter({
     subsets: ['latin'],
@@ -75,7 +74,6 @@ async function AppContent({ children }: { children: React.ReactNode }) {
         <ProvidersWrapper session={session}>
             <CardDataInitializer />
             <Header />
-            <GlobalOfflineBanner />
             <main className='flex-grow'>{children}</main>
             <Footer />
             <ScrollToTopButton />

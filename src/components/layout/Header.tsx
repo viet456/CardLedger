@@ -9,6 +9,9 @@ import { ThemeToggle } from './ThemeToggle';
 import { Button } from '../ui/button';
 import { UserNav } from './UserNav';
 import { useAuthSession } from '@/src/providers/SessionProvider';
+import { useIsOffline } from '@/src/providers/OfflineProvider';
+import { WifiOff } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/src/components/ui/tooltip';
 
 export const navItems = [
     { href: '/', label: 'Home' },
@@ -24,6 +27,7 @@ export function Header() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const pathname = usePathname();
 
+    const isOffline = useIsOffline();
     const isCardsPage = pathname === '/cards';
     const isSetPage = pathname.startsWith('/sets/');
     const showHeaderSearch = !isCardsPage && !isSetPage;
@@ -90,13 +94,40 @@ export function Header() {
                                 <Link href='/sign-in'>Sign In</Link>
                             </Button>
                         )}
+                        {isOffline && (
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <span className='flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-500'>
+                                            <WifiOff className='h-3.5 w-3.5' />
+                                            <span className='hidden lg:inline'>Offline</span>
+                                        </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p className='text-xs'>You&apos;re offline — browsing cached data</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        )}
                         {/* Logged in */}
                         {user && <UserNav user={user} />}
                         <ThemeToggle />
                     </div>
 
                     {/* Mobile navigation toggle */}
-                    <div className='md:hidden'>
+                    <div className='flex items-center md:hidden'>
+                        {isOffline && (
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <WifiOff className='mr-2 h-5 w-5 text-amber-500' />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>You&apos;re offline — browsing cached data</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        )}
                         <MobileNav />
                     </div>
                 </div>

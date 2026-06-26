@@ -159,7 +159,7 @@ export function CardFilterControls({
     // --- LAYOUTS ---
 
     const SidebarLayout = (
-        <div className='flex flex-col gap-3'>
+        <div className='flex h-full flex-col gap-3'>
             {/* Top Area */}
             <div className='w-full shrink-0'>
                 <SearchBar />
@@ -217,7 +217,7 @@ export function CardFilterControls({
             <Button
                 variant='outline'
                 onClick={handleClearFilters}
-                className='mt-2 h-9 w-full shrink-0'
+                className='mt-auto mb-2 h-9 w-full shrink-0'
             >
                 <RotateCcw className='mr-2 h-4 w-4' /> Clear All
             </Button>
