@@ -360,20 +360,32 @@ async function incrementHistoryIndex() {
     const dataBuffer = await dataRes.arrayBuffer();
     const oldInt32Array = new Int32Array(dataBuffer);
 
-    // 3. Setup new date
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().split('T')[0];
+    // 3. Determine the target date from the latest price record in the DB.
+    //    We use the source's reported date (from TCGdex/TCGPlayer) rather than
+    //    new Date(), because the API's `updated` field can lag behind the script
+    //    run date. This ensures the history index date aligns with the actual
+    //    price data timestamps stored in the DB.
+    const latestRecord = await prisma.priceHistory.findFirst({
+        orderBy: { timestamp: 'desc' },
+        select: { timestamp: true }
+    });
+    if (!latestRecord) {
+        console.log('No price history found in DB. Skipping increment.');
+        return;
+    }
+    const latestDate = new Date(latestRecord.timestamp);
+    latestDate.setHours(0, 0, 0, 0);
+    const latestDateStr = latestDate.toISOString().split('T')[0];
 
-    if (indexData.dates[indexData.dates.length - 1] === todayStr) {
-        console.log('History already has today’s date. Skipping increment.');
+    if (indexData.dates[indexData.dates.length - 1] === latestDateStr) {
+        console.log(`History already has latest date (${latestDateStr}). Skipping increment.`);
         return;
     }
 
-    // 4. Fetch today's prices
-    console.log('Querying today’s prices from DB...');
-    const todaysPrices = await prisma.priceHistory.findMany({
-        where: { timestamp: { gte: today } },
+    // 4. Fetch prices for the latest date
+    console.log(`Querying prices from DB for ${latestDateStr}...`);
+    const latestPrices = await prisma.priceHistory.findMany({
+        where: { timestamp: { gte: latestDate } },
         select: {
             cardId: true,
             tcgNearMint: true,
@@ -385,11 +397,11 @@ async function incrementHistoryIndex() {
     });
 
     const priceMap = new Map();
-    for (const row of todaysPrices) {
+    for (const row of latestPrices) {
         priceMap.set(row.cardId, row);
     }
 
-    console.log(`Found ${todaysPrices.length} cards updated today.`);
+    console.log(`Found ${latestPrices.length} cards with prices for ${latestDateStr}.`);
 
     const variantKeys = ['tcgNearMint', 'tcgNormal', 'tcgHolo', 'tcgReverse', 'tcgFirstEdition'] as const;
     const oldDatesLen = indexData.dates.length;
@@ -411,7 +423,7 @@ async function incrementHistoryIndex() {
     
     for (const [cardId, cardOffsets] of Object.entries(offsetsObj)) {
         newOffsets[cardId] = {};
-        const todayData = priceMap.get(cardId);
+        const latestDayData = priceMap.get(cardId);
         
         for (const variant of variantKeys) {
             const oldStart = cardOffsets[variant];
@@ -428,10 +440,10 @@ async function incrementHistoryIndex() {
                     lastRunningPrice += delta;
                 }
                 
-                // Determine new price for today
+                // Determine new price for the latest date
                 let newDelta = 0;
-                if (todayData && (todayData as any)[variant] !== null) {
-                    const currentPriceCents = Math.round(Number((todayData as any)[variant]) * 100);
+                if (latestDayData && (latestDayData as any)[variant] !== null) {
+                    const currentPriceCents = Math.round(Number((latestDayData as any)[variant]) * 100);
                     newDelta = currentPriceCents - lastRunningPrice;
                 }
                 
@@ -443,7 +455,7 @@ async function incrementHistoryIndex() {
         }
     }
 
-    indexData.dates.push(todayStr);
+    indexData.dates.push(latestDateStr);
     indexData.offsets = newOffsets;
 
     const version = new Date().toISOString().replace(/[-:.]/g, '');
