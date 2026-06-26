@@ -59,6 +59,7 @@ export function denormalizeSingleCard(
         hasNormal: card.hasNormal,
         hasHolo: card.hasHolo,
         hasReverse: card.hasReverse,
-        hasFirstEdition: card.hasFirstEdition
+        hasFirstEdition: card.hasFirstEdition,
+        tcgPlayerId: null // Not available in normalized index; populated server-side
     };
 }

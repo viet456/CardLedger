@@ -1,9 +1,10 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import { ArrowUpDown } from 'lucide-react';
+import { ArrowUpDown, ExternalLink } from 'lucide-react';
 import { Button } from '@/src/components/ui/button';
 import Image from 'next/image';
+import { getTcgPlayerUrl } from '@/src/utils/tcgplayer';
 
 export type PortfolioRow = {
     id: string;
@@ -141,6 +142,26 @@ export const columns: ColumnDef<PortfolioRow>[] = [
         cell: ({ row }) => {
             const amount = row.getValue('currentPrice') as number;
             return <div className='text-right text-base font-bold'>${amount.toFixed(2)}</div>;
+        }
+    },
+    {
+        id: 'shop',
+        header: () => <div className='text-right font-semibold'>Shop</div>,
+        cell: ({ row }) => {
+            const url = getTcgPlayerUrl(null, row.original.name, row.original.setName);
+            return (
+                <div className='text-right'>
+                    <a
+                        href={url}
+                        target='_blank'
+                        rel='noopener noreferrer nofollow'
+                        className='inline-flex items-center gap-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-400 transition hover:bg-emerald-500/20 hover:text-emerald-300'
+                    >
+                        <ExternalLink className='h-3 w-3' />
+                        TCGplayer
+                    </a>
+                </div>
+            );
         }
     },
     {

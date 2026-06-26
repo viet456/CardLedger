@@ -170,6 +170,16 @@ async function processCard(cardRef: any, dbSet: any, cardsWithImages: Set<string
 
         const variants = card.variants || {};
 
+        // Extract TCGplayer product ID from pricing data
+        const pricing = (card as any).pricing;
+        const tcgPlayerId: number | null =
+            pricing?.tcgplayer?.holofoil?.productId ??
+            pricing?.tcgplayer?.normal?.productId ??
+            pricing?.tcgplayer?.reverse?.productId ??
+            pricing?.tcgplayer?.['1stEditionHolofoil']?.productId ??
+            pricing?.tcgplayer?.['1stEditionNormal']?.productId ??
+            null;
+
         await prisma.card.upsert({
             where: { id: card.id },
             create: {
@@ -203,7 +213,8 @@ async function processCard(cardRef: any, dbSet: any, cardsWithImages: Set<string
                 hasNormal: variants.normal ?? false,
                 hasHolo: variants.holo ?? false,
                 hasReverse: variants.reverse ?? false,
-                hasFirstEdition: variants.firstEdition ?? false
+                hasFirstEdition: variants.firstEdition ?? false,
+                tcgPlayerId
             },
             update: {
                 hp: card.hp ? parseInt(String(card.hp)) : null,
@@ -211,6 +222,7 @@ async function processCard(cardRef: any, dbSet: any, cardsWithImages: Set<string
                 hasHolo: variants.holo ?? false,
                 hasReverse: variants.reverse ?? false,
                 hasFirstEdition: variants.firstEdition ?? false,
+                ...(tcgPlayerId ? { tcgPlayerId } : {}),
                 ...(imageKey ? { imageKey } : {}),
                 ...(imageUploaded ? { imagesOptimized: false } : {})
             }

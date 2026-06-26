@@ -115,6 +115,7 @@ export function mapPrismaCardToDenormalized(
         hasNormal: card.hasNormal,
         hasHolo: card.hasHolo,
         hasReverse: card.hasReverse,
-        hasFirstEdition: card.hasFirstEdition
+        hasFirstEdition: card.hasFirstEdition,
+        tcgPlayerId: card.tcgPlayerId ?? null
     };
 }

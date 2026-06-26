@@ -123,6 +123,7 @@ model Card {
 
     imageKey        String?
     imagesOptimized Boolean @default(false)
+    tcgPlayerId     Int? // TCGplayer product ID for affiliate links
 
     marketStats   MarketStats? // Curret price
     priceHistory  PriceHistory[]
