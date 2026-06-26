@@ -1,5 +1,6 @@
 import { useCardStore } from '@/src/lib/store/cardStore';
 import { useMarketStore } from '@/src/lib/store/marketStore';
+import { useHistoryStore } from '@/src/lib/store/historyStore';
 import { useSyncExternalStore, useCallback } from 'react';
 
 interface PersistedStore {
@@ -33,6 +34,7 @@ function useStoreHydration(store: PersistedStore): boolean {
 export function useHasHydrated() {
     const cardStoreHydrated = useStoreHydration(useCardStore);
     const marketStoreHydrated = useStoreHydration(useMarketStore);
+    const historyStoreHydrated = useStoreHydration(useHistoryStore);
 
-    return cardStoreHydrated && marketStoreHydrated;
+    return cardStoreHydrated && marketStoreHydrated && historyStoreHydrated;
 }

@@ -16,11 +16,71 @@ export function PriceHero({ cardId }: { cardId: string }) {
         : 0;
 
     useEffect(() => {
-        // Uses the same endpoint as PriceHistoryChart
-        fetch(`/api/prices/${cardId}`)
-            .then(res => res.json())
-            .then(setData)
-            .finally(() => setLoading(false));
+        let cancelled = false;
+
+        const loadLocalFirst = async () => {
+            let localSuccess = false;
+
+            // 1. Try history store for instant local data (includes trend)
+            try {
+                const { useHistoryStore } = await import('@/src/lib/store/historyStore');
+                const store = useHistoryStore.getState();
+
+                // If idle, kick off initialization but also try to wait briefly
+                if (store.status === 'idle') {
+                    store.initialize();
+                }
+
+                let currentStore = useHistoryStore.getState();
+
+                if (currentStore.status === 'loading') {
+                    await new Promise<void>((resolve) => {
+                        const timeout = setTimeout(() => {
+                            unsub();
+                            resolve();
+                        }, 8000);
+                        const unsub = useHistoryStore.subscribe((state) => {
+                            if (state.status !== 'loading') {
+                                clearTimeout(timeout);
+                                unsub();
+                                currentStore = state;
+                                resolve();
+                            }
+                        });
+                    });
+                }
+
+                if (currentStore.status.startsWith('ready')) {
+                    const localData = currentStore.getAllHistory(cardId);
+                    if (localData && localData.length > 0 && !cancelled) {
+                        setData(localData);
+                        localSuccess = true;
+                    }
+                }
+            } catch (err) {
+                // Silently fall back to network
+            }
+
+            // 2. Only use network as fallback if local data wasn't available
+            if (!localSuccess && !cancelled) {
+                try {
+                    const res = await fetch(`/api/prices/${cardId}`);
+                    if (res.ok && !cancelled) {
+                        const networkData = await res.json();
+                        setData(networkData);
+                    }
+                } catch (err) {
+                    // Network unavailable
+                }
+            }
+
+            if (!cancelled) {
+                setLoading(false);
+            }
+        };
+
+        loadLocalFirst();
+        return () => { cancelled = true; };
     }, [cardId]);
 
     // If we are loading and have no local cache fallback, show the skeleton

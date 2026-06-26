@@ -3,7 +3,7 @@ import { persist, PersistStorage, StorageValue } from 'zustand/middleware';
 import { get, set, del } from 'idb-keyval';
 import { HistoryIndex, HistoryPointerFile } from '@/src/shared-types/price-api';
 
-const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
+const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://assets.cardledger.io';
 
 // The state we store in IndexedDB
 type PersistedState = {
@@ -67,7 +67,9 @@ export const useHistoryStore = create<HistoryStoreState>()(
                     }
 
                     // Fetch Index JSON
-                    const indexRes = await fetch(pointer.indexUrl);
+                    // Ensure the URL utilizes the R2 domain if it's an absolute path
+                    const indexUrl = pointer.indexUrl.startsWith('http') ? pointer.indexUrl : `${R2_PUBLIC_URL}${pointer.indexUrl.startsWith('/') ? '' : '/'}${pointer.indexUrl}`;
+                    const indexRes = await fetch(indexUrl);
                     if (!indexRes.ok) throw new Error('Failed to fetch history index artifact.');
                     const indexDataString = await indexRes.text();
 
@@ -84,7 +86,8 @@ export const useHistoryStore = create<HistoryStoreState>()(
                     const indexData: HistoryIndex = JSON.parse(indexDataString);
 
                     // Fetch Binary ArrayBuffer
-                    const dataRes = await fetch(pointer.dataUrl);
+                    const dataUrl = pointer.dataUrl.startsWith('http') ? pointer.dataUrl : `${R2_PUBLIC_URL}${pointer.dataUrl.startsWith('/') ? '' : '/'}${pointer.dataUrl}`;
+                    const dataRes = await fetch(dataUrl);
                     if (!dataRes.ok) throw new Error('Failed to fetch history binary artifact.');
                     const dataBuffer = await dataRes.arrayBuffer();
 
@@ -105,9 +108,11 @@ export const useHistoryStore = create<HistoryStoreState>()(
                     });
                 } catch (error) {
                     console.error(`[HistoryStore]: ❌ Error during initialization:`, error);
+                    if (error instanceof Error && error.name === 'QuotaExceededError') {
+                        console.error('[HistoryStore] IndexedDB Quota Exceeded! The history buffer is likely too large for this browsing mode (e.g. Incognito).');
+                    }
                     const state = getStore();
                     if (state.version && state.buffer && state.index) {
-                        console.log('[HistoryStore]: Using cached offline data due to network error.');
                         set({ 
                             status: 'ready_from_cache', 
                             int32Data: state.int32Data || new Int32Array(state.buffer) 
@@ -120,7 +125,14 @@ export const useHistoryStore = create<HistoryStoreState>()(
 
             getHistory: (cardId: string, variant: string) => {
                 const state = getStore();
-                if (!state.index || !state.int32Data) return null;
+                
+                let data = state.int32Data;
+                if (!data && state.buffer) {
+                    data = new Int32Array(state.buffer);
+                    set({ int32Data: data });
+                }
+
+                if (!state.index || !data) return null;
 
                 const cardOffsets = state.index.offsets[cardId];
                 if (!cardOffsets) return null;
@@ -129,7 +141,6 @@ export const useHistoryStore = create<HistoryStoreState>()(
                 if (offset === undefined) return null;
 
                 const dates = state.index.dates;
-                const data = state.int32Data;
 
                 const result = [];
                 let runningPrice = 0;
@@ -140,7 +151,7 @@ export const useHistoryStore = create<HistoryStoreState>()(
                     
                     result.push({
                         timestamp: dates[i],
-                        price: runningPrice / 100 // Convert cents back to dollars
+                        price: runningPrice > 0 ? runningPrice / 100 : 0 // Technically getHistory is barely used, but we keep it safe
                     });
                 }
 
@@ -149,13 +160,22 @@ export const useHistoryStore = create<HistoryStoreState>()(
 
             getAllHistory: (cardId: string) => {
                 const state = getStore();
-                if (!state.index || !state.int32Data) return null;
+                
+                // If we have buffer but no int32Data, set it up first
+                let data = state.int32Data;
+                if (!data && state.buffer) {
+                    data = new Int32Array(state.buffer);
+                    set({ int32Data: data });
+                }
+
+                if (!state.index || !data) {
+                    return null;
+                }
 
                 const cardOffsets = state.index.offsets[cardId];
                 if (!cardOffsets) return null;
 
                 const dates = state.index.dates;
-                const data = state.int32Data;
 
                 const result: import('@/src/shared-types/price-api').PriceHistoryDataPoint[] = [];
 
@@ -167,19 +187,55 @@ export const useHistoryStore = create<HistoryStoreState>()(
                     runningPrice: 0
                 }));
 
+                // First pass: locate the first valid date index
+                let firstValidIndex = 0;
+                let foundValid = false;
+
+                // We need to simulate running prices up to the first valid index without mutating the actual state objects
+                const tempRunningPrices = variantData.map(() => 0);
+                
+                for (let i = 0; i < dates.length; i++) {
+                    let hasValidPoint = false;
+                    for (let j = 0; j < variantData.length; j++) {
+                        const v = variantData[j];
+                        if (v.offset !== undefined) {
+                            tempRunningPrices[j] += data[v.offset + i];
+                            if (tempRunningPrices[j] > 0) {
+                                hasValidPoint = true;
+                            }
+                        }
+                    }
+                    if (hasValidPoint) {
+                        firstValidIndex = i;
+                        foundValid = true;
+                        break;
+                    }
+                }
+
+                if (!foundValid) {
+                    return [];
+                }
+
+                // Second pass: actually build the array from the first valid index
                 for (let i = 0; i < dates.length; i++) {
                     const dataPoint: any = { timestamp: dates[i] };
                     
                     for (const v of variantData) {
                         if (v.offset !== undefined) {
                             v.runningPrice += data[v.offset + i];
-                            dataPoint[v.key] = v.runningPrice / 100;
+                            if (v.runningPrice > 0) {
+                                dataPoint[v.key] = v.runningPrice / 100;
+                            } else {
+                                dataPoint[v.key] = null;
+                            }
                         } else {
                             dataPoint[v.key] = null;
                         }
                     }
                     
-                    result.push(dataPoint as import('@/src/shared-types/price-api').PriceHistoryDataPoint);
+                    if (i >= firstValidIndex) {
+                        result.push(dataPoint as import('@/src/shared-types/price-api').PriceHistoryDataPoint);
+                    }
                 }
 
                 return result;
@@ -195,7 +251,8 @@ export const useHistoryStore = create<HistoryStoreState>()(
             }),
             onRehydrateStorage: () => (state) => {
                 if (state && state.buffer) {
-                    state.int32Data = new Int32Array(state.buffer);
+                    // Note: Cannot mutate state here, so we defer setting int32Data
+                    useHistoryStore.setState({ int32Data: new Int32Array(state.buffer) });
                 }
             }
         }

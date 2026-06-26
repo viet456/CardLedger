@@ -16,7 +16,10 @@ export function PriceHistoryChart({ cardId }: { cardId: string }) {
     const [activeRange, setActiveRange] = useState<TimeRange>('All');
 
     useEffect(() => {
+        let cancelled = false;
+
         const processData = (data: PriceHistoryDataPoint[]) => {
+            if (cancelled) return;
             setInitialData(data);
             if (data && data.length > 0) {
                 const earliest = new Date(data[0].timestamp).getTime();
@@ -29,54 +32,73 @@ export function PriceHistoryChart({ cardId }: { cardId: string }) {
             }
         };
 
-        const loadData = async () => {
+        const loadFromStore = async (): Promise<boolean> => {
+            try {
+                const { useHistoryStore } = await import('@/src/lib/store/historyStore');
+                const store = useHistoryStore.getState();
+
+                // If idle, trigger initialization but don't block on it for long
+                if (store.status === 'idle') {
+                    store.initialize();
+                }
+
+                let currentStore = useHistoryStore.getState();
+
+                // Wait for store to finish loading (with timeout)
+                if (currentStore.status === 'loading') {
+                    await new Promise<void>((resolve) => {
+                        const timeout = setTimeout(() => {
+                            unsub();
+                            resolve();
+                        }, 8000); // 8s max wait for history index download
+                        const unsub = useHistoryStore.subscribe((state) => {
+                            if (state.status !== 'loading') {
+                                clearTimeout(timeout);
+                                unsub();
+                                currentStore = state;
+                                resolve();
+                            }
+                        });
+                    });
+                }
+
+                if (currentStore.status.startsWith('ready')) {
+                    const localData = currentStore.getAllHistory(cardId);
+                    if (localData && localData.length > 0) {
+                        processData(localData);
+                        return true;
+                    }
+                }
+            } catch (err) {
+                // Silently fall back to network
+            }
+            return false;
+        };
+
+        const loadFromNetwork = async () => {
             try {
                 const res = await fetch(`/api/prices/${cardId}`);
                 if (!res.ok) throw new Error('Network response was not ok');
                 const data = await res.json();
                 processData(data);
             } catch (err) {
-                console.warn("Failed to fetch price history from network, attempting offline store...", err);
-                try {
-                    const { useHistoryStore } = await import('@/src/lib/store/historyStore');
-                    const store = useHistoryStore.getState();
-                    
-                    if (store.status === 'idle') {
-                        await store.initialize();
-                    }
-
-                    let finalStore = useHistoryStore.getState();
-                    
-                    if (finalStore.status === 'loading') {
-                        await new Promise<void>((resolve) => {
-                            const unsub = useHistoryStore.subscribe((state) => {
-                                if (state.status !== 'loading') {
-                                    unsub();
-                                    finalStore = state;
-                                    resolve();
-                                }
-                            });
-                        });
-                    }
-
-                    if (finalStore.status.startsWith('ready')) {
-                        const offlineData = finalStore.getAllHistory(cardId);
-                        if (offlineData) {
-                            console.log("Successfully loaded offline price history.");
-                            processData(offlineData);
-                            return;
-                        }
-                    }
-                } catch (storeErr) {
-                    console.error("Failed to load offline history:", storeErr);
-                }
-
-                console.error("No price history available.");
                 setInitialData([]);
             }
         };
 
+        const loadData = async () => {
+            // 1. Try local store first for instant display
+            const localSuccess = await loadFromStore();
+
+            // 2. Only use network as fallback if local data wasn't available
+            if (!localSuccess && !cancelled) {
+                await loadFromNetwork();
+            }
+        };
+
         loadData();
+
+        return () => { cancelled = true; };
     }, [cardId]);
 
     const filteredData = useMemo(() => {
