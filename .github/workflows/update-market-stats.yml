@@ -2,8 +2,10 @@ name: Update Market Stats
 
 on:
     schedule:
-        # Run twice daily at Midnight and 9 AM UTC (4PM and 1 AM PST)
-        - cron: '0 0,9 * * *'
+        # Run daily at 9 AM UTC (2 AM PDT / 5 AM EDT).
+        # Scheduled during US morning hours (before midnight UTC) so that
+        # the UTC date matches the US calendar date for price history timestamps.
+        - cron: '0 9 * * *'
     workflow_dispatch:
 
 jobs:
