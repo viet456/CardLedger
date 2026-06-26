@@ -127,6 +127,7 @@ export type DenormalizedCard = {
     hasHolo: boolean;
     hasReverse: boolean;
     hasFirstEdition: boolean;
+    tcgPlayerId: number | null;
 };
 
 export type PointerFile = {

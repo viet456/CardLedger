@@ -4,8 +4,13 @@ import { useEffect, useState } from 'react';
 import { PriceHistoryDataPoint } from '@/src/shared-types/price-api';
 import { PriceHeroSkeleton } from '@/src/app/cards/[cardId]/Skeletons';
 import { useMarketStore } from '@/src/lib/store/marketStore';
-
-export function PriceHero({ cardId }: { cardId: string }) {
+export function PriceHero({
+    cardId,
+    tcgPlayerUrl
+}: {
+    cardId: string;
+    tcgPlayerUrl: string;
+}) {
     const [data, setData] = useState<PriceHistoryDataPoint[] | null>(null);
     const [loading, setLoading] = useState(true);
     
@@ -118,6 +123,17 @@ export function PriceHero({ cardId }: { cardId: string }) {
                 </div>
             )}
         </div>
+        <a
+            href={tcgPlayerUrl}
+            target="_blank"
+            rel="noopener noreferrer nofollow"
+            className="inline-flex items-center gap-1.5 mt-1 text-xs font-semibold text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline-offset-2 hover:underline transition-colors w-fit"
+        >
+            Buy on TCGplayer
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M7 17 17 7" /><path d="M7 7h10v10" />
+            </svg>
+        </a>
     </div>
 );
 }

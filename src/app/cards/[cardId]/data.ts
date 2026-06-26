@@ -113,7 +113,8 @@ async function getCardDataRaw(cardId: string): Promise<DenormalizedCard | null> 
         hasNormal: rawCard.hasNormal,
         hasHolo: rawCard.hasHolo,
         hasReverse: rawCard.hasReverse,
-        hasFirstEdition: rawCard.hasFirstEdition
+        hasFirstEdition: rawCard.hasFirstEdition,
+        tcgPlayerId: rawCard.tcgPlayerId ?? null
     };
     return denormalizedCard;
 }

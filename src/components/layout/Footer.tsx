@@ -76,6 +76,10 @@ export function Footer() {
                 {/* Legal / Disclaimer Section */}
                 <div className='mt-12 flex flex-col gap-2 opacity-60'>
                     <p className='text-[10px] leading-tight'>
+                        As an affiliate of TCGplayer, CardLedger earns from qualifying purchases.
+                        Links to TCGplayer throughout this site are affiliate links.
+                    </p>
+                    <p className='text-[10px] leading-tight'>
                         The literal and graphical information presented on this website about the
                         Pokémon Trading Card Game, including card text and images, are copyright The
                         Pokémon Company (Pokémon), Nintendo, Game Freak, Creatures, and/or Wizards
