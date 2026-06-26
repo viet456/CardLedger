@@ -88,6 +88,9 @@ export default function RootLayout({
 }>) {
     return (
         <html lang='en' className={`${inter.variable}`} suppressHydrationWarning>
+            <head>
+                <link rel='preconnect' href='https://assets.cardledger.io' />
+            </head>
             <body
                 className={`flex min-h-screen flex-col bg-background font-sans text-foreground antialiased`}
             >

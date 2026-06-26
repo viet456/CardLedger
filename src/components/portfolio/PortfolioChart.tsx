@@ -1,7 +1,29 @@
 'use client';
-import { Chart, type ChartOptions } from 'chart.js/auto';
+import {
+    Chart,
+    type ChartOptions,
+    LineController,
+    LineElement,
+    PointElement,
+    LinearScale,
+    TimeScale,
+    Filler,
+    Tooltip,
+    Legend
+} from 'chart.js';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import 'chartjs-adapter-date-fns';
+
+Chart.register(
+    LineController,
+    LineElement,
+    PointElement,
+    LinearScale,
+    TimeScale,
+    Filler,
+    Tooltip,
+    Legend
+);
 import { Button } from '@/src/components/ui/button';
 import { useTheme } from 'next-themes';
 import { PortfolioChartPoint } from '@/src/services/portfolioService';

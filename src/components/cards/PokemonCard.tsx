@@ -122,8 +122,8 @@ export function PokemonCard({
                         sizes='192px'
                         decoding='async'
                         className='object-cover'
-                        loading={'eager'}
-                        fetchPriority={'high'}
+                        loading={priority ? 'eager' : 'lazy'}
+                        fetchPriority={priority ? 'high' : 'auto'}
                         style={{
                             viewTransitionName: `card-image-${card.id}`,
                             viewTransitionClass: 'card-expand'

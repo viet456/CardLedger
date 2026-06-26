@@ -104,9 +104,6 @@ importers:
       chartjs-adapter-date-fns:
         specifier: ^3.0.0
         version: 3.0.0(chart.js@4.5.1)(date-fns@4.1.0)
-      chartjs-plugin-crosshair:
-        specifier: ^2.0.0
-        version: 2.0.0(chart.js@4.5.1)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -3050,11 +3047,6 @@ packages:
     peerDependencies:
       chart.js: '>=2.8.0'
       date-fns: '>=2.0.0'
-
-  chartjs-plugin-crosshair@2.0.0:
-    resolution: {integrity: sha512-Vs6strRvYpzL92v40r/rAWhh+7au8VnfyC/m2ZHXcXeLEWeFjDgMvXjWdX+eARhbgHQo+uGIKyq9fmkS79GIyQ==}
-    peerDependencies:
-      chart.js: ^4.0.1
 
   check-error@2.1.3:
     resolution: {integrity: sha512-PAJdDJusoxnwm1VwW07VWwUN1sl7smmC3OKggvndJFadxxDRyFJBX/ggnu/KE4kQAB7a3Dp8f/YXC1FlUprWmA==}
@@ -8089,10 +8081,6 @@ snapshots:
     dependencies:
       chart.js: 4.5.1
       date-fns: 4.1.0
-
-  chartjs-plugin-crosshair@2.0.0(chart.js@4.5.1):
-    dependencies:
-      chart.js: 4.5.1
 
   check-error@2.1.3: {}
 
