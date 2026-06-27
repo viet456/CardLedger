@@ -1,5 +1,16 @@
 'use client';
-import { Chart, type ChartOptions } from 'chart.js/auto';
+import {
+    Chart,
+    type ChartOptions,
+    LineController,
+    LineElement,
+    PointElement,
+    LinearScale,
+    TimeScale,
+    Filler,
+    Tooltip,
+    Legend
+} from 'chart.js';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { PriceHistoryDataPoint } from '@/src/shared-types/price-api';
 import 'chartjs-adapter-date-fns';
@@ -7,6 +18,17 @@ import { Button } from '../ui/button';
 import { useTheme } from 'next-themes';
 
 type TimeRange = '1m' | '3m' | '6m' | '1y' | 'YTD' | 'All';
+
+Chart.register(
+    LineController,
+    LineElement,
+    PointElement,
+    LinearScale,
+    TimeScale,
+    Filler,
+    Tooltip,
+    Legend
+);
 
 export function PriceHistoryChart({ cardId }: { cardId: string }) {
     const [initialData, setInitialData] = useState<PriceHistoryDataPoint[] | null>(null);

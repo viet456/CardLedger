@@ -65,6 +65,7 @@ export function HeroAssetInspector() {
                             alt='CardLedger Interface'
                             unoptimized
                             fill
+                            sizes='100vw'
                             className='object-cover'
                             fetchPriority='high'
                             preload={true}
@@ -320,10 +321,11 @@ function SchematicCard({
                             src={image}
                             alt={name}
                             fill
+                            sizes='300px'
                             className='object-cover'
                             preload={priority}
-                            fetchPriority='high'
-                            loading='eager'
+                            fetchPriority='low'
+                            loading='lazy'
                         />
                         <div className='absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_100%)]' />
                     </div>
