@@ -45,7 +45,7 @@ interface AssetCardProps {
 
 export function HeroAssetInspector() {
     return (
-        <div className='relative -mx-4 overflow-y-clip  sm:-mx-8 md:py-12'>
+        <div className='relative -mx-4 overflow-clip sm:-mx-8 md:py-12'>
             {/* 3D BACKGROUND LAYER */}
             <div className='pointer-events-none absolute -top-[12%] left-1/2 -z-10 w-[150vw] max-w-none -translate-x-1/2 select-none bg-zinc-900 opacity-100'>
                 {' '}
@@ -323,7 +323,6 @@ function SchematicCard({
                             fill
                             sizes='300px'
                             className='object-cover'
-                            preload={priority}
                             fetchPriority='low'
                             loading='lazy'
                         />
