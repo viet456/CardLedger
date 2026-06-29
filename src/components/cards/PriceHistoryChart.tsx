@@ -16,6 +16,7 @@ import { PriceHistoryDataPoint } from '@/src/shared-types/price-api';
 import 'chartjs-adapter-date-fns';
 import { Button } from '../ui/button';
 import { useTheme } from 'next-themes';
+import { useCardHistory } from '@/hooks/useCardHistory';
 
 type TimeRange = '1m' | '3m' | '6m' | '1y' | 'YTD' | 'All';
 
@@ -31,101 +32,34 @@ Chart.register(
 );
 
 export function PriceHistoryChart({ cardId }: { cardId: string }) {
-    const [initialData, setInitialData] = useState<PriceHistoryDataPoint[] | null>(null);
+    const { data: initialData, loading } = useCardHistory(cardId);
     const chartRef = useRef<HTMLCanvasElement>(null);
     const chartInstanceRef = useRef<Chart | null>(null);
     const { resolvedTheme } = useTheme();
     const [activeRange, setActiveRange] = useState<TimeRange>('All');
 
+    // Compute smart default range based on data span (derived state, not effect)
+    const defaultRange = useMemo<TimeRange>(() => {
+        if (!initialData || initialData.length === 0) return 'All';
+        const earliest = new Date(initialData[0].timestamp).getTime();
+        const now = new Date().getTime();
+        const diffDays = (now - earliest) / (1000 * 60 * 60 * 24);
+        if (diffDays >= 90) return '3m';
+        if (diffDays >= 30) return '1m';
+        return 'All';
+    }, [initialData]);
+
+    // One-time initialization of activeRange when data first arrives
+    const hasInitializedRange = useRef(false);
     useEffect(() => {
-        let cancelled = false;
-
-        const processData = (data: PriceHistoryDataPoint[]) => {
-            if (cancelled) return;
-            setInitialData(data);
-            if (data && data.length > 0) {
-                const earliest = new Date(data[0].timestamp).getTime();
-                const now = new Date().getTime();
-                const diffDays = (now - earliest) / (1000 * 60 * 60 * 24);
-
-                if (diffDays >= 90) setActiveRange('3m');
-                else if (diffDays >= 30) setActiveRange('1m');
-                else setActiveRange('All');
-            }
-        };
-
-        const loadFromStore = async (): Promise<boolean> => {
-            try {
-                const { useHistoryStore } = await import('@/src/lib/store/historyStore');
-                const store = useHistoryStore.getState();
-
-                // If idle, trigger initialization but don't block on it for long
-                if (store.status === 'idle') {
-                    store.initialize();
-                }
-
-                let currentStore = useHistoryStore.getState();
-
-                // Wait for store to finish loading (with timeout)
-                if (currentStore.status === 'loading') {
-                    await new Promise<void>((resolve) => {
-                        const timeout = setTimeout(() => {
-                            unsub();
-                            resolve();
-                        }, 8000); // 8s max wait for history index download
-                        const unsub = useHistoryStore.subscribe((state) => {
-                            if (state.status !== 'loading') {
-                                clearTimeout(timeout);
-                                unsub();
-                                currentStore = state;
-                                resolve();
-                            }
-                        });
-                    });
-                }
-
-                if (currentStore.status.startsWith('ready')) {
-                    const localData = currentStore.getAllHistory(cardId);
-                    if (localData && localData.length > 0) {
-                        processData(localData);
-                        return true;
-                    }
-                }
-            } catch (err) {
-                // Silently fall back to network
-            }
-            return false;
-        };
-
-        const loadFromNetwork = async () => {
-            try {
-                const res = await fetch(`/api/prices/${cardId}`);
-                if (!res.ok) throw new Error('Network response was not ok');
-                const data = await res.json();
-                processData(data);
-            } catch (err) {
-                setInitialData([]);
-            }
-        };
-
-        const loadData = async () => {
-            // 1. Try local store first for instant display
-            const localSuccess = await loadFromStore();
-
-            // 2. Only use network as fallback if local data wasn't available
-            if (!localSuccess && !cancelled) {
-                await loadFromNetwork();
-            }
-        };
-
-        loadData();
-
-        return () => { cancelled = true; };
-    }, [cardId]);
+        if (!hasInitializedRange.current && initialData && initialData.length > 0) {
+            hasInitializedRange.current = true;
+            setActiveRange(defaultRange); // eslint-disable-line react-hooks/set-state-in-effect
+        }
+    }, [initialData, defaultRange]);
 
     const filteredData = useMemo(() => {
-        // Safe-guard for when data hasn't loaded yet
-        if (!initialData) return []; 
+        if (!initialData) return [];
 
         const now = new Date();
         let startDate = new Date();
@@ -166,20 +100,20 @@ export function PriceHistoryChart({ cardId }: { cardId: string }) {
 
     const earliestDate = useMemo(() => {
         if (!initialData || initialData.length === 0) return new Date();
-        return new Date(initialData[0].timestamp); 
+        return new Date(initialData[0].timestamp);
     }, [initialData]);
 
     useEffect(() => {
         if (!resolvedTheme) return;
-        
+
         const timerId = setTimeout(() => {
             if (!chartRef.current || !filteredData || filteredData.length === 0) {
                 return;
             }
-            const hasData = filteredData.some((d) => 
-                d.tcgNormal !== null || 
-                d.tcgHolo !== null || 
-                d.tcgReverse !== null || 
+            const hasData = filteredData.some((d) =>
+                d.tcgNormal !== null ||
+                d.tcgHolo !== null ||
+                d.tcgReverse !== null ||
                 d.tcgFirstEdition !== null
             );
             if (!hasData) {
@@ -195,8 +129,7 @@ export function PriceHistoryChart({ cardId }: { cardId: string }) {
             const borderColor = `oklch(${style.getPropertyValue('--border').trim()})`;
 
             const labels = filteredData.map((d) => d.timestamp);
-            
-            // Re-map the datasets to ensure we capture the values
+
             const rawDatasets = [
                 {
                     label: 'Normal',
@@ -208,27 +141,26 @@ export function PriceHistoryChart({ cardId }: { cardId: string }) {
                 {
                     label: 'Holofoil',
                     data: filteredData.map((d) => d.tcgHolo),
-                    borderColor: '#6366F1', 
+                    borderColor: '#6366F1',
                     tension: 0.1,
                     spanGaps: true
                 },
                 {
                     label: 'Reverse Holofoil',
                     data: filteredData.map((d) => d.tcgReverse),
-                    borderColor: '#F59E0B', 
+                    borderColor: '#F59E0B',
                     tension: 0.1,
                     spanGaps: true
                 },
                 {
                     label: 'First Edition',
                     data: filteredData.map((d) => d.tcgFirstEdition),
-                    borderColor: '#EF4444', 
+                    borderColor: '#EF4444',
                     tension: 0.1,
                     spanGaps: true
                 }
             ];
 
-            // Only add datasets with data
             const datasets = rawDatasets.filter((d) => d.data.some((val) => val !== null));
 
             let timeUnit: 'day' | 'week' | 'month' = 'day';
@@ -333,10 +265,23 @@ export function PriceHistoryChart({ cardId }: { cardId: string }) {
         };
     }, []);
 
-    const hasData = filteredData.some((d) => 
-        d.tcgNormal !== null || 
-        d.tcgHolo !== null || 
-        d.tcgReverse !== null || 
+    if (loading) {
+        return (
+            <div className='animate-pulse space-y-4'>
+                <div className='h-8 w-40 rounded-md bg-muted' />
+                <div className='h-48 w-full rounded-md bg-muted' />
+                <div className='flex justify-between'>
+                    <div className='h-6 w-20 rounded-md bg-muted' />
+                    <div className='h-6 w-20 rounded-md bg-muted' />
+                </div>
+            </div>
+        );
+    }
+
+    const hasData = filteredData.some((d) =>
+        d.tcgNormal !== null ||
+        d.tcgHolo !== null ||
+        d.tcgReverse !== null ||
         d.tcgFirstEdition !== null
     );
     const now = new Date();

@@ -12,12 +12,39 @@ type PersistedState = {
     buffer: ArrayBuffer | null;
 };
 
+type PriceHistoryDataPoint = import('@/src/shared-types/price-api').PriceHistoryDataPoint;
+
+// LRU cache: holds decompressed full history arrays for at most N cards.
+// When a new card is added and the cache is full, the oldest entry is evicted,
+// so at most ~10 cards' worth of decompressed data stays in memory at a time.
+const HISTORY_CACHE_MAX = 10;
+const historyCache = new Map<string, PriceHistoryDataPoint[]>();
+function getCachedHistory(cardId: string): PriceHistoryDataPoint[] | undefined {
+    const cached = historyCache.get(cardId);
+    if (cached !== undefined) {
+        // Move to end (most recently used)
+        historyCache.delete(cardId);
+        historyCache.set(cardId, cached);
+    }
+    return cached;
+}
+function setCachedHistory(cardId: string, data: PriceHistoryDataPoint[]): void {
+    historyCache.delete(cardId);
+    historyCache.set(cardId, data);
+    // Evict oldest entries if over limit
+    while (historyCache.size > HISTORY_CACHE_MAX) {
+        const oldest = historyCache.keys().next().value;
+        if (oldest !== undefined) historyCache.delete(oldest);
+    }
+}
+
 type HistoryStoreState = PersistedState & {
     status: 'idle' | 'loading' | 'ready_from_cache' | 'ready_from_network' | 'error';
     int32Data: Int32Array | null;
     initialize: () => Promise<void>;
     getHistory: (cardId: string, variant: string) => { timestamp: string; price: number }[] | null;
-    getAllHistory: (cardId: string) => import('@/src/shared-types/price-api').PriceHistoryDataPoint[] | null;
+    getAllHistory: (cardId: string) => PriceHistoryDataPoint[] | null;
+    getLatestPrices: (cardId: string) => PriceHistoryDataPoint[] | null;
 };
 
 const indexedDbStorage: PersistStorage<PersistedState> = {
@@ -159,6 +186,10 @@ export const useHistoryStore = create<HistoryStoreState>()(
             },
 
             getAllHistory: (cardId: string) => {
+                // Check LRU cache first
+                const cached = getCachedHistory(cardId);
+                if (cached !== undefined) return cached;
+
                 const state = getStore();
                 
                 // If we have buffer but no int32Data, set it up first
@@ -176,69 +207,135 @@ export const useHistoryStore = create<HistoryStoreState>()(
                 if (!cardOffsets) return null;
 
                 const dates = state.index.dates;
-
-                const result: import('@/src/shared-types/price-api').PriceHistoryDataPoint[] = [];
-
-                // Pre-calculate starting offsets and running prices for each variant
                 const variants = ['tcgNearMint', 'tcgNormal', 'tcgHolo', 'tcgReverse', 'tcgFirstEdition'] as const;
-                const variantData = variants.map(v => ({
+
+                // Build offset + running state for each variant
+                const variantStates = variants.map(v => ({
                     key: v,
                     offset: cardOffsets[v],
                     runningPrice: 0
                 }));
 
-                // First pass: locate the first valid date index
-                let firstValidIndex = 0;
-                let foundValid = false;
+                // Single pass: find first valid index while accumulating, then start pushing
+                let firstValidIndex = -1;
+                const result: PriceHistoryDataPoint[] = [];
 
-                // We need to simulate running prices up to the first valid index without mutating the actual state objects
-                const tempRunningPrices = variantData.map(() => 0);
-                
                 for (let i = 0; i < dates.length; i++) {
                     let hasValidPoint = false;
-                    for (let j = 0; j < variantData.length; j++) {
-                        const v = variantData[j];
-                        if (v.offset !== undefined) {
-                            tempRunningPrices[j] += data[v.offset + i];
-                            if (tempRunningPrices[j] > 0) {
-                                hasValidPoint = true;
-                            }
+
+                    for (const vs of variantStates) {
+                        if (vs.offset !== undefined) {
+                            vs.runningPrice += data[vs.offset + i];
+                            if (vs.runningPrice > 0) hasValidPoint = true;
                         }
                     }
-                    if (hasValidPoint) {
-                        firstValidIndex = i;
-                        foundValid = true;
-                        break;
+
+                    if (firstValidIndex === -1) {
+                        if (hasValidPoint) firstValidIndex = i;
+                        continue; // Skip building data points until we have valid data
                     }
-                }
 
-                if (!foundValid) {
-                    return [];
-                }
-
-                // Second pass: actually build the array from the first valid index
-                for (let i = 0; i < dates.length; i++) {
+                    // Build data point only for valid range
                     const dataPoint: any = { timestamp: dates[i] };
-                    
-                    for (const v of variantData) {
-                        if (v.offset !== undefined) {
-                            v.runningPrice += data[v.offset + i];
-                            if (v.runningPrice > 0) {
-                                dataPoint[v.key] = v.runningPrice / 100;
-                            } else {
-                                dataPoint[v.key] = null;
-                            }
+                    for (const vs of variantStates) {
+                        if (vs.offset !== undefined && vs.runningPrice > 0) {
+                            dataPoint[vs.key] = vs.runningPrice / 100;
                         } else {
-                            dataPoint[v.key] = null;
+                            dataPoint[vs.key] = null;
                         }
                     }
-                    
-                    if (i >= firstValidIndex) {
-                        result.push(dataPoint as import('@/src/shared-types/price-api').PriceHistoryDataPoint);
+                    result.push(dataPoint as PriceHistoryDataPoint);
+                }
+
+                setCachedHistory(cardId, result);
+                return result;
+            },
+
+            getLatestPrices: (cardId: string) => {
+                // Check LRU cache first
+                const cached = getCachedHistory(cardId);
+                if (cached !== undefined) {
+                    // Return last 2 points from cached full data
+                    return cached.length > 1 ? cached.slice(-2) : cached.length > 0 ? cached : null;
+                }
+
+                const state = getStore();
+                
+                let data = state.int32Data;
+                if (!data && state.buffer) {
+                    data = new Int32Array(state.buffer);
+                    set({ int32Data: data });
+                }
+
+                if (!state.index || !data) return null;
+
+                const cardOffsets = state.index.offsets[cardId];
+                if (!cardOffsets) return null;
+
+                const dates = state.index.dates;
+                const variants = ['tcgNearMint', 'tcgNormal', 'tcgHolo', 'tcgReverse', 'tcgFirstEdition'] as const;
+                const numDates = dates.length;
+
+                // Scan backwards from the end to find the last 2 points with any valid data
+                const variantStates = variants.map(v => ({
+                    key: v,
+                    offset: cardOffsets[v],
+                    // We'll compute cumulative sums from the end backwards
+                    runningPrice: 0
+                }));
+
+                // Compute total sums first
+                for (const vs of variantStates) {
+                    if (vs.offset !== undefined) {
+                        let sum = 0;
+                        for (let i = 0; i < numDates; i++) {
+                            sum += data[vs.offset + i];
+                        }
+                        vs.runningPrice = sum;
                     }
                 }
 
-                return result;
+                // Now find last 2 valid points by scanning backwards
+                // We need to reconstruct running prices at each point going backwards
+                // Instead, let's just build the last portion efficiently
+                const searchWindow = Math.min(numDates, 30); // Only scan last 30 dates
+                const startIdx = numDates - searchWindow;
+
+                // Rebuild running prices from 0 to startIdx
+                const baseRunningPrices = variantStates.map(vs => {
+                    if (vs.offset === undefined) return 0;
+                    let sum = 0;
+                    for (let i = 0; i < startIdx; i++) {
+                        sum += data[vs.offset + i];
+                    }
+                    return sum;
+                });
+
+                const recentPoints: PriceHistoryDataPoint[] = [];
+                const runningPrices = [...baseRunningPrices];
+
+                for (let i = startIdx; i < numDates; i++) {
+                    let hasValidPoint = false;
+                    for (let j = 0; j < variantStates.length; j++) {
+                        if (variantStates[j].offset !== undefined) {
+                            runningPrices[j] += data[variantStates[j].offset + i];
+                            if (runningPrices[j] > 0) hasValidPoint = true;
+                        }
+                    }
+                    if (!hasValidPoint) continue;
+
+                    const dataPoint: any = { timestamp: dates[i] };
+                    for (let j = 0; j < variantStates.length; j++) {
+                        if (variantStates[j].offset !== undefined && runningPrices[j] > 0) {
+                            dataPoint[variantStates[j].key] = runningPrices[j] / 100;
+                        } else {
+                            dataPoint[variantStates[j].key] = null;
+                        }
+                    }
+                    recentPoints.push(dataPoint as PriceHistoryDataPoint);
+                }
+
+                return recentPoints.length > 0 ? recentPoints : null;
             }
         }),
         {
