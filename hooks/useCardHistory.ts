@@ -4,19 +4,6 @@ import { useEffect, useState, useRef, useMemo } from 'react';
 import { useHistoryStore, getCachedHistory } from '@/src/lib/store/historyStore';
 import { PriceHistoryDataPoint } from '@/src/shared-types/price-api';
 
-/**
- * Ensure the history store is initialized. No-op if already loading or ready.
- */
-function useEnsureHistoryStoreReady() {
-    const status = useHistoryStore((s) => s.status);
-
-    useEffect(() => {
-        if (status === 'idle') {
-            useHistoryStore.getState().initialize();
-        }
-    }, [status]);
-}
-
 export interface PriceTrend {
     price: number;
     diff: number;
@@ -48,12 +35,11 @@ export function useCardHistory(cardId: string): {
     data: PriceHistoryDataPoint[] | null;
     loading: boolean;
 } {
-    useEnsureHistoryStoreReady();
-
     // Subscribe to index availability — this is set from zustand persist hydration (fast IDB read),
     // NOT from initialize() which fetches a pointer file from R2 (~1s delay).
     // This lets us read per-card data from IDB as soon as the index is hydrated.
     const index = useHistoryStore((s) => s.index);
+    const status = useHistoryStore((s) => s.status);
     const [fetched, setFetched] = useState<{ cardId: string; data: PriceHistoryDataPoint[] | null; resolved: boolean }>(() => {
         const cached = getCachedHistory(cardId);
         if (cached !== undefined) {
@@ -76,11 +62,18 @@ export function useCardHistory(cardId: string): {
         if (fetched.cardId === cardId && fetched.resolved) return;
 
         let cancelled = false;
-        useHistoryStore.getState().getAllHistory(cardId).then((result) => {
-            if (!cancelled && cardIdRef.current === cardId) {
-                setFetched({ cardId, data: result, resolved: true });
-            }
-        });
+        useHistoryStore.getState().getAllHistory(cardId)
+            .then((result) => {
+                if (!cancelled && cardIdRef.current === cardId) {
+                    setFetched({ cardId, data: result, resolved: true });
+                }
+            })
+            .catch(() => {
+                // IDB read failed — resolve with null so we don't spin forever
+                if (!cancelled && cardIdRef.current === cardId) {
+                    setFetched({ cardId, data: null, resolved: true });
+                }
+            });
 
         return () => { cancelled = true; };
     }, [index, cardId]);
@@ -89,9 +82,12 @@ export function useCardHistory(cardId: string): {
     const isStale = fetched.cardId !== cardId;
     const data = isStale ? null : fetched.data;
     const resolved = isStale ? false : fetched.resolved;
+    // If store errored (e.g. R2 download failed in incognito with no cached index),
+    // resolve immediately with null instead of spinning forever.
+    const hasNoIndexAndErrored = !index && status === 'error';
     // Only loading if the data hasn't resolved yet (LRU cache or IDB read).
     // Don't gate on store status — LRU-cached data is valid immediately.
-    const loading = !resolved;
+    const loading = hasNoIndexAndErrored ? false : !resolved;
 
     return { data, loading };
 }
@@ -106,10 +102,9 @@ export function useCardLatestPrices(cardId: string): {
     trend: PriceTrend;
     loading: boolean;
 } {
-    useEnsureHistoryStoreReady();
-
     // Subscribe to index availability — set from zustand persist hydration (fast IDB read).
     const index = useHistoryStore((s) => s.index);
+    const status = useHistoryStore((s) => s.status);
     // Check LRU cache synchronously to avoid skeleton flash on revisit.
     // The LRU cache stores full history arrays, so we can derive latest 2 points.
     const [fetched, setFetched] = useState<{ cardId: string; data: PriceHistoryDataPoint[] | null; resolved: boolean }>(() => {
@@ -134,11 +129,18 @@ export function useCardLatestPrices(cardId: string): {
         if (fetched.cardId === cardId && fetched.resolved) return;
 
         let cancelled = false;
-        useHistoryStore.getState().getLatestPrices(cardId).then((result) => {
-            if (!cancelled && cardIdRef.current === cardId) {
-                setFetched({ cardId, data: result, resolved: true });
-            }
-        });
+        useHistoryStore.getState().getLatestPrices(cardId)
+            .then((result) => {
+                if (!cancelled && cardIdRef.current === cardId) {
+                    setFetched({ cardId, data: result, resolved: true });
+                }
+            })
+            .catch(() => {
+                // IDB read failed — resolve with null so we don't spin forever
+                if (!cancelled && cardIdRef.current === cardId) {
+                    setFetched({ cardId, data: null, resolved: true });
+                }
+            });
 
         return () => { cancelled = true; };
     }, [index, cardId]);
@@ -147,9 +149,12 @@ export function useCardLatestPrices(cardId: string): {
     const data = isStale ? null : fetched.data;
     const resolved = isStale ? false : fetched.resolved;
     const trend = useMemo(() => computePrice(data), [data]);
+    // If store errored (e.g. R2 download failed in incognito with no cached index),
+    // resolve immediately with null instead of spinning forever.
+    const hasNoIndexAndErrored = !index && status === 'error';
     // Only loading if the data hasn't resolved yet (LRU cache or IDB read).
     // Don't gate on store status — LRU-cached data is valid immediately.
-    const loading = !resolved;
+    const loading = hasNoIndexAndErrored ? false : !resolved;
 
     return { data, trend, loading };
 }
