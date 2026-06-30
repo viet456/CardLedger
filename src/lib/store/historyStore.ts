@@ -1,22 +1,20 @@
 import { create } from 'zustand';
 import { persist, PersistStorage, StorageValue } from 'zustand/middleware';
-import { get, set, del } from 'idb-keyval';
+import { get, set, del, setMany } from 'idb-keyval';
 import { HistoryIndex, HistoryPointerFile } from '@/src/shared-types/price-api';
 
 const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://assets.cardledger.io';
 
-// The state we store in IndexedDB
+// The state we store in IndexedDB (no buffer — per-card entries live separately in IDB)
 type PersistedState = {
     version: string | null;
     index: HistoryIndex | null;
-    buffer: ArrayBuffer | null;
 };
 
 type PriceHistoryDataPoint = import('@/src/shared-types/price-api').PriceHistoryDataPoint;
 
 // LRU cache: holds decompressed full history arrays for at most N cards.
-// When a new card is added and the cache is full, the oldest entry is evicted,
-// so at most ~10 cards' worth of decompressed data stays in memory at a time.
+// Avoids repeated IDB reads for recently visited cards.
 const HISTORY_CACHE_MAX = 10;
 const historyCache = new Map<string, PriceHistoryDataPoint[]>();
 function getCachedHistory(cardId: string): PriceHistoryDataPoint[] | undefined {
@@ -40,11 +38,10 @@ function setCachedHistory(cardId: string, data: PriceHistoryDataPoint[]): void {
 
 type HistoryStoreState = PersistedState & {
     status: 'idle' | 'loading' | 'ready_from_cache' | 'ready_from_network' | 'error';
-    int32Data: Int32Array | null;
     initialize: () => Promise<void>;
-    getHistory: (cardId: string, variant: string) => { timestamp: string; price: number }[] | null;
-    getAllHistory: (cardId: string) => PriceHistoryDataPoint[] | null;
-    getLatestPrices: (cardId: string) => PriceHistoryDataPoint[] | null;
+    getHistory: (cardId: string, variant: string) => Promise<{ timestamp: string; price: number }[] | null>;
+    getAllHistory: (cardId: string) => Promise<PriceHistoryDataPoint[] | null>;
+    getLatestPrices: (cardId: string) => Promise<PriceHistoryDataPoint[] | null>;
 };
 
 const indexedDbStorage: PersistStorage<PersistedState> = {
@@ -60,22 +57,19 @@ const indexedDbStorage: PersistStorage<PersistedState> = {
     }
 };
 
+// IDB key prefix for per-card history entries
+const CARD_KEY_PREFIX = 'hist-card-';
+const SLICE_CHUNK_SIZE = 500;
+
 export const useHistoryStore = create<HistoryStoreState>()(
     persist(
         (set, getStore) => ({
             version: null,
             index: null,
-            buffer: null,
             status: 'idle',
-            int32Data: null,
 
             initialize: async () => {
                 if (getStore().status.startsWith('loading') || getStore().status.startsWith('ready')) {
-                    // Try to re-hydrate int32Data if it's missing but buffer exists
-                    const state = getStore();
-                    if (!state.int32Data && state.buffer) {
-                        set({ int32Data: new Int32Array(state.buffer) });
-                    }
                     return;
                 }
                 set({ status: 'loading' });
@@ -86,15 +80,19 @@ export const useHistoryStore = create<HistoryStoreState>()(
                     const pointer: HistoryPointerFile = await pointerRes.json();
 
                     if (getStore().version === pointer.version) {
-                        const buffer = getStore().buffer;
-                        if (buffer) {
-                            set({ status: 'ready_from_cache', int32Data: new Int32Array(buffer) });
-                            return;
+                        // Verify per-card data actually exists (handles IDB clear scenarios)
+                        const sampleCardId = Object.keys(getStore().index?.offsets || {})[0];
+                        if (sampleCardId) {
+                            const sample = await get(`${CARD_KEY_PREFIX}${sampleCardId}`);
+                            if (sample) {
+                                set({ status: 'ready_from_cache' });
+                                return;
+                            }
                         }
+                        // Per-card data missing despite version match — fall through to re-download
                     }
 
                     // Fetch Index JSON
-                    // Ensure the URL utilizes the R2 domain if it's an absolute path
                     const indexUrl = pointer.indexUrl.startsWith('http') ? pointer.indexUrl : `${R2_PUBLIC_URL}${pointer.indexUrl.startsWith('/') ? '' : '/'}${pointer.indexUrl}`;
                     const indexRes = await fetch(indexUrl);
                     if (!indexRes.ok) throw new Error('Failed to fetch history index artifact.');
@@ -126,93 +124,97 @@ export const useHistoryStore = create<HistoryStoreState>()(
                         throw new Error('Data checksum validation failed! Data is corrupt.');
                     }
 
+                    // Slice the monolithic buffer into per-card IDB entries
+                    // Each entry stores variant deltas as ArrayBuffers keyed by variant name
+                    const numDates = indexData.dates.length;
+                    const cardEntries = Object.entries(indexData.offsets);
+
+                    for (let i = 0; i < cardEntries.length; i += SLICE_CHUNK_SIZE) {
+                        const chunk: [string, Record<string, ArrayBuffer>][] = [];
+                        const batch = cardEntries.slice(i, i + SLICE_CHUNK_SIZE);
+
+                        for (const [cardId, cardOffsets] of batch) {
+                            const cardData: Record<string, ArrayBuffer> = {};
+                            for (const [variant, offset] of Object.entries(cardOffsets)) {
+                                // offset is in Int32 element units; convert to bytes for slicing
+                                cardData[variant] = dataBuffer.slice(offset * 4, (offset + numDates) * 4);
+                            }
+                            chunk.push([`${CARD_KEY_PREFIX}${cardId}`, cardData]);
+                        }
+
+                        // Write chunk to IDB in a single transaction
+                        await setMany(chunk);
+                    }
+
+                    // Store index + version in Zustand (no buffer)
                     set({
                         version: pointer.version,
                         index: indexData,
-                        buffer: dataBuffer,
-                        int32Data: new Int32Array(dataBuffer),
                         status: 'ready_from_network'
                     });
                 } catch (error) {
                     console.error(`[HistoryStore]: ❌ Error during initialization:`, error);
                     if (error instanceof Error && error.name === 'QuotaExceededError') {
-                        console.error('[HistoryStore] IndexedDB Quota Exceeded! The history buffer is likely too large for this browsing mode (e.g. Incognito).');
+                        console.error('[HistoryStore] IndexedDB Quota Exceeded!');
                     }
                     const state = getStore();
-                    if (state.version && state.buffer && state.index) {
-                        set({ 
-                            status: 'ready_from_cache', 
-                            int32Data: state.int32Data || new Int32Array(state.buffer) 
-                        });
+                    if (state.version && state.index) {
+                        set({ status: 'ready_from_cache' });
                     } else {
                         set({ status: 'error' });
                     }
                 }
             },
 
-            getHistory: (cardId: string, variant: string) => {
+            getHistory: async (cardId: string, variant: string) => {
                 const state = getStore();
-                
-                let data = state.int32Data;
-                if (!data && state.buffer) {
-                    data = new Int32Array(state.buffer);
-                    set({ int32Data: data });
-                }
+                if (!state.index) return null;
 
-                if (!state.index || !data) return null;
+                const cardData: Record<string, ArrayBuffer> | undefined = await get(`${CARD_KEY_PREFIX}${cardId}`);
+                if (!cardData || !cardData[variant]) return null;
 
-                const cardOffsets = state.index.offsets[cardId];
-                if (!cardOffsets) return null;
-
-                const offset = cardOffsets[variant];
-                if (offset === undefined) return null;
-
+                const deltas = new Int32Array(cardData[variant]);
                 const dates = state.index.dates;
 
                 const result = [];
                 let runningPrice = 0;
 
                 for (let i = 0; i < dates.length; i++) {
-                    const delta = data[offset + i];
-                    runningPrice += delta;
-                    
+                    runningPrice += deltas[i];
                     result.push({
                         timestamp: dates[i],
-                        price: runningPrice > 0 ? runningPrice / 100 : 0 // Technically getHistory is barely used, but we keep it safe
+                        price: runningPrice > 0 ? runningPrice / 100 : 0
                     });
                 }
 
                 return result;
             },
 
-            getAllHistory: (cardId: string) => {
+            getAllHistory: async (cardId: string) => {
                 // Check LRU cache first
                 const cached = getCachedHistory(cardId);
                 if (cached !== undefined) return cached;
 
                 const state = getStore();
-                
-                // If we have buffer but no int32Data, set it up first
-                let data = state.int32Data;
-                if (!data && state.buffer) {
-                    data = new Int32Array(state.buffer);
-                    set({ int32Data: data });
-                }
+                if (!state.index) return null;
 
-                if (!state.index || !data) {
-                    return null;
-                }
-
-                const cardOffsets = state.index.offsets[cardId];
-                if (!cardOffsets) return null;
+                // Read per-card data from IDB
+                const cardData: Record<string, ArrayBuffer> | undefined = await get(`${CARD_KEY_PREFIX}${cardId}`);
+                if (!cardData) return null;
 
                 const dates = state.index.dates;
                 const variants = ['tcgNearMint', 'tcgNormal', 'tcgHolo', 'tcgReverse', 'tcgFirstEdition'] as const;
 
+                // Convert stored ArrayBuffers to Int32Arrays
+                const variantDeltas: Record<string, Int32Array> = {};
+                for (const [key, buf] of Object.entries(cardData)) {
+                    variantDeltas[key] = new Int32Array(buf);
+                }
+
                 // Build offset + running state for each variant
                 const variantStates = variants.map(v => ({
                     key: v,
-                    offset: cardOffsets[v],
+                    deltas: variantDeltas[v] || null,
                     runningPrice: 0
                 }));
 
@@ -224,8 +226,8 @@ export const useHistoryStore = create<HistoryStoreState>()(
                     let hasValidPoint = false;
 
                     for (const vs of variantStates) {
-                        if (vs.offset !== undefined) {
-                            vs.runningPrice += data[vs.offset + i];
+                        if (vs.deltas) {
+                            vs.runningPrice += vs.deltas[i];
                             if (vs.runningPrice > 0) hasValidPoint = true;
                         }
                     }
@@ -238,7 +240,7 @@ export const useHistoryStore = create<HistoryStoreState>()(
                     // Build data point only for valid range
                     const dataPoint: any = { timestamp: dates[i] };
                     for (const vs of variantStates) {
-                        if (vs.offset !== undefined && vs.runningPrice > 0) {
+                        if (vs.deltas && vs.runningPrice > 0) {
                             dataPoint[vs.key] = vs.runningPrice / 100;
                         } else {
                             dataPoint[vs.key] = null;
@@ -251,7 +253,7 @@ export const useHistoryStore = create<HistoryStoreState>()(
                 return result;
             },
 
-            getLatestPrices: (cardId: string) => {
+            getLatestPrices: async (cardId: string) => {
                 // Check LRU cache first
                 const cached = getCachedHistory(cardId);
                 if (cached !== undefined) {
@@ -260,53 +262,49 @@ export const useHistoryStore = create<HistoryStoreState>()(
                 }
 
                 const state = getStore();
-                
-                let data = state.int32Data;
-                if (!data && state.buffer) {
-                    data = new Int32Array(state.buffer);
-                    set({ int32Data: data });
-                }
+                if (!state.index) return null;
 
-                if (!state.index || !data) return null;
-
-                const cardOffsets = state.index.offsets[cardId];
-                if (!cardOffsets) return null;
+                // Read per-card data from IDB
+                const cardData: Record<string, ArrayBuffer> | undefined = await get(`${CARD_KEY_PREFIX}${cardId}`);
+                if (!cardData) return null;
 
                 const dates = state.index.dates;
                 const variants = ['tcgNearMint', 'tcgNormal', 'tcgHolo', 'tcgReverse', 'tcgFirstEdition'] as const;
                 const numDates = dates.length;
 
-                // Scan backwards from the end to find the last 2 points with any valid data
+                // Convert stored ArrayBuffers to Int32Arrays
+                const variantDeltas: Record<string, Int32Array> = {};
+                for (const [key, buf] of Object.entries(cardData)) {
+                    variantDeltas[key] = new Int32Array(buf);
+                }
+
                 const variantStates = variants.map(v => ({
                     key: v,
-                    offset: cardOffsets[v],
-                    // We'll compute cumulative sums from the end backwards
+                    deltas: variantDeltas[v] || null,
                     runningPrice: 0
                 }));
 
                 // Compute total sums first
                 for (const vs of variantStates) {
-                    if (vs.offset !== undefined) {
+                    if (vs.deltas) {
                         let sum = 0;
                         for (let i = 0; i < numDates; i++) {
-                            sum += data[vs.offset + i];
+                            sum += vs.deltas[i];
                         }
                         vs.runningPrice = sum;
                     }
                 }
 
                 // Now find last 2 valid points by scanning backwards
-                // We need to reconstruct running prices at each point going backwards
-                // Instead, let's just build the last portion efficiently
                 const searchWindow = Math.min(numDates, 30); // Only scan last 30 dates
                 const startIdx = numDates - searchWindow;
 
                 // Rebuild running prices from 0 to startIdx
                 const baseRunningPrices = variantStates.map(vs => {
-                    if (vs.offset === undefined) return 0;
+                    if (!vs.deltas) return 0;
                     let sum = 0;
                     for (let i = 0; i < startIdx; i++) {
-                        sum += data[vs.offset + i];
+                        sum += vs.deltas[i];
                     }
                     return sum;
                 });
@@ -317,8 +315,8 @@ export const useHistoryStore = create<HistoryStoreState>()(
                 for (let i = startIdx; i < numDates; i++) {
                     let hasValidPoint = false;
                     for (let j = 0; j < variantStates.length; j++) {
-                        if (variantStates[j].offset !== undefined) {
-                            runningPrices[j] += data[variantStates[j].offset + i];
+                        if (variantStates[j].deltas) {
+                            runningPrices[j] += variantStates[j].deltas[i];
                             if (runningPrices[j] > 0) hasValidPoint = true;
                         }
                     }
@@ -326,7 +324,7 @@ export const useHistoryStore = create<HistoryStoreState>()(
 
                     const dataPoint: any = { timestamp: dates[i] };
                     for (let j = 0; j < variantStates.length; j++) {
-                        if (variantStates[j].offset !== undefined && runningPrices[j] > 0) {
+                        if (variantStates[j].deltas && runningPrices[j] > 0) {
                             dataPoint[variantStates[j].key] = runningPrices[j] / 100;
                         } else {
                             dataPoint[variantStates[j].key] = null;
@@ -343,15 +341,8 @@ export const useHistoryStore = create<HistoryStoreState>()(
             storage: indexedDbStorage,
             partialize: (state): PersistedState => ({
                 version: state.version,
-                index: state.index,
-                buffer: state.buffer
-            }),
-            onRehydrateStorage: () => (state) => {
-                if (state && state.buffer) {
-                    // Note: Cannot mutate state here, so we defer setting int32Data
-                    useHistoryStore.setState({ int32Data: new Int32Array(state.buffer) });
-                }
-            }
+                index: state.index
+            })
         }
     )
 );
