@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useHistoryStore } from '@/src/lib/store/historyStore';
 import { PriceHistoryDataPoint } from '@/src/shared-types/price-api';
 
@@ -14,30 +14,7 @@ function useEnsureHistoryStoreReady() {
         if (status === 'idle') {
             useHistoryStore.getState().initialize();
         }
-    }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
-}
-
-/**
- * Shared hook for loading card price history (full array for charts).
- * Reads from the zustand store reactively. The store's LRU cache limits
- * decompressed data to ~10 cards at a time before evicting oldest entries.
- */
-export function useCardHistory(cardId: string): {
-    data: PriceHistoryDataPoint[] | null;
-    loading: boolean;
-} {
-    useEnsureHistoryStoreReady();
-
-    const status = useHistoryStore((s) => s.status);
-
-    const data = useMemo(() => {
-        if (!status.startsWith('ready')) return null;
-        return useHistoryStore.getState().getAllHistory(cardId);
-    }, [status, cardId]);
-
-    const loading = status === 'idle' || status === 'loading';
-
-    return { data, loading };
+    }, [status]);
 }
 
 export interface PriceTrend {
@@ -63,6 +40,50 @@ function computePrice(data: PriceHistoryDataPoint[] | null): PriceTrend {
 }
 
 /**
+ * Shared hook for loading card price history (full array for charts).
+ * Reads per-card data from IndexedDB asynchronously. The store's LRU cache limits
+ * decompressed data to ~10 cards at a time before evicting oldest entries.
+ */
+export function useCardHistory(cardId: string): {
+    data: PriceHistoryDataPoint[] | null;
+    loading: boolean;
+} {
+    useEnsureHistoryStoreReady();
+
+    const status = useHistoryStore((s) => s.status);
+    // Track which cardId the fetched data belongs to, so stale data from a previous card
+    // is naturally masked in render without a synchronous setState in an effect.
+    const [fetched, setFetched] = useState<{ cardId: string; data: PriceHistoryDataPoint[] | null }>({
+        cardId,
+        data: null
+    });
+    const cardIdRef = useRef(cardId);
+
+    useEffect(() => {
+        cardIdRef.current = cardId;
+    }, [cardId]);
+
+    useEffect(() => {
+        if (!status.startsWith('ready')) return;
+
+        let cancelled = false;
+        useHistoryStore.getState().getAllHistory(cardId).then((result) => {
+            if (!cancelled && cardIdRef.current === cardId) {
+                setFetched({ cardId, data: result });
+            }
+        });
+
+        return () => { cancelled = true; };
+    }, [status, cardId]);
+
+    // If fetched data is for a different cardId, treat as null (stale)
+    const data = fetched.cardId === cardId ? fetched.data : null;
+    const loading = status === 'idle' || status === 'loading' || (status.startsWith('ready') && data === null);
+
+    return { data, loading };
+}
+
+/**
  * Lightweight hook for PriceHero: returns the computed price and trend
  * (price, diff, percent) from the last ~2 data points, without
  * decompressing the full history array.
@@ -75,15 +96,32 @@ export function useCardLatestPrices(cardId: string): {
     useEnsureHistoryStoreReady();
 
     const status = useHistoryStore((s) => s.status);
+    const [fetched, setFetched] = useState<{ cardId: string; data: PriceHistoryDataPoint[] | null }>({
+        cardId,
+        data: null
+    });
+    const cardIdRef = useRef(cardId);
 
-    const data = useMemo(() => {
-        if (!status.startsWith('ready')) return null;
-        return useHistoryStore.getState().getLatestPrices(cardId);
+    useEffect(() => {
+        cardIdRef.current = cardId;
+    }, [cardId]);
+
+    useEffect(() => {
+        if (!status.startsWith('ready')) return;
+
+        let cancelled = false;
+        useHistoryStore.getState().getLatestPrices(cardId).then((result) => {
+            if (!cancelled && cardIdRef.current === cardId) {
+                setFetched({ cardId, data: result });
+            }
+        });
+
+        return () => { cancelled = true; };
     }, [status, cardId]);
 
+    const data = fetched.cardId === cardId ? fetched.data : null;
     const trend = useMemo(() => computePrice(data), [data]);
-    const loading = status === 'idle' || status === 'loading';
+    const loading = status === 'idle' || status === 'loading' || (status.startsWith('ready') && data === null);
 
     return { data, trend, loading };
 }
-
