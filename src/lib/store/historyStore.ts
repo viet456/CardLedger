@@ -3,6 +3,21 @@ import { persist, PersistStorage, StorageValue } from 'zustand/middleware';
 import { get, set, del, setMany } from 'idb-keyval';
 import { HistoryIndex, HistoryPointerFile } from '@/src/shared-types/price-api';
 
+/**
+ * Price History Store
+ * 
+ * Data pipeline:
+ * 1. Server builds a monolithic Int32Array of delta-encoded price deltas for all cards/variants
+ *    + a HistoryIndex JSON with dates[] and per-card byte offsets. Both hosted on R2.
+ * 2. On first visit, initialize() downloads both files, checksums them, then slices the
+ *    monolithic buffer into per-card entries and writes them to IndexedDB (hist-card-{id}).
+ *    The 183MB buffer is discarded after slicing — only index metadata stays in Zustand.
+ * 3. On card page visit, getAllHistory()/getLatestPrices() read the per-card entry from IDB,
+ *    create Int32Array views, accumulate deltas, and return decoded data points.
+ * 4. LRU cache (10 cards) avoids repeated IDB reads for recently visited cards.
+ */
+
+
 const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://assets.cardledger.io';
 
 // The state we store in IndexedDB (no buffer — per-card entries live separately in IDB)

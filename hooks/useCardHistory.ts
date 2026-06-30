@@ -53,9 +53,10 @@ export function useCardHistory(cardId: string): {
     const status = useHistoryStore((s) => s.status);
     // Track which cardId the fetched data belongs to, so stale data from a previous card
     // is naturally masked in render without a synchronous setState in an effect.
-    const [fetched, setFetched] = useState<{ cardId: string; data: PriceHistoryDataPoint[] | null }>({
+    const [fetched, setFetched] = useState<{ cardId: string; data: PriceHistoryDataPoint[] | null; resolved: boolean }>({
         cardId,
-        data: null
+        data: null,
+        resolved: false
     });
     const cardIdRef = useRef(cardId);
 
@@ -69,7 +70,7 @@ export function useCardHistory(cardId: string): {
         let cancelled = false;
         useHistoryStore.getState().getAllHistory(cardId).then((result) => {
             if (!cancelled && cardIdRef.current === cardId) {
-                setFetched({ cardId, data: result });
+                setFetched({ cardId, data: result, resolved: true });
             }
         });
 
@@ -77,8 +78,11 @@ export function useCardHistory(cardId: string): {
     }, [status, cardId]);
 
     // If fetched data is for a different cardId, treat as null (stale)
-    const data = fetched.cardId === cardId ? fetched.data : null;
-    const loading = status === 'idle' || status === 'loading' || (status.startsWith('ready') && data === null);
+    const isStale = fetched.cardId !== cardId;
+    const data = isStale ? null : fetched.data;
+    const resolved = isStale ? false : fetched.resolved;
+    // Only loading if the store isn't ready OR the IDB read hasn't resolved yet
+    const loading = status === 'idle' || status === 'loading' || (status.startsWith('ready') && !resolved);
 
     return { data, loading };
 }
@@ -96,9 +100,10 @@ export function useCardLatestPrices(cardId: string): {
     useEnsureHistoryStoreReady();
 
     const status = useHistoryStore((s) => s.status);
-    const [fetched, setFetched] = useState<{ cardId: string; data: PriceHistoryDataPoint[] | null }>({
+    const [fetched, setFetched] = useState<{ cardId: string; data: PriceHistoryDataPoint[] | null; resolved: boolean }>({
         cardId,
-        data: null
+        data: null,
+        resolved: false
     });
     const cardIdRef = useRef(cardId);
 
@@ -112,16 +117,19 @@ export function useCardLatestPrices(cardId: string): {
         let cancelled = false;
         useHistoryStore.getState().getLatestPrices(cardId).then((result) => {
             if (!cancelled && cardIdRef.current === cardId) {
-                setFetched({ cardId, data: result });
+                setFetched({ cardId, data: result, resolved: true });
             }
         });
 
         return () => { cancelled = true; };
     }, [status, cardId]);
 
-    const data = fetched.cardId === cardId ? fetched.data : null;
+    const isStale = fetched.cardId !== cardId;
+    const data = isStale ? null : fetched.data;
+    const resolved = isStale ? false : fetched.resolved;
     const trend = useMemo(() => computePrice(data), [data]);
-    const loading = status === 'idle' || status === 'loading' || (status.startsWith('ready') && data === null);
+    // Only loading if the store isn't ready OR the IDB read hasn't resolved yet
+    const loading = status === 'idle' || status === 'loading' || (status.startsWith('ready') && !resolved);
 
     return { data, trend, loading };
 }
