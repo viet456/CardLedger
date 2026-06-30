@@ -111,6 +111,7 @@ async function generateCardIndex() {
                     nationalPokedexNumbers: true,
                     ancientTraitName: true,
                     ancientTraitText: true,
+                    tcgPlayerId: true,
                     attacks: {
                         select: {
                             name: true,
@@ -265,6 +266,7 @@ async function generateCardIndex() {
                 },
                 pdx: card.nationalPokedexNumbers.length > 0 ? card.nationalPokedexNumbers : null,
                 aT: card.ancientTraitName ? { n: card.ancientTraitName, t: card.ancientTraitText || '' } : null,
+                tcgPlayerId: card.tcgPlayerId ?? null,
             });
         }
     }

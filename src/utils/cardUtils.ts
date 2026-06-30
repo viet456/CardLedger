@@ -60,6 +60,6 @@ export function denormalizeSingleCard(
         hasHolo: card.hasHolo,
         hasReverse: card.hasReverse,
         hasFirstEdition: card.hasFirstEdition,
-        tcgPlayerId: null // Not available in normalized index; populated server-side
+        tcgPlayerId: card.tcgPlayerId
     };
 }

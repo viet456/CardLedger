@@ -3,7 +3,6 @@ import { PriceHistoryChart } from '@/src/components/cards/PriceHistoryChart';
 import { AbilityObject } from '@/src/shared-types/card-index';
 import { notFound } from 'next/navigation';
 import { FilterLink } from '@/src/app/cards/[cardId]/FilterLink';
-import { PriceHero } from '@/src/components/cards/PriceHero';
 import { EnergyIcon } from '@/src/components/cards/EnergyIcon';
 import { FormattedText } from '@/src/components/cards/FormattedText';
 
