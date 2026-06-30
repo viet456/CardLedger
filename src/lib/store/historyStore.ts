@@ -32,7 +32,7 @@ type PriceHistoryDataPoint = import('@/src/shared-types/price-api').PriceHistory
 // Avoids repeated IDB reads for recently visited cards.
 const HISTORY_CACHE_MAX = 10;
 const historyCache = new Map<string, PriceHistoryDataPoint[]>();
-function getCachedHistory(cardId: string): PriceHistoryDataPoint[] | undefined {
+export function getCachedHistory(cardId: string): PriceHistoryDataPoint[] | undefined {
     const cached = historyCache.get(cardId);
     if (cached !== undefined) {
         // Move to end (most recently used)

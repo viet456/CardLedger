@@ -3,14 +3,11 @@
 import { PriceHeroSkeleton } from '@/src/app/cards/[cardId]/Skeletons';
 import { useMarketStore } from '@/src/lib/store/marketStore';
 import { useCardLatestPrices } from '@/hooks/useCardHistory';
+import { useCardStore } from '@/src/lib/store/cardStore';
+import { getTcgPlayerUrl } from '@/src/utils/tcgplayer';
+import { denormalizeSingleCard } from '@/src/utils/cardUtils';
 
-export function PriceHero({
-    cardId,
-    tcgPlayerUrl
-}: {
-    cardId: string;
-    tcgPlayerUrl: string;
-}) {
+export function PriceHero({ cardId }: { cardId: string }) {
     const { trend, loading } = useCardLatestPrices(cardId);
 
     // Attempt to get instant price from market cache as fallback
@@ -18,6 +15,14 @@ export function PriceHero({
     const fallbackPrice = cachedPrices 
         ? (cachedPrices.tcgNearMint || cachedPrices.tcgNormal || cachedPrices.tcgHolo || cachedPrices.tcgReverse || cachedPrices.tcgFirstEdition || 0)
         : 0;
+
+    // Compute TCGPlayer URL from client store
+    const store = useCardStore();
+    const normalizedCard = store.cardMap.get(cardId);
+    const denormalized = normalizedCard ? denormalizeSingleCard(normalizedCard, store) : null;
+    const tcgPlayerUrl = denormalized 
+        ? getTcgPlayerUrl(denormalized.tcgPlayerId, denormalized.n, denormalized.set?.name)
+        : `https://www.tcgplayer.com/search/pokemon/product?q=${encodeURIComponent(cardId)}`;
 
     // If we are loading and have no local cache fallback, show the skeleton
     if (loading && !fallbackPrice) return <PriceHeroSkeleton />;

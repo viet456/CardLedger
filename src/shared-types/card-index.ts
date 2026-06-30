@@ -86,6 +86,7 @@ export type NormalizedCard = {
     hasHolo: boolean;
     hasReverse: boolean;
     hasFirstEdition: boolean;
+    tcgPlayerId: number | null;
 };
 
 export type DenormalizedCard = {

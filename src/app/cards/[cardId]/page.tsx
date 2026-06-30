@@ -5,10 +5,11 @@ import { CardBreadcrumbs } from './CardBreadcrumbs';
 import { ClientCachedBreadcrumbFallback } from './ClientCachedBreadcrumbFallback';
 import { ClientCachedDetailsFallback } from './ClientCachedDetailsFallback';
 import { PriceHero } from '@/src/components/cards/PriceHero';
-import { getCachedCardData } from './data';
-import { getTcgPlayerUrl } from '@/src/utils/tcgplayer';
 
 // src/app/cards/[cardId]/page.tsx
+// Thin server shell — no data fetching here.
+// All card data comes from client-side zustand stores (hydrated from IndexedDB/R2)
+// for instant navigation with zero loading skeletons.
 
 export default async function SingleCardPage({ params, searchParams }: {
     params: Promise<{ cardId: string }>;
@@ -17,14 +18,6 @@ export default async function SingleCardPage({ params, searchParams }: {
     const { cardId } = await params;
     const { preview } = await searchParams;
     const imagePath = preview ? decodeURIComponent(preview) : `cards/${cardId}`;
-
-    // Fetch card data server-side for TCGplayer URL (SEO-friendly)
-    const card = await getCachedCardData(cardId);
-    const tcgPlayerUrl = getTcgPlayerUrl(
-        card?.tcgPlayerId ?? null,
-        card?.n ?? 'Pokemon Card',
-        card?.set?.name
-    );
 
     return (
         <main className='container mx-auto max-w-6xl p-4 sm:p-6 lg:p-8'>
@@ -40,7 +33,7 @@ export default async function SingleCardPage({ params, searchParams }: {
                         
                         {/* Desktop-only PriceHero */}
                         <div className='hidden md:block px-2'> 
-                            <PriceHero cardId={cardId} tcgPlayerUrl={tcgPlayerUrl} />
+                            <PriceHero cardId={cardId} />
                         </div>
                     </div>
                 </div>
