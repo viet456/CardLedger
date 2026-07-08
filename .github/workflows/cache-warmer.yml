@@ -1,0 +1,68 @@
+name: Cache Warmer
+on:
+  schedule:
+    - cron: '0 * * * *' # every hour
+  workflow_dispatch:
+
+jobs:
+  warm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Warm caches
+        env:
+          R2_BASE: https://assets.cardledger.io
+        run: |
+          UA="User-Agent: Mozilla/5.0 (compatible; CacheWarmer/1.0)"
+
+          # --- Vercel SSR pages ---
+          pages=(
+            "https://cardledger.io"
+            "https://cardledger.io/cards"
+            "https://cardledger.io/sets"
+          )
+          for url in "${pages[@]}"; do
+            curl -s -o /dev/null -w "%{http_code} %{url}\n" \
+              -L -H "$UA" --max-time 10 "$url" &
+          done
+
+          # --- Card index ---
+          card_ptr=$(curl -s --max-time 10 "$R2_BASE/card-index.current.json")
+          if [ -n "$card_ptr" ]; then
+            card_url=$(echo "$card_ptr" | jq -r '.url // empty')
+            if [ -n "$card_url" ]; then
+              [[ "$card_url" != http* ]] && card_url="$R2_BASE/$card_url"
+              curl -s -o /dev/null -w "%{http_code} card-index\n" \
+                --max-time 30 "$card_url" &
+            fi
+          fi
+
+          # --- History index + data ---
+          hist_ptr=$(curl -s --max-time 10 "$R2_BASE/history/history-index.current.json")
+          if [ -n "$hist_ptr" ]; then
+            idx_url=$(echo "$hist_ptr" | jq -r '.indexUrl // empty')
+            if [ -n "$idx_url" ]; then
+              [[ "$idx_url" != http* ]] && idx_url="$R2_BASE/$idx_url"
+              curl -s -o /dev/null -w "%{http_code} history-index\n" \
+                --max-time 30 "$idx_url" &
+            fi
+            data_url=$(echo "$hist_ptr" | jq -r '.dataUrl // empty')
+            if [ -n "$data_url" ]; then
+              [[ "$data_url" != http* ]] && data_url="$R2_BASE/$data_url"
+              curl -s -o /dev/null -w "%{http_code} history-data\n" \
+                --max-time 120 "$data_url" &
+            fi
+          fi
+
+          # --- Market index ---
+          market_ptr=$(curl -s --max-time 10 "$R2_BASE/market-index.current.json")
+          if [ -n "$market_ptr" ]; then
+            mkt_url=$(echo "$market_ptr" | jq -r '.url // empty')
+            if [ -n "$mkt_url" ]; then
+              [[ "$mkt_url" != http* ]] && mkt_url="$R2_BASE/$mkt_url"
+              curl -s -o /dev/null -w "%{http_code} market-index\n" \
+                --max-time 30 "$mkt_url" &
+            fi
+          fi
+
+          wait
+          echo "✅ Cache warming complete"
