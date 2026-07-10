@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { Button } from '@/src/components/ui/button';
 import Link from 'next/link';
 import { Metadata } from 'next';
@@ -27,17 +28,20 @@ export default function Home() {
     return (
         <div className='flex flex-col'>
             {/* Hero Section */}
-            <section className='flex flex-col items-center gap-6 overflow-hidden py-12 text-center md:py-20'>
-                <div className='container mx-auto flex flex-col items-center gap-4 px-4'>
-                    <Link
-                        href='/sets'
-                        className='group inline-flex items-center rounded-full border border-border bg-secondary px-3 py-1 text-sm font-medium text-secondary-foreground backdrop-blur-sm transition-all duration-150 hover:bg-muted/70'
-                    >
-                        {/* <span className='mr-2 flex h-2 w-2 rounded-full bg-blue-500'></span> */}
-                        Browse Expansion Sets
-                        <ArrowRight className='ml-1 h-3 w-3 transition-transform group-hover:translate-x-1' />
-                    </Link>
-
+            <section className='relative flex flex-col items-center gap-6 overflow-hidden py-12 text-center md:py-12'>
+                {/* Background image behind hero text */}
+                <div className='pointer-events-none absolute inset-0 -z-10 overflow-hidden'>
+                    <Image
+                        src='/hero/dashboard-bg.avif'
+                        alt=''
+                        fill
+                        unoptimized
+                        sizes='100vw'
+                        className='object-cover opacity-20 dark:opacity-15'
+                    />
+                    <div className='absolute inset-0 bg-gradient-to-b from-background via-background/80 to-background' />
+                </div>
+                <div className='container mx-auto flex flex-col items-center gap-5 px-4'>
                     <h1 className='max-w-[800px] text-4xl font-extrabold tracking-tight md:text-5xl lg:text-6xl'>
                         The operating system <br />
                         <span className='bg-gradient-to-b from-zinc-900 to-zinc-300 bg-clip-text text-transparent dark:from-white dark:to-zinc-400'>
@@ -49,25 +53,33 @@ export default function Home() {
                         Stop relying on manual spreadsheets. CardLedger automates your pricing,
                         tracks historical value, and organizes your assets in one place.
                     </p>
-                </div>
 
-                <div className='flex flex-col gap-3 px-4 sm:flex-row'>
-                    <Button
-                        asChild
-                        variant={'secondary'}
-                        className='h-10 w-48 border border-border bg-accent px-6 text-sm font-medium text-accent-foreground hover:bg-muted/80 hover:text-muted-foreground'
+                    <div className='flex flex-col gap-3 sm:flex-row'>
+                        <Button
+                            asChild
+                            size='lg'
+                            className='h-11 w-52 px-6 text-base'
+                        >
+                            <Link href='/cards'>
+                                Search Database <Search className='ml-2 h-4 w-4' />
+                            </Link>
+                        </Button>
+                        <HomeAuthButtons />
+                    </div>
+
+                    <Link
+                        href='/sets'
+                        className='group mt-2 inline-flex items-center rounded-full border border-border bg-secondary px-3 py-1 text-sm font-medium text-secondary-foreground backdrop-blur-sm transition-all duration-150 hover:bg-muted/70'
                     >
-                        <Link href='/cards'>
-                            Search Database <Search className='ml-2 h-4 w-4' />
-                        </Link>
-                    </Button>
-                    <HomeAuthButtons />
+                        Browse Expansion Sets
+                        <ArrowRight className='ml-1 h-3 w-3 transition-transform group-hover:translate-x-1' />
+                    </Link>
                 </div>
+            </section>
 
-                {/* HERO IMAGE */}
-                <div className='mt-8 w-screen'>
-                    <HeroAssetInspector />
-                </div>
+            {/* Interactive Inspector Section */}
+            <section className='overflow-hidden'>
+                <HeroAssetInspector />
             </section>
 
             {/* Features Section 1 */}

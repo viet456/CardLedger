@@ -45,7 +45,7 @@ interface AssetCardProps {
 
 export function HeroAssetInspector() {
     return (
-        <div className='relative overflow-clip md:py-12'>
+        <div className='relative overflow-clip md:py-4'>
             {/* 3D BACKGROUND LAYER */}
             <div className='pointer-events-none absolute -top-[12%] left-0 -z-10 w-screen max-w-none select-none bg-zinc-900 opacity-100'>
                 {' '}
