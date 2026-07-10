@@ -27,8 +27,8 @@ export default function Home() {
     return (
         <div className='flex flex-col'>
             {/* Hero Section */}
-            <section className='container mx-auto flex flex-col items-center gap-6 px-4 py-12 text-center md:py-20'>
-                <div className='flex flex-col items-center gap-4'>
+            <section className='flex flex-col items-center gap-6 overflow-hidden py-12 text-center md:py-20'>
+                <div className='container mx-auto flex flex-col items-center gap-4 px-4'>
                     <Link
                         href='/sets'
                         className='group inline-flex items-center rounded-full border border-border bg-secondary px-3 py-1 text-sm font-medium text-secondary-foreground backdrop-blur-sm transition-all duration-150 hover:bg-muted/70'
@@ -51,7 +51,7 @@ export default function Home() {
                     </p>
                 </div>
 
-                <div className='flex flex-col gap-3 sm:flex-row'>
+                <div className='flex flex-col gap-3 px-4 sm:flex-row'>
                     <Button
                         asChild
                         variant={'secondary'}
@@ -65,7 +65,7 @@ export default function Home() {
                 </div>
 
                 {/* HERO IMAGE */}
-                <div className='mt-8 w-full'>
+                <div className='mt-8 w-screen'>
                     <HeroAssetInspector />
                 </div>
             </section>
