@@ -13,6 +13,7 @@ jobs:
           R2_BASE: https://assets.cardledger.io
         run: |
           UA="User-Agent: Mozilla/5.0 (compatible; CacheWarmer/1.0)"
+          set +e  # don't abort on first failure — warm as much as possible
 
           # --- Vercel SSR pages ---
           pages=(
@@ -26,19 +27,21 @@ jobs:
           done
 
           # --- Card index ---
-          card_ptr=$(curl -s --max-time 10 "$R2_BASE/card-index.current.json")
-          if [ -n "$card_ptr" ]; then
+          card_ptr=$(curl -s --max-time 10 "$R2_BASE/indices/card-index.current.json")
+          if [ -n "$card_ptr" ] && echo "$card_ptr" | jq empty 2>/dev/null; then
             card_url=$(echo "$card_ptr" | jq -r '.url // empty')
             if [ -n "$card_url" ]; then
               [[ "$card_url" != http* ]] && card_url="$R2_BASE/$card_url"
               curl -s -o /dev/null -w "%{http_code} card-index\n" \
                 --max-time 30 "$card_url" &
             fi
+          else
+            echo "⚠️  card-index pointer not available"
           fi
 
           # --- History index + data ---
           hist_ptr=$(curl -s --max-time 10 "$R2_BASE/history/history-index.current.json")
-          if [ -n "$hist_ptr" ]; then
+          if [ -n "$hist_ptr" ] && echo "$hist_ptr" | jq empty 2>/dev/null; then
             idx_url=$(echo "$hist_ptr" | jq -r '.indexUrl // empty')
             if [ -n "$idx_url" ]; then
               [[ "$idx_url" != http* ]] && idx_url="$R2_BASE/$idx_url"
@@ -51,17 +54,21 @@ jobs:
               curl -s -o /dev/null -w "%{http_code} history-data\n" \
                 --max-time 120 "$data_url" &
             fi
+          else
+            echo "⚠️  history-index pointer not available"
           fi
 
           # --- Market index ---
-          market_ptr=$(curl -s --max-time 10 "$R2_BASE/market-index.current.json")
-          if [ -n "$market_ptr" ]; then
+          market_ptr=$(curl -s --max-time 10 "$R2_BASE/market/market-index.current.json")
+          if [ -n "$market_ptr" ] && echo "$market_ptr" | jq empty 2>/dev/null; then
             mkt_url=$(echo "$market_ptr" | jq -r '.url // empty')
             if [ -n "$mkt_url" ]; then
               [[ "$mkt_url" != http* ]] && mkt_url="$R2_BASE/$mkt_url"
               curl -s -o /dev/null -w "%{http_code} market-index\n" \
                 --max-time 30 "$mkt_url" &
             fi
+          else
+            echo "⚠️  market-index pointer not available"
           fi
 
           wait
