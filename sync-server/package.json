@@ -1,0 +1,9 @@
+{
+  "name": "cardledger-sync-server",
+  "version": "1.0.0",
+  "private": true,
+  "main": "server.js",
+  "dependencies": {
+    "pg": "^8.13.0"
+  }
+}
