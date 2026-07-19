@@ -324,26 +324,40 @@ async function syncSeriesAndSets() {
             let symbolImageKey: string | null = null;
             let imagesUpdated = false; // Flag to trigger re-optimization if needed
 
+            // Fetch existing set to check if images are already stored
+            const existingSet = await prisma.set.findUnique({
+                where: { id: set.id },
+                select: { logoImageKey: true, symbolImageKey: true }
+            });
+
             if (set.logo) {
                 const key = `sets/${set.id}-logo.png`;
-                // Try to upload. If returns true, it means we uploaded a NEW file.
-                try {
-                    const uploaded = await uploadImageToR2(set.logo + '.png', key);
-                    logoImageKey = key; // Only assign if upload succeeds
-                    if (uploaded) imagesUpdated = true;
-                } catch (e) {
-                    console.warn(`    ⚠️ Logo upload failed for ${set.id}. Saving set with null logoImageKey.`);
+                if (existingSet?.logoImageKey !== key) {
+                    // Try to upload. If returns true, it means we uploaded a NEW file.
+                    try {
+                        const uploaded = await uploadImageToR2(set.logo + '.png', key);
+                        logoImageKey = key; // Only assign if upload succeeds
+                        if (uploaded) imagesUpdated = true;
+                    } catch (e) {
+                        console.warn(`    ⚠️ Logo upload failed for ${set.id}. Saving set with null logoImageKey.`);
+                    }
+                } else {
+                    logoImageKey = key; // Already exists, just reference it
                 }
             }
 
             if (set.symbol) {
                 const key = `sets/${set.id}-symbol.png`;
-                try {
-                    const uploaded = await uploadImageToR2(set.symbol + '.png', key);
-                    symbolImageKey = key; // Only assign if upload succeeds
-                    if (uploaded) imagesUpdated = true;
-                } catch (e) {
-                    console.warn(`    ⚠️ Symbol upload failed for ${set.id}. Saving set with null symbolImageKey.`);
+                if (existingSet?.symbolImageKey !== key) {
+                    try {
+                        const uploaded = await uploadImageToR2(set.symbol + '.png', key);
+                        symbolImageKey = key; // Only assign if upload succeeds
+                        if (uploaded) imagesUpdated = true;
+                    } catch (e) {
+                        console.warn(`    ⚠️ Symbol upload failed for ${set.id}. Saving set with null symbolImageKey.`);
+                    }
+                } else {
+                    symbolImageKey = key; // Already exists, just reference it
                 }
             }
             // ------------------------
