@@ -9,12 +9,24 @@ import { useAuthSession } from '@/src/providers/SessionProvider';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/src/components/ui/tooltip';
 import { useCollectionStore } from '@/src/lib/store/collectionStore';
+import { useCardStore } from '@/src/lib/store/cardStore';
 
 interface CollectionControlProps {
     cardId: string;
     currentPrice: number | null;
     entryId?: string;
     cardName?: string;
+}
+
+function getDefaultVariant(
+    card: { hasNormal: boolean; hasHolo: boolean; hasReverse: boolean; hasFirstEdition: boolean } | undefined
+): CardVariant {
+    if (!card) return CardVariant.Normal;
+    if (card.hasNormal) return CardVariant.Normal;
+    if (card.hasHolo) return CardVariant.Holo;
+    if (card.hasReverse) return CardVariant.Reverse;
+    if (card.hasFirstEdition) return CardVariant.FirstEdition;
+    return CardVariant.Normal;
 }
 
 export function CollectionControl({
@@ -31,6 +43,7 @@ export function CollectionControl({
     const pendingDeletesRef = useRef<Set<string>>(new Set());
 
     const collectionEntries = useCollectionStore((state) => state.entries);
+    const cardVariantFlags = useCardStore((state) => state.cardMap.get(cardId));
     const collectionStatus = useCollectionStore((state) => state.status);
     const addEntry = useCollectionStore((state) => state.addEntry);
     const removeEntry = useCollectionStore((state) => state.removeEntry);
@@ -61,9 +74,7 @@ export function CollectionControl({
             await addEntry({
                 cardId,
                 purchasePrice: currentPrice || 0,
-                // Default variant, to be edited later in modal
-                // Should be refactored to the card's primary variant
-                variant: CardVariant.Normal
+                variant: getDefaultVariant(cardVariantFlags)
             });
             toast.success('Added to collection');
         } catch (error) {
