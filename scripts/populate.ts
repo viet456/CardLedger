@@ -313,6 +313,9 @@ async function syncSeriesAndSets() {
 
             console.log(`  Processing set: ${set.name}...`);
 
+            // Fetch full set details to get releaseDate (series endpoint omits it)
+            const fullSet = await tcgdex.fetch('sets', set.id);
+
             // 🛠️ Spelling Fix
             const correctedName = set.name.replace("Macdonald's", "McDonald's");
 
@@ -355,8 +358,8 @@ async function syncSeriesAndSets() {
                     seriesId: s.id,
                     printedTotal: set.cardCount.official,
                     total: set.cardCount.total,
-                    releaseDate: (set as any).releaseDate
-                        ? new Date((set as any).releaseDate)
+                    releaseDate: fullSet?.releaseDate
+                        ? new Date(fullSet.releaseDate)
                         : new Date(),
                     updatedAt: new Date(),
                     logoImageKey,
@@ -369,9 +372,6 @@ async function syncSeriesAndSets() {
                     name: correctedName,
                     series: s.name,
                     seriesId: s.id,
-                    releaseDate: (set as any).releaseDate
-                        ? new Date((set as any).releaseDate)
-                        : new Date(),
                     printedTotal: set.cardCount.official,
                     total: set.cardCount.total,
                     ...(logoImageKey ? { logoImageKey } : {}),
