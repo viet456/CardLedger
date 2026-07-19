@@ -99,10 +99,10 @@ async function processCard(cardRef: any, dbSet: any, cardsWithImages: Set<string
             card.stage,
             card.suffix,
             card.trainerType,
-            (card as any).energyType
+            card.energyType
         ].filter(Boolean) as string[];
         const uniqueSubtypes = [...new Set(rawSubtypes)].map(normalizeSubtype);
-        const descriptionText = card.description || (card as any).effect || null;
+        const descriptionText = card.description || card.effect || null;
 
         let imageKey: string | null = null;
         let imageUploaded = false;
@@ -217,14 +217,65 @@ async function processCard(cardRef: any, dbSet: any, cardsWithImages: Set<string
                 tcgPlayerId
             },
             update: {
+                // Sync all API-owned scalars — API is source of truth
                 hp: card.hp ? parseInt(String(card.hp)) : null,
+                name: card.name,
+                supertype,
+                number: card.localId,
+                description: descriptionText,
+                regulationMark: card.regulationMark ?? null,
+                nationalPokedexNumbers: card.dexId || [],
+                pokedexNumberSort: card.dexId?.[0] || null,
+                evolvesFrom: card.evolveFrom ?? null,
+                evolvesTo: (card as any).evolveTo ?? [],
+                convertedRetreatCost: card.retreat || null,
+                artistId,
+                rarityId,
+                standard: mapLegality(card.legal?.standard),
+                expanded: mapLegality(card.legal?.expanded),
+                unlimited: mapLegality((card.legal as Record<string, boolean>)?.unlimited),
                 hasNormal: variants.normal ?? false,
                 hasHolo: variants.holo ?? false,
                 hasReverse: variants.reverse ?? false,
                 hasFirstEdition: variants.firstEdition ?? false,
                 ...(tcgPlayerId ? { tcgPlayerId } : {}),
                 ...(imageKey ? { imageKey } : {}),
-                ...(imageUploaded ? { imagesOptimized: false } : {})
+                ...(imageUploaded ? { imagesOptimized: false } : {}),
+                // Sync relational data on update to propagate API corrections
+                subtypes: {
+                    deleteMany: {},
+                    create: uniqueSubtypes.map((st) => ({
+                        subtype: { connectOrCreate: { where: { name: st }, create: { name: st } } }
+                    })),
+                },
+                types: {
+                    deleteMany: {},
+                    create: (card.types || []).map((t) => ({
+                        type: { connectOrCreate: { where: { name: t }, create: { name: t } } }
+                    })),
+                },
+                weaknesses: {
+                    deleteMany: {},
+                    create: (card.weaknesses || []).map((w) => ({
+                        type: { connectOrCreate: { where: { name: w.type }, create: { name: w.type } } },
+                        value: w.value ?? null,
+                    })),
+                },
+                resistances: {
+                    deleteMany: {},
+                    create: (card.resistances || []).map((r) => ({
+                        type: { connectOrCreate: { where: { name: r.type }, create: { name: r.type } } },
+                        value: r.value ?? null,
+                    })),
+                },
+                abilities: {
+                    deleteMany: {},
+                    create: abilitiesCreate,
+                },
+                attacks: {
+                    deleteMany: {},
+                    create: attacksCreate,
+                },
             }
         });
         process.stdout.write('.');
@@ -315,8 +366,14 @@ async function syncSeriesAndSets() {
                 },
                 update: {
                     tcgdexId: set.id,
-                    total: set.cardCount.total,
                     name: correctedName,
+                    series: s.name,
+                    seriesId: s.id,
+                    releaseDate: (set as any).releaseDate
+                        ? new Date((set as any).releaseDate)
+                        : new Date(),
+                    printedTotal: set.cardCount.official,
+                    total: set.cardCount.total,
                     ...(logoImageKey ? { logoImageKey } : {}),
                     ...(symbolImageKey ? { symbolImageKey } : {}),
                     ...(imagesUpdated ? { logoOptimized: false, symbolOptimized: false } : {})
@@ -329,7 +386,7 @@ async function syncSeriesAndSets() {
 const isForce = process.argv.includes('--force');
 
 async function syncCards() {
-    console.log(isForce ? '🃏 Syncing Cards (Force Mode)...' : '🃏 Syncing Cards (Smart Skip Mode)...');
+    console.log(isForce ? '🃏 Syncing Cards (Force Mode — all metadata + re-uploads)...' : '🃏 Syncing Cards (all metadata synced, R2 uploads for missing images)...');
     const dbSets = await prisma.set.findMany({ 
         where: { 
             // Don't sync cards in blocked series and sets
@@ -339,27 +396,29 @@ async function syncCards() {
     });
 
     for (const dbSet of dbSets) {
+        // Track which cards already have images (for R2 upload skip only)
         const existing = await prisma.card.findMany({
             where: { setId: dbSet.id, imageKey: { not: null } },
             select: { id: true }
         });
-        const completed = new Set(existing.map((c) => c.id));
+        const cardsWithImages = new Set(existing.map((c) => c.id));
         const setDetails = await tcgdex.fetch('sets', dbSet.tcgdexId!);
         if (!setDetails || !setDetails.cards) {
             console.log(`  ⚠️  ${dbSet.name} has no cards data on TCGdex. Skipping.`);
             continue;
         }
 
-        const toProcess = isForce ? setDetails.cards : setDetails.cards.filter((c) => !completed.has(c.id));
-        if (toProcess.length === 0) {
-            console.log(`  ✅ ${dbSet.name} is 100% complete. Moving on...`);
-            continue;
-        }
-
-        console.log(`\n🚀 ${dbSet.name}: Processing ${toProcess.length} missing cards...`);
+        // In force mode, or normal mode — always process ALL cards for metadata sync.
+        // R2 image uploads are skipped per-card inside processCard when image already exists.
+        // Smart Skip = skip R2 uploads for cards that already have images.
+        // Force Mode = re-upload everything.
+        const toProcess = setDetails.cards;
+        const missingImages = setDetails.cards.filter((c) => !cardsWithImages.has(c.id));
+        
+        console.log(`\n🚀 ${dbSet.name}: Syncing ${toProcess.length} cards (R2 uploads: ${isForce ? 'force all' : `${missingImages.length} missing`})...`);
         const chunks = chunkArray(toProcess, 5);
         for (const chunk of chunks) {
-            await Promise.all(chunk.map((c) => processCard(c, dbSet, completed)));
+            await Promise.all(chunk.map((c) => processCard(c, dbSet, cardsWithImages)));
         }
     }
 }
