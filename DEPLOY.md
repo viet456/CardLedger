@@ -97,7 +97,7 @@ docker compose exec -T postgres pg_restore \
   < /tmp/cardledger-migration.dump
 
 # Verify data
-docker compose exec - postgres psql -U cardledger -d cardledger -c "\dt"
+docker compose exec postgres psql -U cardledger -d cardledger -c "\dt"
 ```
 
 ### 5. Stop native services
@@ -121,43 +121,51 @@ docker compose logs -f  # watch all services start up
 
 ### 7. Set up SSL (Certbot on host)
 
+The nginx container is already configured for SSL (see `docker.conf`), and `docker-compose.yml` mounts `/etc/letsencrypt` into the container. You just need to get the certificate on the host first.
+
 ```bash
-sudo apt install nginx certbot python3-certbot-nginx -y
+# Install certbot (standalone mode — no native nginx needed)
+sudo apt install certbot -y
 
-# Create a temporary nginx config for certbot HTTP-01 challenge
-sudo tee /etc/nginx/sites-available/sync.cardledger.io <<'EOF'
-server {
-    listen 80;
-    server_name sync.cardledger.io;
-    location / {
-        proxy_pass http://127.0.0.1:80;
-    }
-}
-EOF
-sudo ln -sf /etc/nginx/sites-available/sync.cardledger.io /etc/nginx/sites-enabled/
-sudo systemctl restart nginx
+# Temporarily stop Docker nginx to free port 80
+docker stop cardledger-nginx
 
-# Get certificate
-sudo certbot --nginx -d sync.cardledger.io
+# Get the certificate (standalone mode spins up its own HTTP server for the challenge)
+sudo certbot certonly --standalone -d sync.cardledger.io --agree-tos --email your@email.com
 
-# Stop native nginx — Docker nginx will handle traffic
-sudo systemctl stop nginx
-sudo systemctl disable nginx
-
-# Re-run certbot renewal manually to test, or set up a cron:
-# sudo certbot renew --dry-run
+# Restart Docker nginx
+docker start cardledger-nginx
 ```
 
-> **Note:** For SSL termination, you have two options:
-> 1. Mount certs into the Docker nginx container (recommended for production)
-> 2. Keep native nginx as SSL terminator, proxy to Docker nginx on a local port
->
-> Option 1 is cleaner. Add a volume mount to `docker-compose.yml` nginx service:
-> ```yaml
-> volumes:
->   - /etc/letsencrypt:/etc/letsencrypt:ro
-> ```
-> And update `docker.conf` to include SSL listeners and cert paths.
+Verify it works:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}" --max-time 31 https://sync.cardledger.io/stream?userId=test
+# Should return 200 (timeout needs to exceed the 30s SSE heartbeat interval)
+```
+
+### 8. Set up cert auto-renewal
+
+Let's Encrypt certs expire every 90 days. Set up a cron job that stops Docker nginx, renews, then restarts it:
+
+```bash
+# Update certbot renewal config to use standalone (not nginx plugin)
+sudo sed -i 's/authenticator = nginx/authenticator = standalone/' \
+  /etc/letsencrypt/renewal/sync.cardledger.io.conf 2>/dev/null
+
+# Create cron job (runs daily at 3am, only renews if cert is due)
+sudo tee /etc/cron.d/certbot-renew <<'EOF'
+0 3 * * * root certbot renew --standalone --pre-hook "docker stop cardledger-nginx" --post-hook "docker start cardledger-nginx" --quiet
+EOF
+
+# Test the renewal process
+sudo certbot renew --standalone \
+  --pre-hook "docker stop cardledger-nginx" \
+  --post-hook "docker start cardledger-nginx" \
+  --dry-run
+```
+
+The dry-run should complete without errors.
 
 ---
 
