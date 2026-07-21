@@ -2,6 +2,8 @@ name: Cache Warmer
 on:
   schedule:
     - cron: '0 * * * *' # every hour
+  push:
+    branches: ['main']
   workflow_dispatch:
 
 jobs:
