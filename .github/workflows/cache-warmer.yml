@@ -25,6 +25,29 @@ jobs:
             curl -s -o /dev/null -w "%{http_code} %{url}\n" \
               -L -H "$UA" --max-time 10 "$url" &
           done
+          wait
+
+          # --- Set pages (dynamic SSR, warmed via /api/set-ids) ---
+          set_ids_json=$(curl -s --max-time 10 "https://cardledger.io/api/set-ids")
+          if [ -n "$set_ids_json" ] && echo "$set_ids_json" | jq empty 2>/dev/null; then
+            mapfile -t set_ids < <(echo "$set_ids_json" | jq -r '.setIds[]')
+            echo "Warming ${#set_ids[@]} set pages…"
+            max_parallel=10
+            running=0
+            for sid in "${set_ids[@]}"; do
+              curl -s -o /dev/null -w "%{http_code} /sets/${sid}\n" \
+                -L -H "$UA" --max-time 10 "https://cardledger.io/sets/${sid}" &
+              running=$((running + 1))
+              if [ "$running" -ge "$max_parallel" ]; then
+                wait -n 2>/dev/null || wait
+                running=$((running - 1))
+              fi
+            done
+            wait
+            echo "✅ Set page warming complete"
+          else
+            echo "⚠️  /api/set-ids not available, skipping set pages"
+          fi
 
           # --- Card index ---
           card_ptr=$(curl -s --max-time 10 "$R2_BASE/indices/card-index.current.json")
