@@ -1,9 +1,14 @@
-import { PrismaClient } from '@prisma/client';
+import 'dotenv/config';
+import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '../prisma/generated/client';
 import { performance } from 'perf_hooks';
 import pLimit from 'p-limit';
 import { optimizeImage } from './optimizeImages';
 
-const prisma = new PrismaClient();
+const pool = new Pool({ connectionString: process.env.DATABASE_URL! });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 const ALL_SIZES = [64, 384, 512, 640];
 const limit = pLimit(4);
 

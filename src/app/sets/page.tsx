@@ -2,7 +2,7 @@ import { prisma } from '@/src/lib/prisma';
 import { SetObject } from '@/src/shared-types/card-index';
 import { Metadata } from 'next';
 import { cacheLife, cacheTag } from 'next/cache';
-import { type Set as PrismaSet } from '@prisma/client';
+import { type Set as PrismaSet } from '@/prisma/generated/client';
 import { SetClient, GroupedSet } from './SetClient';
 
 export const metadata: Metadata = {

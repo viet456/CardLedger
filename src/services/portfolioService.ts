@@ -1,6 +1,6 @@
 import { prisma } from '../lib/prisma';
 import { cacheTag, cacheLife } from 'next/cache';
-import { CardVariant } from '@prisma/client';
+import { CardVariant } from '@/prisma/generated/client';
 
 type PriceRow = {
     cardId: string;

@@ -1,10 +1,15 @@
-import { PrismaClient, Supertype, LegalityStatus } from '@prisma/client';
+import 'dotenv/config';
+import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient, Supertype, LegalityStatus } from '../prisma/generated/client';
 import TCGdex from '@tcgdex/sdk';
 import { PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { r2 } from '../src/lib/r2';
 import fetch from 'node-fetch';
 
-const prisma = new PrismaClient();
+const pool = new Pool({ connectionString: process.env.DATABASE_URL! });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 const tcgdex = new TCGdex('en');
 const BUCKET_NAME = process.env.R2_BUCKET_NAME!;
 

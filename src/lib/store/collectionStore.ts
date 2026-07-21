@@ -1,7 +1,8 @@
 import { create } from 'zustand/react';
 import { persist, PersistStorage, StorageValue } from 'zustand/middleware';
 import { get, set, del } from 'idb-keyval';
-import { CollectionEntry, CardVariant } from '@prisma/client';
+import { CollectionEntry } from '@/prisma/generated/browser';
+import { CardVariant } from '@/prisma/generated/enums';
 import { trpcClient } from '@/src/utils/trpc';
 import { toast } from 'sonner';
 

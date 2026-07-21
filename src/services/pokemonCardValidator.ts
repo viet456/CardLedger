@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { Supertype, LegalityStatus } from '@prisma/client';
+import { Supertype, LegalityStatus } from '@/prisma/generated/browser';
 
 // set what fields should be sortable
 const sortableKeys = z.enum([

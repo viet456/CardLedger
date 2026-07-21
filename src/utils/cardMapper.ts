@@ -1,5 +1,5 @@
 import { DenormalizedCard, SetObject, AbilityObject } from '@/src/shared-types/card-index';
-import { Decimal } from '@prisma/client/runtime/library';
+import { Decimal } from '@prisma/client/runtime/client';
 import {
     Card,
     Set as PrismaSet,
@@ -10,7 +10,7 @@ import {
     Subtype,
     Ability,
     Attack
-} from '@prisma/client';
+} from '@/prisma/generated/client';
 
 export type PrismaCardWithRelations = Card & {
     set: PrismaSet;

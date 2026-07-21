@@ -18,7 +18,7 @@ import { EditableVariantSelect } from './EditableVariantSelect';
 import { EditablePriceInput } from './EditablePriceInput';
 import { EditableDate } from './EditableDate';
 import { SafeDeleteButton } from './SafeDeleteButton';
-import { CardVariant } from '@prisma/client';
+import { CardVariant } from '@/prisma/generated/enums';
 import { useCollectionStore } from '@/src/lib/store/collectionStore';
 import { useCardStore } from '@/src/lib/store/cardStore';
 

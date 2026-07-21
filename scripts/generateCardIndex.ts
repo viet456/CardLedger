@@ -1,4 +1,7 @@
-import { PrismaClient } from '@prisma/client';
+import 'dotenv/config';
+import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '../prisma/generated/client';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { r2 } from '../src/lib/r2';
 import crypto from 'crypto';
@@ -6,7 +9,9 @@ import zlib from 'zlib';
 import { NormalizedCard, SetObject, AbilityObject, AttackObject } from '../src/shared-types/card-index';
 
 const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
-const prisma = new PrismaClient();
+const pool = new Pool({ connectionString: process.env.DATABASE_URL! });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 const BUCKET_NAME = 'cardledger';
 
 // Helper function to get or create an ID from a lookup map
