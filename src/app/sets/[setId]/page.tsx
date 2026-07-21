@@ -27,17 +27,6 @@ export async function generateMetadata({
     };
 }
 
-export async function generateStaticParams() {
-    const sets = await prisma.set.findMany({
-        select: {
-            id: true
-        }
-    });
-    return sets.map((set) => ({
-        setId: set.id
-    }));
-}
-
 export default async function SingleSetPage({ params }: { params: Promise<{ setId: string }> }) {
     const { setId } = await params;
     const data = await getCachedSetData(setId);
