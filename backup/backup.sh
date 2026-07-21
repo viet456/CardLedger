@@ -56,29 +56,21 @@ run_backup() {
     echo "[$(date)] Cleaning up local backups older than ${RETENTION_DAYS} days..."
     find "$BACKUP_DIR" -name "cardledger_*.dump" -mtime +"${RETENTION_DAYS}" -delete 2>/dev/null || true
 
-    # Cleanup old backups on R2
+    # Cleanup old backups on R2 (keep last 5 most recent, delete the rest)
     if [ -n "$R2_BUCKET" ] && [ -n "${AWS_ACCESS_KEY_ID:-}" ]; then
-        echo "[$(date)] Cleaning up old R2 backups..."
+        echo "[$(date)] Cleaning up old R2 backups (keeping last 5)..."
         aws s3 ls "s3://${R2_BUCKET}/${R2_PREFIX}/" \
             --endpoint-url "$R2_ENDPOINT" 2>/dev/null \
             | grep "cardledger_" \
-            | while read -r line; do
-                local file_name
-                file_name=$(echo "$line" | awk '{print $4}')
+            | awk '{print $4}' \
+            | sort -r \
+            | tail -n +6 \
+            | while read -r file_name; do
                 if [ -n "$file_name" ]; then
-                    # Extract date from filename: cardledger_YYYYMMDD_HHMMSS.dump
-                    local file_date
-                    file_date=$(echo "$file_name" | grep -oP '\d{8}' | head -1)
-                    if [ -n "$file_date" ]; then
-                        local cutoff_date
-                        cutoff_date=$(date -d "-${RETENTION_DAYS} days" +%Y%m%d)
-                        if [[ "$file_date" < "$cutoff_date" ]]; then
-                            aws s3 rm "s3://${R2_BUCKET}/${R2_PREFIX}/${file_name}" \
-                                --endpoint-url "$R2_ENDPOINT" \
-                                --quiet
-                            echo "[$(date)] Deleted old R2 backup: $file_name"
-                        fi
-                    fi
+                    aws s3 rm "s3://${R2_BUCKET}/${R2_PREFIX}/${file_name}" \
+                        --endpoint-url "$R2_ENDPOINT" \
+                        --quiet
+                    echo "[$(date)] Deleted old R2 backup: $file_name"
                 fi
             done
     fi
@@ -91,19 +83,11 @@ run_backup() {
 # Run an initial backup immediately on container start
 run_backup
 
-# Then loop: sleep until 3am UTC, run again
+# Then loop every 24 hours
+INTERVAL=$((24 * 60 * 60))  # 86400 seconds = 24 hours
+
 while true; do
-    NOW_EPOCH=$(date +%s)
-    # Calculate next 3:00 UTC
-    NEXT_3AM=$(date -u -d "tomorrow 03:00:00" +%s 2>/dev/null || \
-               date -u -j -f "%Y-%m-%d %H:%M:%S" "$(date -u -v+1d +%Y-%m-%d) 03:00:00" +%s)
-    SLEEP_SECONDS=$(( NEXT_3AM - NOW_EPOCH ))
-
-    if [ "$SLEEP_SECONDS" -le 0 ]; then
-        SLEEP_SECONDS=86400
-    fi
-
-    echo "[$(date)] Next backup in ${SLEEP_SECONDS}s (3:00 UTC)..."
-    sleep "$SLEEP_SECONDS"
+    echo "[$(date)] Next backup in ${INTERVAL}s (24 hours)..."
+    sleep "$INTERVAL"
     run_backup
 done
