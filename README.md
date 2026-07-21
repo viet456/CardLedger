@@ -66,9 +66,11 @@ The platform maintains a continuously updating local database of card market val
 
 ### Infrastructure & Automation
 - **Database:** PostgreSQL, Prisma ORM
+- **Containerization:** Docker Compose (Postgres, Sync Server, Nginx, Automated Backups)
 - **Sync Server:** Linux VPS, Nginx, PM2, Server-Sent Events (SSE)
 - **CI/CD:** GitHub Actions (Linting, Daily ETL Cron Jobs)
 - **Asset Storage:** Cloudflare R2
+- **Deployment:** See [DEPLOY.md](DEPLOY.md) for VPS setup, backup/restore, and disaster recovery
 
 ## Project Goals
 
