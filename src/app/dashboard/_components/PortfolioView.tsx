@@ -1,7 +1,7 @@
 'use client';
 import { PortfolioChart } from '@/src/components/portfolio/PortfolioChart';
 import { PortfolioChartPoint } from '@/src/services/portfolioService';
-import { CardVariant } from '@prisma/client';
+import { CardVariant } from '@/prisma/generated/enums';
 import { DataTable } from './DataTable';
 import { columns, PortfolioRow } from './Columns';
 import { Wallet, TrendingUp, TrendingDown, CircleDollarSign } from 'lucide-react';

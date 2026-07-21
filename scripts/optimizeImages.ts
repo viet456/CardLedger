@@ -1,11 +1,16 @@
+import 'dotenv/config';
 import sharp from 'sharp';
-import { PrismaClient } from '@prisma/client';
+import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '../prisma/generated/client';
 import { PutObjectCommand, HeadObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { r2 } from '../src/lib/r2';
 import { performance } from 'perf_hooks';
 import pLimit from 'p-limit';
 
-const prisma = new PrismaClient();
+const pool = new Pool({ connectionString: process.env.DATABASE_URL! });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME;
 
 const ALL_SIZES = [64, 384, 512, 640]; // 640 is near the original PNG size

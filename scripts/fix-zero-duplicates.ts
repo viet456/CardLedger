@@ -1,6 +1,11 @@
-import { PrismaClient } from '@prisma/client';
+import 'dotenv/config';
+import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '../prisma/generated/client';
 
-const prisma = new PrismaClient();
+const pool = new Pool({ connectionString: process.env.DATABASE_URL! });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 function chunkArray<T>(array: T[], size: number): T[][] {
     const result: T[][] = [];

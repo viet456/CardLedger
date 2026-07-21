@@ -7,7 +7,7 @@ import {
     SelectTrigger,
     SelectValue
 } from '@/src/components/ui/select';
-import { CardVariant } from '@prisma/client';
+import { CardVariant } from '@/prisma/generated/enums';
 import { toast } from 'sonner';
 import { useState } from 'react';
 

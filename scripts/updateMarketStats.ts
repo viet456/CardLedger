@@ -1,4 +1,7 @@
-import { PrismaClient } from '@prisma/client';
+import 'dotenv/config';
+import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '../prisma/generated/client';
 import TCGdex from '@tcgdex/sdk';
 import axios from 'axios';
 import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -6,7 +9,10 @@ import { r2 } from '../src/lib/r2';
 import zlib from 'zlib';
 import crypto from 'crypto';
 
+const pool = new Pool({ connectionString: process.env.DATABASE_URL! });
+const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({
+    adapter,
     log: ['error']
 });
 const tcgdex = new TCGdex('en');

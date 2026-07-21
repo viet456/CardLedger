@@ -1,12 +1,17 @@
+import 'dotenv/config';
 import sharp from 'sharp';
-import { PrismaClient } from '@prisma/client';
+import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '../prisma/generated/client';
 import { GetObjectCommand, PutObjectCommand, DeleteObjectsCommand } from '@aws-sdk/client-s3';
 import { r2 } from '../src/lib/r2';
 import pLimit from 'p-limit';
 import fs from 'fs';
 import path from 'path';
 
-const prisma = new PrismaClient();
+const pool = new Pool({ connectionString: process.env.DATABASE_URL! });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME;
 const COMPLETED_FILE = path.join(__dirname, '_maintenance_completed.txt');
 

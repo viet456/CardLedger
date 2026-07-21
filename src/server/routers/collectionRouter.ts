@@ -3,10 +3,9 @@ import { z } from 'zod';
 import { prisma } from '@/src/lib/prisma';
 import { getPortfolioValue } from '@/src/services/portfolioService';
 import { TRPCError } from '@trpc/server';
-import { Card, CardVariant } from '@prisma/client';
-import { MarketStats } from '@prisma/client';
+import { Card, CardVariant, MarketStats } from '@/prisma/generated/client';
 import { CardPrices } from '@/src/shared-types/price-api';
-import { Decimal } from '@prisma/client/runtime/library';
+import { Decimal } from '@prisma/client/runtime/client';
 
 function toNum(val: number | Decimal | null | undefined): number | null {
     if (val === null || val === undefined) return null;
