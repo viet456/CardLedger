@@ -5,6 +5,13 @@ import { Metadata } from 'next';
 import { getCachedSetData } from './data';
 import { FilterOptions } from '@/src/shared-types/card-index';
 
+export async function generateStaticParams() {
+    const sets = await prisma.set.findMany({
+        select: { id: true }
+    });
+    return sets.map((s) => ({ setId: s.id }));
+}
+
 export async function generateMetadata({
     params
 }: {
