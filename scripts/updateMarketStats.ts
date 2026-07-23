@@ -345,19 +345,54 @@ async function main() {
     }
 }
 
-// Adds current day prices to price history file
+/**
+ * Incrementally updates the R2-hosted price history artifacts by appending
+ * a new date column and incorporating any new cards that appeared since
+ * the last run.
+ *
+ * ## R2 Data Format
+ *
+ * Two files are stored on R2 and downloaded by the client on page load:
+ *
+ * - **Index JSON** (`history-index.v*.json`)
+ *   - `dates[]` — every calendar day from the earliest price to the latest,
+ *     as ISO strings ("2024-01-15", "2024-01-16", …).
+ *   - `offsets` — `cardId → variant → int32ElementOffset` pointing into the
+ *     monolithic binary file. Each offset is the *element* index (not byte)
+ *     where that card/variant's delta array starts.
+ *
+ * - **Binary data** (`history-data.v*.bin`)
+ *   - A single `Int32Array`. For each card+variant the array stores one
+ *     Int32 value per date in `dates[]`:
+ *       • Day 0 → absolute price in cents
+ *       • Day 1+ → delta from previous day's running price
+ *   - The client accumulates deltas to reconstruct the full price series.
+ *
+ * ## What this function does
+ *
+ * 1. Downloads the existing R2 artifacts.
+ * 2. Finds the newest date in the DB that isn't already in `dates[]`.
+ * 3. Fetches that day's prices for all cards from the DB.
+ * 4. Identifies **new cards** (in DB but missing from R2 offsets) and
+ *    fetches their complete history so we can build delta arrays from
+ *    scratch — no full rebuild of all 4.5M rows needed.
+ * 5. Builds a new buffer in a single unified pass over every card:
+ *    - Existing cards: copy old deltas from the R2 buffer, append new delta.
+ *    - New cards: build full delta array from DB history.
+ * 6. Uploads the updated artifacts to R2.
+ */
 async function incrementHistoryIndex() {
     console.log('--- Starting Incremental History Update ---');
-    
+
     const BUCKET_NAME = 'cardledger';
     const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
 
-    // 1. Fetch pointer
+    // ── Step 1: Fetch current R2 artifacts ────────────────────────────────────
+    // The pointer file always points to the latest versioned index + data files.
     const pointerRes = await fetch(`${R2_PUBLIC_URL}/history/history-index.current.json`);
     if (!pointerRes.ok) throw new Error('Could not fetch pointer file');
     const pointer = await pointerRes.json();
 
-    // 2. Fetch Index & Data
     const indexRes = await fetch(pointer.indexUrl);
     const dataRes = await fetch(pointer.dataUrl);
     if (!indexRes.ok || !dataRes.ok) throw new Error('Could not fetch history files');
@@ -366,11 +401,11 @@ async function incrementHistoryIndex() {
     const dataBuffer = await dataRes.arrayBuffer();
     const oldInt32Array = new Int32Array(dataBuffer);
 
-    // 3. Determine the target date from the latest price record in the DB.
-    //    We use the source's reported date (from TCGdex/TCGPlayer) rather than
-    //    new Date(), because the API's `updated` field can lag behind the script
-    //    run date. This ensures the history index date aligns with the actual
-    //    price data timestamps stored in the DB.
+    // ── Step 2: Determine the target date to append ───────────────────────────
+    // We use the source's reported date (from TCGdex/TCGPlayer) rather than
+    // new Date(), because the API's `updated` field can lag behind the script
+    // run date. This ensures the history index date aligns with the actual
+    // price data timestamps stored in the DB.
     const latestRecord = await prisma.priceHistory.findFirst({
         orderBy: { timestamp: 'desc' },
         select: { timestamp: true }
@@ -388,7 +423,8 @@ async function incrementHistoryIndex() {
         return;
     }
 
-    // 4. Fetch prices for the latest date
+    // ── Step 3: Fetch the new day's prices for all cards ──────────────────────
+    // This gives us the latest price snapshot to append as a new delta column.
     console.log(`Querying prices from DB for ${latestDateStr}...`);
     const latestPrices = await prisma.priceHistory.findMany({
         where: { timestamp: { gte: latestDate } },
@@ -402,72 +438,185 @@ async function incrementHistoryIndex() {
         }
     });
 
-    const priceMap = new Map();
+    const priceMap = new Map<string, typeof latestPrices[0]>();
     for (const row of latestPrices) {
         priceMap.set(row.cardId, row);
     }
-
     console.log(`Found ${latestPrices.length} cards with prices for ${latestDateStr}.`);
 
-    const variantKeys = ['tcgNearMint', 'tcgNormal', 'tcgHolo', 'tcgReverse', 'tcgFirstEdition'] as const;
-    const oldDatesLen = indexData.dates.length;
-    
-    // Calculate new total variants
-    let totalVariants = 0;
+    // ── Step 4: Identify new cards and fetch their full history ────────────────
+    // New cards are present in the DB's priceHistory table but have no entry in
+    // the R2 index's offsets map. We need their complete history to build delta
+    // arrays from scratch (the R2 buffer has nothing for them).
     const offsetsObj = indexData.offsets as Record<string, Record<string, number>>;
-    for (const card of Object.values(offsetsObj)) {
-        totalVariants += Object.keys(card).length;
+    const newCardIds = Array.from(priceMap.keys()).filter(id => !(id in offsetsObj));
+
+    // newCardHistory[cardId][dateStr] → { variant: priceInDollars | null }
+    const newCardHistory = new Map<string, Record<string, Record<string, number | null>>>();
+
+    if (newCardIds.length > 0) {
+        console.log(`Found ${newCardIds.length} new cards not in history index. Fetching their history from DB...`);
+
+        const CHUNK_SIZE = 500;
+        for (let i = 0; i < newCardIds.length; i += CHUNK_SIZE) {
+            const chunk = newCardIds.slice(i, i + CHUNK_SIZE);
+            const records = await prisma.priceHistory.findMany({
+                where: { cardId: { in: chunk } },
+                select: {
+                    cardId: true,
+                    timestamp: true,
+                    tcgNearMint: true,
+                    tcgNormal: true,
+                    tcgHolo: true,
+                    tcgReverse: true,
+                    tcgFirstEdition: true
+                },
+                orderBy: { timestamp: 'asc' }
+            });
+
+            for (const r of records) {
+                const dateStr = new Date(r.timestamp).toISOString().split('T')[0];
+                if (!newCardHistory.has(r.cardId)) {
+                    newCardHistory.set(r.cardId, {});
+                }
+                newCardHistory.get(r.cardId)![dateStr] = {
+                    tcgNearMint: r.tcgNearMint !== null ? Number(r.tcgNearMint) : null,
+                    tcgNormal: r.tcgNormal !== null ? Number(r.tcgNormal) : null,
+                    tcgHolo: r.tcgHolo !== null ? Number(r.tcgHolo) : null,
+                    tcgReverse: r.tcgReverse !== null ? Number(r.tcgReverse) : null,
+                    tcgFirstEdition: r.tcgFirstEdition !== null ? Number(r.tcgFirstEdition) : null
+                };
+            }
+        }
+        console.log(`Fetched history for ${newCardHistory.size} new cards.`);
     }
 
-    const newBufferArray = new Int32Array(oldInt32Array.length + totalVariants);
+    // ── Step 5: Build the new buffer and offsets ──────────────────────────────
+    // We iterate all cards in a single unified pass. Each card+variant produces
+    // exactly (oldDatesLen + 1) Int32 entries: the original deltas plus one new
+    // delta for the appended date.
+    //
+    // Uses a dynamic array (number[]) because the final size depends on how
+    // many new-card variants have data. Converted to Int32Array at the end.
+    const variantKeys = ['tcgNearMint', 'tcgNormal', 'tcgHolo', 'tcgReverse', 'tcgFirstEdition'] as const;
+    const oldDatesLen = indexData.dates.length;
+    const newDates = [...indexData.dates, latestDateStr]; // all dates including the new one
+    const totalNewDates = newDates.length;
+
+    const buffer: number[] = [];
     const newOffsets: Record<string, Record<string, number>> = {};
+    let newCardVariantCount = 0;
 
-    let writeCursor = 0;
+    // Union of every card we need to process: those already in the R2 index
+    // plus those that are new in this run.
+    const allCardIds = new Set([
+        ...Object.keys(offsetsObj),
+        ...priceMap.keys()
+    ]);
 
-    // Iterate through the existing indexData.offsets map,
-    // assuming offsets are correct
-    
-    for (const [cardId, cardOffsets] of Object.entries(offsetsObj)) {
-        newOffsets[cardId] = {};
+    for (const cardId of allCardIds) {
+        const isExisting = cardId in offsetsObj;
         const latestDayData = priceMap.get(cardId);
-        
-        for (const variant of variantKeys) {
-            const oldStart = cardOffsets[variant];
-            if (oldStart !== undefined) {
-                const newStart = writeCursor;
-                newOffsets[cardId][variant] = newStart;
-                
+        const cardHistory = newCardHistory.get(cardId);
+
+        if (isExisting) {
+            // ── Existing card: copy old deltas, append new delta ──────────
+            // The R2 buffer already has this card's full history. We copy
+            // those deltas verbatim, then compute the delta for the new
+            // date (latestDayData price minus last accumulated price).
+            const cardOffsets = offsetsObj[cardId];
+            newOffsets[cardId] = {};
+
+            for (const variant of variantKeys) {
+                const oldStart = cardOffsets[variant];
+                if (oldStart === undefined) continue;
+
+                newOffsets[cardId][variant] = buffer.length;
+
                 let lastRunningPrice = 0;
-                
-                // Copy old deltas and calculate last known price
+
+                // Copy old deltas and accumulate to find the last known price
                 for (let i = 0; i < oldDatesLen; i++) {
                     const delta = oldInt32Array[oldStart + i];
-                    newBufferArray[newStart + i] = delta;
+                    buffer.push(delta);
                     lastRunningPrice += delta;
                 }
-                
-                // Determine new price for the latest date
+
+                // Compute delta for the new date
                 let newDelta = 0;
                 if (latestDayData && (latestDayData as any)[variant] !== null) {
                     const currentPriceCents = Math.round(Number((latestDayData as any)[variant]) * 100);
                     newDelta = currentPriceCents - lastRunningPrice;
                 }
-                
-                // Append new delta
-                newBufferArray[newStart + oldDatesLen] = newDelta;
-                
-                writeCursor += (oldDatesLen + 1);
+                buffer.push(newDelta);
+            }
+        } else {
+            // ── New card: build full delta array from DB history ──────────
+            // This card wasn't in the previous R2 index at all. We build
+            // its delta arrays from scratch using the DB records fetched
+            // in Step 4.
+            //
+            // Delta encoding rules (same as generateHistoryIndex.ts):
+            //   • Day 0: absolute price in cents (or 0 if no record yet)
+            //   • Day 1+: delta from previous running price
+            //   • Dates before the card's first price record produce
+            //     delta=0, so the running price stays at 0 until data
+            //     appears.
+            if (!cardHistory) continue;
+
+            newOffsets[cardId] = {};
+            let hasAnyVariant = false;
+
+            for (const variant of variantKeys) {
+                // Skip variants that have zero non-null prices across all dates
+                const hasData = newDates.some(d => cardHistory[d] && cardHistory[d][variant] !== null);
+                if (!hasData) continue;
+
+                hasAnyVariant = true;
+                newOffsets[cardId][variant] = buffer.length;
+                newCardVariantCount++;
+
+                let lastPriceCents = 0;
+
+                for (let i = 0; i < totalNewDates; i++) {
+                    const dateStr = newDates[i];
+                    const record = cardHistory[dateStr];
+
+                    let currentPriceCents = lastPriceCents;
+                    if (record && record[variant] !== null) {
+                        currentPriceCents = Math.round(record[variant]! * 100);
+                    }
+
+                    // Day 0 = absolute price, Days 1+ = delta
+                    if (i === 0) {
+                        buffer.push(currentPriceCents);
+                    } else {
+                        buffer.push(currentPriceCents - lastPriceCents);
+                    }
+
+                    lastPriceCents = currentPriceCents;
+                }
+            }
+
+            // Clean up if no variants had data (shouldn't happen since we
+            // filtered to cards in priceMap, but be safe)
+            if (!hasAnyVariant) {
+                delete newOffsets[cardId];
             }
         }
     }
 
-    indexData.dates.push(latestDateStr);
+    console.log(` -> Processed ${allCardIds.size} total cards (${Object.keys(offsetsObj).length} existing + ${newCardIds.length} new, ${newCardVariantCount} new variant columns).`);
+
+    // ── Step 6: Upload updated artifacts to R2 ───────────────────────────────
+    indexData.dates = newDates;
     indexData.offsets = newOffsets;
 
     const version = new Date().toISOString().replace(/[-:.]/g, '');
     indexData.version = version;
 
-    const binaryBufferToUpload = Buffer.from(newBufferArray.buffer);
+    const int32Array = new Int32Array(buffer);
+    const binaryBufferToUpload = Buffer.from(int32Array.buffer);
     const indexJsonStr = JSON.stringify(indexData);
 
     const compressedBinary = zlib.brotliCompressSync(binaryBufferToUpload);
@@ -478,6 +627,9 @@ async function incrementHistoryIndex() {
 
     const dataFileName = `history-data.v${version}.bin.br`;
     const indexFileName = `history-index.v${version}.json.br`;
+
+    console.log(` -> Binary uncompressed size: ${(binaryBufferToUpload.length / 1024 / 1024).toFixed(2)} MB`);
+    console.log(` -> Binary Brotli compressed size: ${(compressedBinary.length / 1024 / 1024).toFixed(2)} MB`);
 
     console.log(` -> Uploading data artifact to R2: ${dataFileName}`);
     await r2.send(new PutObjectCommand({
@@ -499,6 +651,8 @@ async function incrementHistoryIndex() {
         CacheControl: 'public, max-age=86400, immutable'
     }));
 
+    // The pointer file always points to the latest version. Clients fetch
+    // this first, then download the versioned index + data files it references.
     const pointerFile = {
         version,
         indexUrl: `${R2_PUBLIC_URL}/history/${indexFileName}`,

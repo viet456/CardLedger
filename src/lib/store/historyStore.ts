@@ -90,7 +90,7 @@ export const useHistoryStore = create<HistoryStoreState>()(
                 set({ status: 'loading' });
 
                 try {
-                    const pointerRes = await fetch(`${R2_PUBLIC_URL}/history/history-index.current.json`);
+                    const pointerRes = await fetch(`${R2_PUBLIC_URL}/history/history-index.current.json`, { cache: 'no-store' });
                     if (!pointerRes.ok) throw new Error('Failed to fetch history pointer file.');
                     const pointer: HistoryPointerFile = await pointerRes.json();
 
