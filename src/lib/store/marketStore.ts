@@ -53,7 +53,8 @@ export const useMarketStore = create<MarketStoreState>()(
                 try {
                     //console.log('[MarketStore]: Fetching pointer file...');
                     const pointerRes = await fetch(
-                        `${R2_PUBLIC_URL}/market/market-index.current.json`
+                        `${R2_PUBLIC_URL}/market/market-index.current.json`,
+                        { cache: 'no-store' }
                     );
                     if (!pointerRes.ok) throw new Error("Failed to fetch market's pointer file.");
                     const pointer: PointerFile = await pointerRes.json();

@@ -217,9 +217,10 @@ export const useCardStore = create<CardStoreState>()(
 
                 try {
                     //console.log('[CardStore]: Fetching pointer file...');
-                    const pointerRes = await fetch(
-                        `${R2_PUBLIC_URL}/indices/card-index.current.json`
-                    );
+const pointerRes = await fetch(
+`${R2_PUBLIC_URL}/indices/card-index.current.json`,
+{ cache: 'no-store' }
+);
                     if (!pointerRes.ok) throw new Error("Failed to fetch card's pointer file.");
                     const pointer: PointerFile = await pointerRes.json();
                     // console.log(
