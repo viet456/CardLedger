@@ -7,9 +7,11 @@ import { useShallow } from 'zustand/react/shallow';
 import { useSearchStore } from '@/src/lib/store/searchStore';
 import { useEffect, useMemo, useState, useRef } from 'react';
 import Image from 'next/image';
-import { Calendar, Layers, Hash, ChevronDown, ChevronUp } from 'lucide-react';
+import { Calendar, Layers, Hash, ChevronDown, ChevronUp, BarChart3 } from 'lucide-react';
+import { Button } from '@/src/components/ui/button';
 import { cn } from '@/src/lib/utils';
 import { Separator } from '@/src/components/ui/separator';
+import { SetCollectionBreakdownDialog } from '@/src/components/collection/SetCollectionBreakdownDialog';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 interface SetPageViewProps {
@@ -206,6 +208,17 @@ export function SetPageView({ setInfo, cards, filterOptions }: SetPageViewProps)
                             {setInfo.total} Cards
                         </div>
                     </div>
+
+                    <SetCollectionBreakdownDialog setId={setInfo.id} setName={setInfo.name}>
+                        <Button
+                            variant='outline'
+                            size='sm'
+                            className='mt-3 w-full gap-2 dark:bg-secondary dark:hover:bg-zinc-700 border border-border'
+                        >
+                            <BarChart3 className='h-4 w-4' />
+                            Collection Progress
+                        </Button>
+                    </SetCollectionBreakdownDialog>
                 </div>
 
                 <Separator className='mb-4 shrink-0' />
@@ -253,6 +266,16 @@ export function SetPageView({ setInfo, cards, filterOptions }: SetPageViewProps)
                                     {setInfo.total} Cards
                                 </div>
                             </div>
+                            <SetCollectionBreakdownDialog setId={setInfo.id} setName={setInfo.name}>
+                                <Button
+                                    variant='outline'
+                                    size='sm'
+                                    className='w-full gap-2 dark:bg-secondary dark:hover:bg-zinc-700 border border-border'
+                                >
+                                    <BarChart3 className='h-4 w-4' />
+                                    Collection Progress
+                                </Button>
+                            </SetCollectionBreakdownDialog>
                         </div>
                     )}
                 </div>
