@@ -156,7 +156,7 @@ export function useSetCollectionStats(setId: string): SetCollectionStats {
             variantProgress,
             rarityProgress,
             artistProgress,
-            isLoading: collectionStatus === 'loading' || collectionStatus === 'idle',
+            isLoading: collectionStatus === 'loading',
         };
     }, [setCards, entries, prices, collectionStatus, rarities, artists]);
 
