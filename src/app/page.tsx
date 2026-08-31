@@ -76,9 +76,6 @@ export default function Home() {
                         <ArrowRight className='ml-1 h-3 w-3 transition-transform group-hover:translate-x-1' />
                     </Link>
 
-                    <p className='mt-1 text-xs text-muted-foreground/70'>
-                        ⚡ Featuring 21,000+ cards from every expansion
-                    </p>
                 </div>
             </section>
 
