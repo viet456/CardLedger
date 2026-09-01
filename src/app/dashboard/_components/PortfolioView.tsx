@@ -6,6 +6,7 @@ import { DataTable } from './DataTable';
 import { columns, PortfolioRow } from './Columns';
 import { Wallet, TrendingUp, TrendingDown, CircleDollarSign } from 'lucide-react';
 import { CardPrices } from '@/src/shared-types/price-api';
+import { useFormatPrice } from '@/src/lib/store/currencyStore';
 
 interface PortfolioEntry {
     id: string;
@@ -54,10 +55,9 @@ function SummaryCard({
     suffix = '',
     icon: Icon
 }: SummaryCardProps) {
+    const formatPrice = useFormatPrice();
     const formatted = isCurrency
-        ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
-              Math.abs(value)
-          )
+        ? formatPrice(Math.abs(value))
         : Math.abs(value).toFixed(2);
 
     let colorClass = 'text-foreground';

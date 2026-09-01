@@ -27,6 +27,7 @@ Chart.register(
 import { Button } from '@/src/components/ui/button';
 import { useTheme } from 'next-themes';
 import { PortfolioChartPoint } from '@/src/services/portfolioService';
+import { useFormatPrice } from '@/src/lib/store/currencyStore';
 
 interface PortfolioChartProps {
     initialData: PortfolioChartPoint[];
@@ -38,6 +39,7 @@ export function PortfolioChart({ initialData }: PortfolioChartProps) {
     const chartRef = useRef<HTMLCanvasElement>(null);
     const chartInstanceRef = useRef<Chart | null>(null);
     const { resolvedTheme } = useTheme();
+    const formatPrice = useFormatPrice();
 
     const earliestDate = useMemo(() => {
         if (initialData.length === 0) return new Date();
@@ -160,11 +162,7 @@ export function PortfolioChart({ initialData }: PortfolioChartProps) {
                         ticks: {
                             color: fg,
                             callback: (val) =>
-                                new Intl.NumberFormat('en-US', {
-                                    style: 'currency',
-                                    currency: 'USD',
-                                    notation: 'compact'
-                                }).format(Number(val))
+                                formatPrice(Number(val), { compact: true })
                         },
                         grid: { color: border }
                     }
@@ -180,10 +178,7 @@ export function PortfolioChart({ initialData }: PortfolioChartProps) {
                                 let label = context.dataset.label || '';
                                 if (label) label += ': ';
                                 if (context.parsed.y !== null) {
-                                    label += new Intl.NumberFormat('en-US', {
-                                        style: 'currency',
-                                        currency: 'USD'
-                                    }).format(context.parsed.y);
+                                    label += formatPrice(context.parsed.y);
                                 }
                                 return label;
                             }
@@ -207,7 +202,7 @@ export function PortfolioChart({ initialData }: PortfolioChartProps) {
         }, 0);
 
         return () => clearTimeout(timerId);
-    }, [filteredData, resolvedTheme]);
+    }, [filteredData, resolvedTheme, formatPrice]);
 
     useEffect(() => {
         return () => {

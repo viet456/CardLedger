@@ -6,9 +6,11 @@ import { useCardLatestPrices } from '@/hooks/useCardHistory';
 import { useCardStore } from '@/src/lib/store/cardStore';
 import { getTcgPlayerUrl } from '@/src/utils/tcgplayer';
 import { denormalizeSingleCard } from '@/src/utils/cardUtils';
+import { useFormatPrice } from '@/src/lib/store/currencyStore';
 
 export function PriceHero({ cardId }: { cardId: string }) {
     const { trend, loading } = useCardLatestPrices(cardId);
+    const formatPrice = useFormatPrice();
 
     // Attempt to get instant price from market cache as fallback
     const cachedPrices = useMarketStore(state => state.prices[cardId]);
@@ -38,7 +40,7 @@ export function PriceHero({ cardId }: { cardId: string }) {
         </span>
         <div className="flex items-baseline gap-2">
             <span className="text-3xl font-bold tracking-tight">
-                {price > 0 ? `$${price.toFixed(2)}` : 'N/A'}
+                {price > 0 ? formatPrice(price) : 'N/A'}
             </span>
             {diff !== 0 && price > 0 && (
                 <div className={`flex items-center text-sm font-bold ${diff > 0 ? 'text-trend-up' : 'text-trend-down'}`}>

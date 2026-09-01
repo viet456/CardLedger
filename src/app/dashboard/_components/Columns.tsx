@@ -5,6 +5,12 @@ import { ArrowUpDown, ExternalLink } from 'lucide-react';
 import { Button } from '@/src/components/ui/button';
 import Image from 'next/image';
 import { getTcgPlayerUrl } from '@/src/utils/tcgplayer';
+import { useFormatPrice } from '@/src/lib/store/currencyStore';
+
+function FormattedPrice({ amount }: { amount: number }) {
+    const formatPrice = useFormatPrice();
+    return <>{formatPrice(amount)}</>;
+}
 
 export type PortfolioRow = {
     id: string;
@@ -122,7 +128,7 @@ export const columns: ColumnDef<PortfolioRow>[] = [
         ),
         cell: ({ row }) => {
             const amount = row.getValue('purchasePrice') as number;
-            return <div className='text-right text-base font-medium'>${amount.toFixed(2)}</div>;
+            return <div className='text-right text-base font-medium'><FormattedPrice amount={amount} /></div>;
         }
     },
     {
@@ -141,7 +147,7 @@ export const columns: ColumnDef<PortfolioRow>[] = [
         ),
         cell: ({ row }) => {
             const amount = row.getValue('currentPrice') as number;
-            return <div className='text-right text-base font-bold'>${amount.toFixed(2)}</div>;
+            return <div className='text-right text-base font-bold'><FormattedPrice amount={amount} /></div>;
         }
     },
     {
@@ -189,7 +195,7 @@ export const columns: ColumnDef<PortfolioRow>[] = [
                 >
                     <span className='text-base font-bold'>
                         {isProfit ? '+' : ''}
-                        {gain.toFixed(2)}
+                        <FormattedPrice amount={gain} />
                     </span>
                     <span className='text-sm font-medium'>
                         {isProfit ? '▲' : '▼'} {percent.toFixed(1)}%

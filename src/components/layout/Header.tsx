@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { MobileNav } from './MobileNav';
 import { HeaderSearchBar } from '../search/HeaderSearchBar';
 import { ThemeToggle } from './ThemeToggle';
+import { CurrencyToggle } from './CurrencyToggle';
 import { Button } from '../ui/button';
 import { UserNav } from './UserNav';
 import { useAuthSession } from '@/src/providers/SessionProvider';
@@ -111,6 +112,7 @@ export function Header() {
                         )}
                         {/* Logged in */}
                         {user && <UserNav user={user} />}
+                        <CurrencyToggle />
                         <ThemeToggle />
                     </div>
 
