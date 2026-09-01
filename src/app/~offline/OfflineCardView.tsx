@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { FilterLink } from '@/src/app/cards/[cardId]/FilterLink';
 import { useHasHydrated } from '@/hooks/useHasHydrated';
 import { BreadcrumbSkeleton, ImageSkeleton, PriceHeroSkeleton, DetailsSkeleton } from '../cards/[cardId]/Skeletons';
+import { useFormatPrice } from '@/src/lib/store/currencyStore';
 
 const DetailItem = ({ label, children }: { label: string; children: React.ReactNode }) => (
     <div>
@@ -28,6 +29,7 @@ const getEnergyStack = (costs: string[]) => {
 
 export function OfflineCardView({ cardId }: { cardId: string }) {
     const hasHydrated = useHasHydrated()
+    const formatPrice = useFormatPrice();
     const { 
         cardMap, sets, supertypes, subtypes, rarities, names, 
         types, artists, attacks, abilities, rules
@@ -123,7 +125,7 @@ export function OfflineCardView({ cardId }: { cardId: string }) {
                                 <div className="flex items-baseline gap-2">
                                     <span className="text-3xl font-bold tracking-tight">
                                         {/* If we have data, show it. Otherwise, show a clean N/A */}
-                                        {cardMarketData ? `$${offlinePrice.toFixed(2)}` : 'N/A'}
+                                        {cardMarketData ? formatPrice(offlinePrice) : 'N/A'}
                                     </span>
                                     <div className="flex items-center text-sm font-bold text-muted-foreground opacity-50">
                                         <span>(Offline)</span>

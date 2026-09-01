@@ -1,3 +1,5 @@
+'use client';
+
 import { DenormalizedCard } from '@/src/shared-types/card-index';
 import { CardPrices } from '@/src/shared-types/price-api';
 import { format } from 'date-fns';
@@ -7,6 +9,7 @@ import { ResilientImage } from './ResilientImage';
 import r2ImageLoader from '@/src/lib/loader';
 import { useMemo } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { useFormatPrice } from '@/src/lib/store/currencyStore';
 
 interface DashboardCard extends DenormalizedCard {
     uniqueId?: string;
@@ -34,6 +37,7 @@ export function PokemonCard({
     entryId,
     collectionStats: propStats
 }: PokemonCardProps) {
+    const formatPrice = useFormatPrice();
     const cardHref = card.img
         ? `/cards/${card.id}?preview=${encodeURIComponent(card.img)}`
         : `/cards/${card.id}`;
@@ -167,13 +171,13 @@ export function PokemonCard({
                                 <div className='flex items-baseline gap-1'>
                                     {/* BODY: Uses 'bodyColor' (Darker on White / Lighter on Dark) */}
                                     <span className={`text-sm font-bold ${bodyColor}`}>
-                                        ${currentPrice.toFixed(2)}
+                                        {formatPrice(currentPrice)}
                                     </span>
                                 </div>
                                 <div className='flex items-baseline gap-1'>
                                     <span className='text-[10px] text-muted-foreground'>Cost:</span>
                                     <span className='text-xs text-muted-foreground'>
-                                        ${cost.toFixed(2)}
+                                        {formatPrice(cost)}
                                     </span>
                                 </div>
                             </div>
@@ -190,7 +194,7 @@ export function PokemonCard({
                                 </p>
                                 {card.price ? (
                                     <p className='text-trend-up text-sm font-semibold'>
-                                        ${card.price.toFixed(2)}
+                                        {formatPrice(card.price)}
                                     </p>
                                 ) : (
                                     <p className='text-sm text-muted-foreground'>N/A</p>

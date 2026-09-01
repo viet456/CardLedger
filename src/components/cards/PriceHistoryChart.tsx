@@ -17,6 +17,7 @@ import 'chartjs-adapter-date-fns';
 import { Button } from '../ui/button';
 import { useTheme } from 'next-themes';
 import { useCardHistory } from '@/hooks/useCardHistory';
+import { useFormatPrice } from '@/src/lib/store/currencyStore';
 
 type TimeRange = '1m' | '3m' | '6m' | '1y' | 'YTD' | 'All';
 
@@ -37,6 +38,7 @@ export function PriceHistoryChart({ cardId }: { cardId: string }) {
     const chartInstanceRef = useRef<Chart | null>(null);
     const { resolvedTheme } = useTheme();
     const [activeRange, setActiveRange] = useState<TimeRange>('All');
+    const formatPrice = useFormatPrice();
 
     // Compute smart default range based on data span (derived state, not effect)
     const defaultRange = useMemo<TimeRange>(() => {
@@ -199,11 +201,7 @@ export function PriceHistoryChart({ cardId }: { cardId: string }) {
                         title: { display: false },
                         ticks: {
                             callback: (value: string | number) => {
-                                return new Intl.NumberFormat('en-US', {
-                                    style: 'currency',
-                                    currency: 'USD',
-                                    notation: 'compact'
-                                }).format(Number(value));
+                                return formatPrice(Number(value), { compact: true });
                             },
                             color: foregroundColor,
                             font: { size: 12 }
@@ -223,10 +221,7 @@ export function PriceHistoryChart({ cardId }: { cardId: string }) {
                                 let label = context.dataset.label || '';
                                 if (label) label += ': ';
                                 if (context.parsed.y !== null) {
-                                    label += new Intl.NumberFormat('en-US', {
-                                        style: 'currency',
-                                        currency: 'USD'
-                                    }).format(context.parsed.y);
+                                    label += formatPrice(context.parsed.y);
                                 }
                                 return label;
                             }
@@ -254,7 +249,7 @@ export function PriceHistoryChart({ cardId }: { cardId: string }) {
         }, 0);
 
         return () => clearTimeout(timerId);
-    }, [filteredData, resolvedTheme]);
+    }, [filteredData, resolvedTheme, formatPrice]);
 
     useEffect(() => {
         return () => {

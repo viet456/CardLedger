@@ -13,6 +13,7 @@ import { Progress } from '@/src/components/ui/progress';
 import { useSetCollectionStats, ProgressRow } from '@/hooks/useSetCollectionStats';
 import { DollarSign, TrendingUp, Package } from 'lucide-react';
 import { Separator } from '@/src/components/ui/separator';
+import { useFormatPrice } from '@/src/lib/store/currencyStore';
 
 interface SetCollectionBreakdownDialogProps {
     setId: string;
@@ -53,6 +54,7 @@ function LoadingSkeleton() {
 
 function BreakdownContent({ setId }: { setId: string }) {
     const stats = useSetCollectionStats(setId);
+    const formatPrice = useFormatPrice();
 
     if (stats.isLoading) {
         return <LoadingSkeleton />;
@@ -82,7 +84,7 @@ function BreakdownContent({ setId }: { setId: string }) {
                         <span>Market</span>
                     </div>
                     <span className='text-xl font-bold tabular-nums'>
-                        ${stats.marketValue.toFixed(2)}
+                        {formatPrice(stats.marketValue)}
                     </span>
                     <span className='text-xs text-muted-foreground'>value</span>
                 </div>
@@ -92,7 +94,7 @@ function BreakdownContent({ setId }: { setId: string }) {
                         <span>Cost</span>
                     </div>
                     <span className='text-xl font-bold tabular-nums'>
-                        ${stats.costBasis.toFixed(2)}
+                        {formatPrice(stats.costBasis)}
                     </span>
                     <span className='text-xs text-muted-foreground'>basis</span>
                 </div>

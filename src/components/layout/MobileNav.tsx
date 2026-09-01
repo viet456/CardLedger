@@ -18,6 +18,7 @@ import {
 } from '@/src/components/ui/sheet';
 import { navItems } from './Header';
 import { ThemeToggle } from './ThemeToggle';
+import { CurrencyToggle } from './CurrencyToggle';
 import { Avatar, AvatarFallback, AvatarImage } from '@/src/components/ui/avatar';
 import { LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -126,7 +127,8 @@ export function MobileNav() {
                                             {session.user.email}
                                         </span>
                                     </div>
-                                    <div className='h-9 rounded-md bg-secondary'>
+                                    <div className='flex items-center gap-1'>
+                                        <CurrencyToggle />
                                         <ThemeToggle />
                                         <span className='sr-only'>Toggle</span>
                                     </div>
@@ -158,7 +160,8 @@ export function MobileNav() {
                                 >
                                     <Link href='/sign-in'>Sign In</Link>
                                 </Button>
-                                <div className='h-9 w-9 rounded-md bg-secondary'>
+                                <div className='flex items-center gap-1'>
+                                    <CurrencyToggle />
                                     <ThemeToggle />
                                     <span className='sr-only'>Theme toggle</span>
                                 </div>
