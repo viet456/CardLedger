@@ -9,7 +9,7 @@ CardLedger is a production-grade platform for cataloging and tracking Pokémon T
 
 - **📶 Offline-First & Real-Time Sync:** Add or edit collection entries without an internet connection. Changes are queued locally and automatically reconciled across multi-device sessions in real-time via Server-Sent Events (SSE) when connectivity is restored.
 - **📊 Portfolio Analytics:** Tracks acquisition date and cost basis vs. current market value. Visualizes portfolio performance over time with aggregate "Cost vs. Value" charts and percentage growth metrics.
-- **🔍 Instant Search:** Performs zero-latency filtering across 21,000+ cards using pre-calculated intersection maps and persisted client-side indexes.
+- **🔍 Instant Search:** Performs zero-latency filtering across 22,000+ cards using pre-calculated intersection maps and persisted client-side indexes.
 - **📱 Infinite Grid:** Features a highly optimized, infinite-scrolling virtualized grid for browsing massive card sets without pagination lag.
 
 ## Engineering Highlights
@@ -44,7 +44,7 @@ If 4.3M price rows were stored as JSON, every app load would require `JSON.parse
 ### 🔄 Automated Market Data Pipeline
 The platform maintains a continuously updating local database of card market values and historical trends.
 - **Daily Market Sync:** Built an ETL process running on GitHub Actions that queries the TCGdex API to seamlessly fetch and upsert current market data into a relational history table.
-- **Scale:** Tracks daily price fluctuations across tens of thousands of cards, managing millions of price history records through optimized batching strategies.
+- **Scale:** Tracks daily price fluctuations across tens of thousands of cards, managing 6.3M+ price history records through optimized batching strategies.
 - **Relational Optimization:** Database schema utilizes efficient nested relations (eg shared `Types` tables referenced by `Attacks`) to minimize storage footprint and simplify join logic.
 
 ### 🖼️ Cost-Optimized Asset Pipeline
