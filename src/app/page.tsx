@@ -100,13 +100,13 @@ export default function Home() {
                                 </span>
                             </h2>
                             <p className='text-base text-muted-foreground'>
-                                21,000+ cards with live pricing. Search, filter, and instantly add
+                                22,000+ cards with live pricing. Search, filter, and instantly add
                                 to your collection. No manual entry, no spreadsheets—just click and
                                 track.
                             </p>
                             <ul className='grid gap-2'>
                                 {[
-                                    '21,000+ cards with live market data',
+                                    '22,000+ cards with live market data',
                                     'Instant add-to-collection from any card',
                                     'Advanced search and filtering by any attribute'
                                 ].map((item) => (
@@ -189,7 +189,7 @@ export default function Home() {
                             <p className='text-base text-muted-foreground'>
                                 Cell service dead at the card show? No problem. CardLedger is
                                 engineered with a local-first architecture. Browse the entire
-                                21,000+ card catalog and manage your portfolio completely offline.
+                                22,000+ card catalog and manage your portfolio completely offline.
                             </p>
                             <ul className='grid gap-2'>
                                 {[
