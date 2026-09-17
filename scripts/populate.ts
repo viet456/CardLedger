@@ -89,11 +89,39 @@ function chunkArray<T>(array: T[], size: number): T[][] {
     return result;
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function withRetry<T>(fn: () => Promise<T>, label: string): Promise<T> {
+    const retries = 5;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+        try {
+            return await fn();
+        } catch (e: any) {
+            const msg = e?.message || '';
+            const isRetryable =
+                msg.includes('invalid error') ||
+                msg.includes('500') ||
+                msg.includes('502') ||
+                msg.includes('503');
+            if (isRetryable && attempt < retries) {
+                const delay = 2000 * Math.pow(2, attempt); // 2s, 4s, 8s, 16s, 32s
+                console.warn(
+                    `\n  ⏳ Retry ${attempt + 1}/${retries} for ${label} in ${delay}ms...`
+                );
+                await sleep(delay);
+                continue;
+            }
+            throw e;
+        }
+    }
+    throw new Error(`withRetry: exhausted retries for ${label}`);
+}
+
 // --- Logic Processors ---
 
 async function processCard(cardRef: any, dbSet: any, cardsWithImages: Set<string>) {
     try {
-        const card = await tcgdex.fetch('cards', cardRef.id);
+        const card = await withRetry(() => tcgdex.fetch('cards', cardRef.id), `cards/${cardRef.id}`);
         if (!card) return;
 
         let supertype: Supertype = 'Pokémon';
@@ -107,6 +135,7 @@ async function processCard(cardRef: any, dbSet: any, cardsWithImages: Set<string
             card.energyType
         ].filter(Boolean) as string[];
         const uniqueSubtypes = [...new Set(rawSubtypes)].map(normalizeSubtype);
+        const uniqueTypes = [...new Set(card.types || [])];
         const descriptionText = card.description || card.effect || null;
 
         let imageKey: string | null = null;
@@ -130,26 +159,6 @@ async function processCard(cardRef: any, dbSet: any, cardsWithImages: Set<string
             }
         }
 
-        let artistId: number | null = null;
-        if (card.illustrator) {
-            const artist = await prisma.artist.upsert({
-                where: { name: card.illustrator },
-                create: { name: card.illustrator },
-                update: {}
-            });
-            artistId = artist.id;
-        }
-
-        let rarityId: number | null = null;
-        if (card.rarity) {
-            const rarity = await prisma.rarity.upsert({
-                where: { name: card.rarity },
-                create: { name: card.rarity },
-                update: {}
-            });
-            rarityId = rarity.id;
-        }
-
         // --- Sleep Shields for Attacks & Abilities ---
         const attacksCreate = (card.attacks || []).map((atk) => {
             let name = atk.name || 'Unnamed Attack';
@@ -161,7 +170,7 @@ async function processCard(cardRef: any, dbSet: any, cardsWithImages: Set<string
                 convertedEnergyCost: (atk.cost || []).length,
                 cost: {
                     create: (atk.cost || []).map((c) => ({
-                        type: { connectOrCreate: { where: { name: c }, create: { name: c } } }
+                        type: { connect: { name: c } }
                     }))
                 }
             };
@@ -175,50 +184,112 @@ async function processCard(cardRef: any, dbSet: any, cardsWithImages: Set<string
 
         const variants = card.variants || {};
 
+        // Collect ALL unique type names from every source on this card
+        // so we can upsert them once before the card write.
+        const allTypeNames = new Set<string>();
+        for (const t of uniqueTypes) allTypeNames.add(t);
+        for (const w of (card.weaknesses || [])) allTypeNames.add(w.type);
+        for (const r of (card.resistances || [])) allTypeNames.add(r.type);
+        for (const atk of (card.attacks || [])) {
+            for (const c of (atk.cost || [])) allTypeNames.add(c);
+        }
+
+        // Pre-create all shared reference records with idempotent upserts.
+        // These are safe under concurrent Promise.all — two upserts for the
+        // same name both succeed (one inserts, the other hits ON CONFLICT and
+        // is a no-op update). This avoids P2002 races that `connectOrCreate`
+        // inside concurrent nested writes causes with @prisma/adapter-pg.
+        const refUpserts: Promise<any>[] = [];
+        if (card.illustrator) {
+            refUpserts.push(prisma.artist.upsert({ where: { name: card.illustrator }, create: { name: card.illustrator }, update: {} }));
+        }
+        if (card.rarity) {
+            refUpserts.push(prisma.rarity.upsert({ where: { name: card.rarity }, create: { name: card.rarity }, update: {} }));
+        }
+        for (const st of uniqueSubtypes) {
+            refUpserts.push(prisma.subtype.upsert({ where: { name: st }, create: { name: st }, update: {} }));
+        }
+        for (const t of allTypeNames) {
+            refUpserts.push(prisma.type.upsert({ where: { name: t }, create: { name: t }, update: {} }));
+        }
+        await Promise.all(refUpserts);
+
         // Extract TCGplayer product ID from pricing data
         const pricing = (card as any).pricing;
-        const tcgPlayerId: number | null =
-            pricing?.tcgplayer?.holofoil?.productId ??
-            pricing?.tcgplayer?.normal?.productId ??
-            pricing?.tcgplayer?.reverse?.productId ??
-            pricing?.tcgplayer?.['1stEditionHolofoil']?.productId ??
-            pricing?.tcgplayer?.['1stEditionNormal']?.productId ??
-            null;
+        let tcgPlayerId: number | null = null;
+        if (pricing?.tcgplayer) {
+            // Scan all variant keys (holofoil, normal, reverse-holofoil, etc.)
+            for (const variant of Object.values(pricing.tcgplayer)) {
+                if (variant && typeof variant === 'object' && 'productId' in variant) {
+                    tcgPlayerId = (variant as any).productId as number;
+                    break;
+                }
+            }
+        }
+        // Fallback: look in variants_detailed[].thirdParty.tcgplayer
+        if (!tcgPlayerId && (card as any).variants_detailed) {
+            for (const vd of (card as any).variants_detailed) {
+                if (vd?.thirdParty?.tcgplayer) {
+                    tcgPlayerId = vd.thirdParty.tcgplayer as number;
+                    break;
+                }
+            }
+        }
 
         await prisma.card.upsert({
             where: { id: card.id },
             create: {
                 id: card.id,
-                setId: dbSet.id,
+                set: { connect: { id: dbSet.id } },
                 name: card.name,
                 supertype,
                 number: card.localId,
                 hp: card.hp ? parseInt(String(card.hp)) : null,
                 convertedRetreatCost: card.retreat || null,
                 description: descriptionText,
+                regulationMark: card.regulationMark ?? null,
+                evolvesFrom: card.evolveFrom ?? null,
+                evolvesTo: (card as any).evolveTo ?? [],
+                rules: (card as any).rules ?? [],
                 nationalPokedexNumbers: card.dexId || [],
                 pokedexNumberSort: card.dexId?.[0] || null,
                 releaseDate: dbSet.releaseDate,
+                standard: mapLegality(card.legal?.standard),
+                expanded: mapLegality(card.legal?.expanded),
+                unlimited: mapLegality((card.legal as Record<string, boolean>)?.unlimited),
                 imageKey,
                 imagesOptimized: false,
                 subtypes: {
                     create: uniqueSubtypes.map((st) => ({
-                        subtype: { connectOrCreate: { where: { name: st }, create: { name: st } } }
+                        subtype: { connect: { name: st } }
                     }))
                 },
                 types: {
-                    create: (card.types || []).map((t) => ({
-                        type: { connectOrCreate: { where: { name: t }, create: { name: t } } }
+                    create: uniqueTypes.map((t) => ({
+                        type: { connect: { name: t } }
                     }))
+                },
+                weaknesses: {
+                    create: (card.weaknesses || []).map((w) => ({
+                        type: { connect: { name: w.type } },
+                        value: w.value ?? null,
+                    })),
+                },
+                resistances: {
+                    create: (card.resistances || []).map((r) => ({
+                        type: { connect: { name: r.type } },
+                        value: r.value ?? null,
+                    })),
                 },
                 attacks: { create: attacksCreate },
                 abilities: { create: abilitiesCreate },
-                artistId,
-                rarityId,
+                ...(card.illustrator ? { artist: { connect: { name: card.illustrator } } } : {}),
+                ...(card.rarity ? { rarity: { connect: { name: card.rarity } } } : {}),
                 hasNormal: variants.normal ?? false,
                 hasHolo: variants.holo ?? false,
                 hasReverse: variants.reverse ?? false,
                 hasFirstEdition: variants.firstEdition ?? false,
+                hasWPromo: (variants as any).wPromo ?? false,
                 tcgPlayerId
             },
             update: {
@@ -233,9 +304,11 @@ async function processCard(cardRef: any, dbSet: any, cardsWithImages: Set<string
                 pokedexNumberSort: card.dexId?.[0] || null,
                 evolvesFrom: card.evolveFrom ?? null,
                 evolvesTo: (card as any).evolveTo ?? [],
+                rules: (card as any).rules ?? [],
                 convertedRetreatCost: card.retreat || null,
-                artistId,
-                rarityId,
+                releaseDate: dbSet.releaseDate,
+                ...(card.illustrator ? { artist: { connect: { name: card.illustrator } } } : {}),
+                ...(card.rarity ? { rarity: { connect: { name: card.rarity } } } : {}),
                 standard: mapLegality(card.legal?.standard),
                 expanded: mapLegality(card.legal?.expanded),
                 unlimited: mapLegality((card.legal as Record<string, boolean>)?.unlimited),
@@ -243,33 +316,34 @@ async function processCard(cardRef: any, dbSet: any, cardsWithImages: Set<string
                 hasHolo: variants.holo ?? false,
                 hasReverse: variants.reverse ?? false,
                 hasFirstEdition: variants.firstEdition ?? false,
-                ...(tcgPlayerId ? { tcgPlayerId } : {}),
+                hasWPromo: (variants as any).wPromo ?? false,
+                tcgPlayerId,
                 ...(imageKey ? { imageKey } : {}),
                 ...(imageUploaded ? { imagesOptimized: false } : {}),
                 // Sync relational data on update to propagate API corrections
                 subtypes: {
                     deleteMany: {},
                     create: uniqueSubtypes.map((st) => ({
-                        subtype: { connectOrCreate: { where: { name: st }, create: { name: st } } }
+                        subtype: { connect: { name: st } }
                     })),
                 },
                 types: {
                     deleteMany: {},
-                    create: (card.types || []).map((t) => ({
-                        type: { connectOrCreate: { where: { name: t }, create: { name: t } } }
+                    create: uniqueTypes.map((t) => ({
+                        type: { connect: { name: t } }
                     })),
                 },
                 weaknesses: {
                     deleteMany: {},
                     create: (card.weaknesses || []).map((w) => ({
-                        type: { connectOrCreate: { where: { name: w.type }, create: { name: w.type } } },
+                        type: { connect: { name: w.type } },
                         value: w.value ?? null,
                     })),
                 },
                 resistances: {
                     deleteMany: {},
                     create: (card.resistances || []).map((r) => ({
-                        type: { connectOrCreate: { where: { name: r.type }, create: { name: r.type } } },
+                        type: { connect: { name: r.type } },
                         value: r.value ?? null,
                     })),
                 },
@@ -291,7 +365,7 @@ async function processCard(cardRef: any, dbSet: any, cardsWithImages: Set<string
 
 async function syncSeriesAndSets() {
     console.log('🔄 Syncing Series and Sets...');
-    const seriesList = await tcgdex.fetch('series');
+    const seriesList = await withRetry(() => tcgdex.fetch('series'), 'series');
     if (!seriesList) return;
 
     // Update from newest to oldest series
@@ -306,7 +380,7 @@ async function syncSeriesAndSets() {
             update: { name: s.name }
         });
 
-        const details = await tcgdex.fetch('series', s.id);
+        const details = await withRetry(() => tcgdex.fetch('series', s.id), `series/${s.id}`);
         if (!details) continue;
 
         // Reverse the sets within the series
@@ -319,7 +393,7 @@ async function syncSeriesAndSets() {
             console.log(`  Processing set: ${set.name}...`);
 
             // Fetch full set details to get releaseDate (series endpoint omits it)
-            const fullSet = await tcgdex.fetch('sets', set.id);
+            const fullSet = await withRetry(() => tcgdex.fetch('sets', set.id), `sets/${set.id}`);
 
             // 🛠️ Spelling Fix
             const correctedName = set.name.replace("Macdonald's", "McDonald's");
@@ -367,6 +441,8 @@ async function syncSeriesAndSets() {
             }
             // ------------------------
 
+            const ptcgoCode = fullSet?.tcgOnline || (fullSet as any)?.abbreviation?.official || null;
+
             await prisma.set.upsert({
                 where: { id: set.id },
                 create: {
@@ -377,6 +453,7 @@ async function syncSeriesAndSets() {
                     seriesId: s.id,
                     printedTotal: set.cardCount.official,
                     total: set.cardCount.total,
+                    ptcgoCode,
                     releaseDate: fullSet?.releaseDate
                         ? new Date(fullSet.releaseDate)
                         : new Date(),
@@ -384,7 +461,9 @@ async function syncSeriesAndSets() {
                     logoImageKey,
                     symbolImageKey,
                     logoOptimized: false,
-                    symbolOptimized: false
+                    symbolOptimized: false,
+                    standard: mapLegality((fullSet as any)?.legal?.standard),
+                    expanded: mapLegality((fullSet as any)?.legal?.expanded),
                 },
                 update: {
                     tcgdexId: set.id,
@@ -393,6 +472,9 @@ async function syncSeriesAndSets() {
                     seriesId: s.id,
                     printedTotal: set.cardCount.official,
                     total: set.cardCount.total,
+                    ptcgoCode,
+                    standard: mapLegality((fullSet as any)?.legal?.standard),
+                    expanded: mapLegality((fullSet as any)?.legal?.expanded),
                     ...(logoImageKey ? { logoImageKey } : {}),
                     ...(symbolImageKey ? { symbolImageKey } : {}),
                     ...(imagesUpdated ? { logoOptimized: false, symbolOptimized: false } : {})
@@ -411,7 +493,8 @@ async function syncCards() {
             // Don't sync cards in blocked series and sets
             seriesId: { notIn: BLOCKED_SERIES },
             id: { notIn: BLOCKED_SETS }
-        } 
+        },
+        orderBy: { releaseDate: 'desc' }
     });
 
     for (const dbSet of dbSets) {
@@ -421,7 +504,7 @@ async function syncCards() {
             select: { id: true }
         });
         const cardsWithImages = new Set(existing.map((c) => c.id));
-        const setDetails = await tcgdex.fetch('sets', dbSet.tcgdexId!);
+        const setDetails = await withRetry(() => tcgdex.fetch('sets', dbSet.tcgdexId!), `sets/${dbSet.tcgdexId}`);
         if (!setDetails || !setDetails.cards) {
             console.log(`  ⚠️  ${dbSet.name} has no cards data on TCGdex. Skipping.`);
             continue;
@@ -436,8 +519,10 @@ async function syncCards() {
         
         console.log(`\n🚀 ${dbSet.name}: Syncing ${toProcess.length} cards (R2 uploads: ${isForce ? 'force all' : `${missingImages.length} missing`})...`);
         const chunks = chunkArray(toProcess, 5);
-        for (const chunk of chunks) {
-            await Promise.all(chunk.map((c) => processCard(c, dbSet, cardsWithImages)));
+        for (let i = 0; i < chunks.length; i++) {
+            await Promise.all(chunks[i].map((c) => processCard(c, dbSet, cardsWithImages)));
+            // Throttle to avoid API rate-limiting (5xx errors)
+            if (i < chunks.length - 1) await sleep(500);
         }
     }
 }
