@@ -1,0 +1,29 @@
+# CardLedger
+
+> A local-first, high-performance Pokémon TCG catalog and portfolio manager. Browse every English-language Pokémon card, track market prices, and build a personal collection portfolio — all with instant, client-side search and offline support.
+
+## Key pages
+
+- [Home](https://www.cardledger.io/): Search across the full Pokémon TCG catalog with instant fuzzy results
+- [Sets](https://www.cardledger.io/sets): Browse all Pokémon TCG sets with release dates and card counts
+- [Cards](https://www.cardledger.io/cards): Individual card detail pages with pricing history, market stats, and set info
+- [About](https://www.cardledger.io/about): Information about the project, data sources, and features
+
+## Data available
+
+- Complete English Pokémon TCG card catalog with images
+- TCG set listings with release dates, symbols, and card counts
+- Market pricing data sourced from TCGPlayer
+- Historical price charts per card
+- Card details: HP, types, attacks, abilities, weaknesses, resistances, retreat cost, rarity, and illustrator
+
+## API
+
+All routes under `/api/` are internal and not intended for public consumption.
+
+## Technical notes
+
+- Built with Next.js (App Router), React, Prisma, and PostgreSQL
+- Uses a service worker for offline-first caching of visited pages
+- Card search powered by client-side fuzzy matching for instant results
+- Images served from a dedicated CDN at assets.cardledger.io

@@ -2,7 +2,7 @@ import { MetadataRoute } from 'next'
 import { prisma } from '@/src/lib/prisma';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-    const baseUrl = 'https://cardledger.io'
+    const baseUrl = 'https://www.cardledger.io'
 
     const cards = await prisma.card.findMany({
         select: { id: true, releaseDate: true }

@@ -30,7 +30,10 @@ export async function generateMetadata({
 
     return {
         title: `${set.name} | CardLedger`,
-        description: `Browse all ${set.printedTotal} cards from the ${set.name} set.`
+        description: `Browse all ${set.printedTotal} cards from the ${set.name} set.`,
+        alternates: {
+            canonical: `/sets/${setId}`
+        }
     };
 }
 

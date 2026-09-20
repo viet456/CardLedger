@@ -25,6 +25,7 @@ const APP_TITLE_TEMPLATE = '%s | CardLedger';
 const APP_DESCRIPTION = 'A local-first, high-performance Pokémon TCG catalog and portfolio manager.';
 
 export const metadata: Metadata = {
+    metadataBase: new URL('https://www.cardledger.io'),
     applicationName: APP_NAME,
     title: {
         default: APP_DEFAULT_TITLE,
