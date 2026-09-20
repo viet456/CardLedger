@@ -5,11 +5,48 @@ import { CardBreadcrumbs } from './CardBreadcrumbs';
 import { ClientCachedBreadcrumbFallback } from './ClientCachedBreadcrumbFallback';
 import { ClientCachedDetailsFallback } from './ClientCachedDetailsFallback';
 import { PriceHero } from '@/src/components/cards/PriceHero';
+import { Metadata } from 'next';
+import { getCachedCardData } from './data';
 
-// src/app/cards/[cardId]/page.tsx
-// Thin server shell — no data fetching here.
-// All card data comes from client-side zustand stores (hydrated from IndexedDB/R2)
-// for instant navigation with zero loading skeletons.
+export async function generateMetadata({
+    params
+}: {
+    params: Promise<{ cardId: string }>;
+}): Promise<Metadata> {
+    const { cardId } = await params;
+    const card = await getCachedCardData(cardId);
+
+    if (!card) {
+        return {
+            title: 'Card Not Found | CardLedger',
+            description: 'The requested card could not be found.'
+        };
+    }
+
+    const cardName = card.n;
+    const cardNumber = card.num;
+    const setName = card.set.name;
+    const title = `${cardName} #${cardNumber} (${setName}) | CardLedger`;
+    const description = `View ${cardName} #${cardNumber} from the ${setName} set. Track prices, check market trends, and add to your Pokémon TCG collection on CardLedger.`;
+
+    return {
+        title,
+        description,
+        alternates: {
+            canonical: `/cards/${cardId}`
+        },
+        openGraph: {
+            title,
+            description,
+            type: 'website'
+        },
+        twitter: {
+            card: 'summary',
+            title,
+            description
+        }
+    };
+}
 
 export default async function SingleCardPage({ params, searchParams }: {
     params: Promise<{ cardId: string }>;
