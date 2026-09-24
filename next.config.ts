@@ -1,12 +1,13 @@
 import type { NextConfig } from 'next';
 import { withSerwist } from "@serwist/turbopack";
-import { cardRedirects } from './src/lib/cardRedirects';
+import { cardRedirects, setRedirects } from './src/lib/cardRedirects';
 
 const nextConfig: NextConfig = {
     cacheComponents: true,
     async redirects() {
-        // Dedupe pipeline: 301s for merged card/set URLs (see src/lib/cardRedirects.ts)
-        return cardRedirects.map(({ source, destination }) => ({
+        // Dedupe + set-consolidation pipelines: 301s for merged card URLs and
+        // absorbed set shells (see src/lib/cardRedirects.ts)
+        return [...cardRedirects, ...setRedirects].map(({ source, destination }) => ({
             source,
             destination,
             permanent: true

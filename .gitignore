@@ -58,3 +58,4 @@ next-env.d.ts
 .next
 .vscode
 scripts/dedupe-report.json
+scripts/set-merge-report.json

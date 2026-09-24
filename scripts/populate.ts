@@ -3,10 +3,10 @@ import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient, Supertype, LegalityStatus } from '../prisma/generated/client';
 import TCGdex from '@tcgdex/sdk';
-import { PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
+import { HeadObjectCommand } from '@aws-sdk/client-s3';
 import { r2 } from '../src/lib/r2';
 import { DuplicateIndex } from './lib/duplicateDetection';
-import fetch from 'node-fetch';
+import { uploadImageToR2 } from './lib/r2Upload';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL! });
 const adapter = new PrismaPg(pool);
@@ -55,32 +55,7 @@ async function doesImageExistInR2(key: string): Promise<boolean> {
     }
 }
 
-async function uploadImageToR2(url: string, key: string): Promise<boolean> {
-    try {
-        // const exists = await doesImageExistInR2(key);
-        // if (exists) return false;
-
-        const res = await fetch(url);
-        if (!res.ok) return false;
-
-        const arrayBuffer = await res.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        const contentType = res.headers.get('content-type') || 'image/png';
-
-        await r2.send(
-            new PutObjectCommand({
-                Bucket: BUCKET_NAME,
-                Key: key,
-                Body: buffer,
-                ContentType: contentType
-            })
-        );
-        return true;
-    } catch (e) {
-        console.error(`\n    ⚠️ R2 Upload Error for ${key}:`, (e as Error).message);
-        throw e;
-    }
-}
+// uploadImageToR2 extracted to scripts/lib/r2Upload.ts (shared with the set-merge tooling).
 
 function chunkArray<T>(array: T[], size: number): T[][] {
     const result: T[][] = [];
