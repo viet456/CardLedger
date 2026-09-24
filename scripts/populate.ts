@@ -132,7 +132,7 @@ async function processCard(cardRef: any, dbSet: any, cardsWithImages: Set<string
         // Updates to existing rows flow through the normal upsert below.
         const selfExists = await prisma.card.findUnique({
             where: { id: card.id },
-            select: { id: true }
+            select: { id: true, imageKey: true }
         });
         if (!selfExists) {
             const equivalent = duplicateIndex.findDuplicate({
@@ -170,7 +170,15 @@ async function processCard(cardRef: any, dbSet: any, cardsWithImages: Set<string
         if (card.image) {
             const sanitizedId = sanitizePublicId(card.id);
             const expectedImageKey = `cards/${sanitizedId}.png`;
-            if (!cardsWithImages.has(card.id)) {
+            const existingKey = selfExists?.imageKey ?? null;
+            if (existingKey && existingKey !== expectedImageKey) {
+                // Compensated / non-convention key (the dedupe pipeline copies a
+                // shadow card's image onto its keeper) — the API is NOT the
+                // source of truth for which R2 object serves a card's art.
+                // Never overwrite it or the next populate (even --force) would
+                // orphan the image.
+                imageKey = existingKey;
+            } else if (!cardsWithImages.has(card.id)) {
                 const srcUrl = card.image.endsWith('.png') ? card.image : `${card.image}/high.png`;
                 try {
                     imageUploaded = await uploadImageToR2(srcUrl, expectedImageKey);

@@ -176,3 +176,78 @@ export class DuplicateIndex {
         return null;
     }
 }
+
+
+/** Signals a keeper candidate offers to `chooseKeeper` (dedupe audit/apply scripts). */
+export interface KeeperSignals {
+    id: string;
+    /** Printed number — used to prefer zero-padded ("033") over short ("33") forms. */
+    number: string;
+    /** Id appears in the live TCGdex set listing — the API-canonical form. */
+    isLive: boolean;
+    /** Id follows the native "{setId}-…" convention (vs a migration leftover). */
+    isNative: boolean;
+    hasImage: boolean;
+    hasPrice: boolean;
+    /** DB `total` of the candidate's set — fuller listings win ties. */
+    setTotal: number;
+}
+
+export interface KeeperChoice {
+    winner: KeeperSignals;
+    /** Which rule family decided: the live API, its localId convention, or local heuristics. */
+    via: 'api' | 'localId' | 'heuristic';
+    rationale: string;
+}
+
+/**
+ * Pick the keeper for a merge group — the row that survives and absorbs the
+ * others. Ranking (pipeline context in scripts/auditDuplicates.ts):
+ *   1. TCGdex liveness — the API keeps updating, so its canonical id wins.
+ *      For zero-notation collisions ("033"/"33") the API's zero-padded
+ *      `localId` form is the live one and wins here.
+ *   2. Zero-padded number form (API `localId` convention) on liveness ties.
+ *   3. Native "{setId}-…" id (migration leftovers go away).
+ *   4. Has an image (can absorb the other's later).
+ *   5. Has price data (links/SEO value).
+ *   6. Larger (fuller) set listing.
+ *   7. Deterministic id asc.
+ * Always a PROPOSAL — humans approve via `pnpm db:apply-merges` (dry-run first).
+ */
+export function chooseKeeper(signals: KeeperSignals[]): KeeperChoice {
+    const digits = (s: KeeperSignals) => s.number.replace(/\D/g, '').length;
+    const sorted = [...signals].sort((a, b) => {
+        if (a.isLive !== b.isLive) return a.isLive ? -1 : 1;
+        if (digits(a) !== digits(b)) return digits(b) - digits(a);
+        if (a.isNative !== b.isNative) return a.isNative ? -1 : 1;
+        if (a.hasImage !== b.hasImage) return a.hasImage ? -1 : 1;
+        if (a.hasPrice !== b.hasPrice) return a.hasPrice ? -1 : 1;
+        if (a.setTotal !== b.setTotal) return b.setTotal - a.setTotal;
+        return a.id < b.id ? -1 : 1;
+    });
+    const winner = sorted[0];
+    const others = signals.filter((s) => s.id !== winner.id);
+
+    // Only report the factors that actually separate the winner from a loser.
+    const factors: string[] = [];
+    if (winner.isLive && others.some((o) => !o.isLive)) factors.push('id in live TCGdex set listing');
+    if (others.some((o) => digits(o) < digits(winner))) {
+        factors.push('zero-padded number (API localId convention)');
+    }
+    if (winner.isNative && others.some((o) => !o.isNative)) factors.push('native id');
+    if (winner.hasImage && others.some((o) => !o.hasImage)) factors.push('has image');
+    if (winner.hasPrice && others.some((o) => !o.hasPrice)) factors.push('has price data');
+    if (others.some((o) => o.setTotal < winner.setTotal)) {
+        factors.push(`larger set listing (${winner.setTotal} cards)`);
+    }
+    if (factors.length === 0) factors.push('deterministic (id asc)');
+
+    const via: KeeperChoice['via'] = factors[0].includes('live TCGdex')
+        ? 'api'
+        : factors[0].includes('zero-padded')
+          ? 'localId'
+          : 'heuristic';
+    const label =
+        via === 'api' ? 'via TCGdex API' : via === 'localId' ? 'via API localId convention' : 'local heuristics';
+    return { winner, via, rationale: `${label}: ${factors.join(', ')}; verify manually` };
+}

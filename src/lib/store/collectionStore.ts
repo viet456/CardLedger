@@ -5,6 +5,7 @@ import { CollectionEntry } from '@/prisma/generated/browser';
 import { CardVariant } from '@/prisma/generated/enums';
 import { trpcClient } from '@/src/utils/trpc';
 import { toast } from 'sonner';
+import { cardIdRedirects } from '@/src/lib/cardRedirects';
 
 let isPulling = false;
 let pendingPull = false;
@@ -502,6 +503,37 @@ export const useCollectionStore = create<CollectionStoreState>()(
             onRehydrateStorage: () => (state) => {
                 if (state) {
                     //console.log('[CollectionStore]: Rehydrated from IndexedDB');
+
+                    // Remap merged-away card ids (dedupe pipeline) to their
+                    // keepers so cached entries and queued offline adds keep
+                    // resolving. Server rows are repointed at merge time, but
+                    // the changeset pull does not cover those updates.
+                    const hasCardRemap =
+                        (state.entries ?? []).some((e) => !!cardIdRedirects[e.cardId]) ||
+                        (state.offline_mutations ?? []).some(
+                            (m) => m.type === 'ADD' && !!cardIdRedirects[m.payload.cardId]
+                        );
+                    if (hasCardRemap) {
+                        useCollectionStore.setState({
+                            entries: (state.entries ?? []).map((e) =>
+                                cardIdRedirects[e.cardId]
+                                    ? { ...e, cardId: cardIdRedirects[e.cardId] }
+                                    : e
+                            ),
+                            offline_mutations: (state.offline_mutations ?? []).map((m) =>
+                                m.type === 'ADD' && cardIdRedirects[m.payload.cardId]
+                                    ? {
+                                          ...m,
+                                          payload: {
+                                              ...m.payload,
+                                              cardId: cardIdRedirects[m.payload.cardId]
+                                          }
+                                      }
+                                    : m
+                            )
+                        });
+                    }
+
                     if (state.entries && state.entries.length > 0) {
                         useCollectionStore.setState({ status: 'ready_from_cache' });
                     }
