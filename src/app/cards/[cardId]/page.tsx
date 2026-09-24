@@ -7,7 +7,9 @@ import { ClientCachedDetailsFallback } from './ClientCachedDetailsFallback';
 import { RelatedCards } from './RelatedCards';
 import { PriceHero } from '@/src/components/cards/PriceHero';
 import { Metadata } from 'next';
-import { getCachedCardData } from './data';
+import { getCachedCardData, getCachedPriceHistory } from './data';
+import { resolveBestNearMint } from '@/src/shared-types/price-api';
+import { breadcrumbJsonLd, cardProductJsonLd } from '@/src/lib/jsonld';
 
 export async function generateMetadata({
     params
@@ -59,8 +61,54 @@ export default async function SingleCardPage({ params }: {
     // Falls back to the standard key pattern for cards without an image.
     const imagePath = card?.img ?? `cards/${cardId}`;
 
+    // JSON-LD (schema.org): BreadcrumbList + Product/Offer
+    const priceHistory = card ? await getCachedPriceHistory(cardId) : [];
+    const latestPricePoint = priceHistory.length > 0 ? priceHistory[priceHistory.length - 1] : null;
+    const headlinePrice = latestPricePoint
+        ? resolveBestNearMint(
+              latestPricePoint.tcgNearMint,
+              latestPricePoint.tcgNormal,
+              latestPricePoint.tcgHolo,
+              latestPricePoint.tcgReverse,
+              latestPricePoint.tcgFirstEdition
+          )
+        : null;
+    const productJsonLd = card
+        ? cardProductJsonLd({
+              id: card.id,
+              name: card.n,
+              number: card.num,
+              setName: card.set.name,
+              imageKey: card.img,
+              description: card.description,
+              releaseDate: card.set.releaseDate,
+              price: headlinePrice
+          })
+        : null;
+    const crumbs = card
+        ? [
+              { name: 'Home', url: '/' },
+              { name: 'Sets', url: '/sets' },
+              { name: card.set.name, url: `/sets/${card.set.id}` },
+              { name: `${card.n} #${card.num}` }
+          ]
+        : [
+              { name: 'Home', url: '/' },
+              { name: 'Card Not Found' }
+          ];
+
     return (
         <main className='container mx-auto max-w-6xl p-4 sm:p-6 lg:p-8'>
+            <script
+                type='application/ld+json'
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd(crumbs)) }}
+            />
+            {productJsonLd && (
+                <script
+                    type='application/ld+json'
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+                />
+            )}
             <Suspense fallback={<ClientCachedBreadcrumbFallback cardId={cardId} />}>
                 <CardBreadcrumbs cardId={cardId} />
             </Suspense>

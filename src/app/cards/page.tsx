@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import CardPageView from './CardPageView';
 import { Suspense } from 'react';
+import { breadcrumbJsonLd } from '@/src/lib/jsonld';
 import { CardFilterControlsSkeleton } from '@/src/components/search/CardFilterControlsSkeleton';
 import { CardGridSkeleton } from '@/src/components/cards/CardGridSkeleton';
 
@@ -49,8 +50,21 @@ function CardsPageSkeleton() {
 
 export default function CardsPage() {
     return (
-        <Suspense fallback={<CardsPageSkeleton />}>
-            <CardPageView />
-        </Suspense>
+        <>
+            <script
+                type='application/ld+json'
+                dangerouslySetInnerHTML={{
+                    __html: JSON.stringify(
+                        breadcrumbJsonLd([
+                            { name: 'Home', url: '/' },
+                            { name: 'All Cards' }
+                        ])
+                    )
+                }}
+            />
+            <Suspense fallback={<CardsPageSkeleton />}>
+                <CardPageView />
+            </Suspense>
+        </>
     );
 }

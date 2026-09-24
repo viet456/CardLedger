@@ -1,5 +1,6 @@
 import { getCachedCardData } from '@/src/app/cards/[cardId]/data';
 import { PriceHistoryChart } from '@/src/components/cards/PriceHistoryChart';
+import { PriceSummary } from '@/src/app/cards/[cardId]/PriceSummary';
 import { AbilityObject } from '@/src/shared-types/card-index';
 import { notFound } from 'next/navigation';
 import { FilterLink } from '@/src/app/cards/[cardId]/FilterLink';
@@ -44,6 +45,10 @@ export async function CardDetails({ cardId }: { cardId: string }) {
             <section className='rounded-lg border bg-card p-4 shadow-sm'>
                 <h2 className='mb-2 text-2xl font-semibold tracking-tight'>Prices</h2>
                 <PriceHistoryChart cardId={cardId} />
+                {/* Crawlable server-rendered price prose */}
+                <div className='mt-3 border-t border-border/50 pt-3'>
+                    <PriceSummary cardId={cardId} />
+                </div>
             </section>
 
             {/* Details Grid */}

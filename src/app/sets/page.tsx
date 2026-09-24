@@ -4,6 +4,7 @@ import { Metadata } from 'next';
 import { cacheLife, cacheTag } from 'next/cache';
 import { type Set as PrismaSet } from '@/prisma/generated/client';
 import { SetClient, GroupedSet } from './SetClient';
+import { breadcrumbJsonLd } from '@/src/lib/jsonld';
 
 export const metadata: Metadata = {
     title: 'All Sets',
@@ -57,6 +58,17 @@ export default async function SetsPage() {
 
     return (
         <div className='container mx-auto p-4 sm:p-6 lg:p-8'>
+            <script
+                type='application/ld+json'
+                dangerouslySetInnerHTML={{
+                    __html: JSON.stringify(
+                        breadcrumbJsonLd([
+                            { name: 'Home', url: '/' },
+                            { name: 'All Sets' }
+                        ])
+                    )
+                }}
+            />
             <SetClient groupedSets={groupedSets} />
         </div>
     );

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { SetPageView } from './SetPageView';
 import { Metadata } from 'next';
 import { getCachedSetData } from './data';
+import { breadcrumbJsonLd } from '@/src/lib/jsonld';
 import { FilterOptions } from '@/src/shared-types/card-index';
 
 export async function generateStaticParams() {
@@ -58,5 +59,21 @@ export default async function SingleSetPage({ params }: { params: Promise<{ setI
             new Set(data.cards.flatMap((c) => c.resistances.map((r) => r.type)))
         ).sort()
     };
-    return <SetPageView setInfo={data.setInfo} cards={data.cards} filterOptions={filterOptions} />;
+    return (
+        <>
+            <script
+                type='application/ld+json'
+                dangerouslySetInnerHTML={{
+                    __html: JSON.stringify(
+                        breadcrumbJsonLd([
+                            { name: 'Home', url: '/' },
+                            { name: 'Sets', url: '/sets' },
+                            { name: data.setInfo.name }
+                        ])
+                    )
+                }}
+            />
+            <SetPageView setInfo={data.setInfo} cards={data.cards} filterOptions={filterOptions} />
+        </>
+    );
 }
