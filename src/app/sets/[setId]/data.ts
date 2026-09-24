@@ -1,6 +1,7 @@
 import { prisma } from '@/src/lib/prisma';
 import { cacheTag, cacheLife } from 'next/cache';
 import { mapPrismaCardToDenormalized } from '@/src/utils/cardMapper';
+import { sortDenormalizedCards } from '@/src/utils/cardSort';
 import { SetObject } from '@/src/shared-types/card-index';
 
 export async function getCachedSetData(setId: string) {
@@ -55,8 +56,13 @@ export async function getCachedSetData(setId: string) {
         ptcgoCode: setWithCards.ptcgoCode
     };
 
-    const denormalizedCards = setWithCards.cards.map((card) =>
-        mapPrismaCardToDenormalized(card, setInfo)
+    // Locked sort contract (src/utils/cardSort.ts): SSR emits 'num' 'asc' via
+    // the shared comparator ('num' asc === generateCardIndex order) so client
+    // re-sorts always agree with the server-rendered HTML.
+    const denormalizedCards = sortDenormalizedCards(
+        setWithCards.cards.map((card) => mapPrismaCardToDenormalized(card, setInfo)),
+        'num',
+        'asc'
     );
     return {
         setInfo: setInfo,

@@ -45,14 +45,11 @@ export default function CardPageView() {
         const parsed = findCardsInputSchema.safeParse(paramsObj);
 
         if (parsed.success) {
-            const filtersWithDefaults = {
-                sortBy: parsed.data.sortBy || 'rD',
-                sortOrder: parsed.data.sortOrder || 'desc',
-                ...parsed.data
-            };
-            replaceFilters(filtersWithDefaults);
+            // Locked sort contract: carry URL values verbatim into the store —
+            // no sort defaults are injected (missing keys -> page default).
+            replaceFilters(parsed.data);
         } else {
-            replaceFilters({ sortBy: 'rD', sortOrder: 'desc' });
+            replaceFilters({});
         }
 
         setTimeout(() => {
@@ -82,6 +79,12 @@ export default function CardPageView() {
 
     ]);
 
+    // Clear the store when leaving the page so stale filters never leak into
+    // the first render of another page (locked sort contract: cardSort.ts)
+    useEffect(() => {
+        return () => replaceFilters({});
+    }, [replaceFilters]);
+
     const { status, artists, rarities, sets, types, subtypes } = useCardStore(
         useShallow((state: CardStoreState) => ({
             status: state.status,
@@ -110,11 +113,10 @@ export default function CardPageView() {
         { label: 'Price', value: 'price' }
     ];
 
-    const defaultSort = { sortBy: 'rD' as SortableKey, sortOrder: 'desc' as const };
     const isLoading = !isHydrated || !status.startsWith('ready');
 
     //const startTime = performance.now();
-    const { filteredCards: normalizedFilteredCards } = useCardFilters({ defaultSort });
+    const { filteredCards: normalizedFilteredCards } = useCardFilters();
     // const endTime = performance.now();
     // if (normalizedFilteredCards.length > 0) {
     //     console.log(`🏎️ [Total Data Pipeline] Filter + Sort + Denorm: ${(endTime - startTime).toFixed(2)}ms`);

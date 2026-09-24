@@ -17,7 +17,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/src/
 export const navItems = [
     { href: '/', label: 'Home' },
     { href: '/dashboard', label: 'Dashboard' },
-    { href: '/cards?sortBy=rD&sortOrder=desc', label: 'Cards' },
+    { href: '/cards', label: 'Cards' },
     { href: '/sets', label: 'Sets' },
     { href: '/about', label: 'About' }
 ];

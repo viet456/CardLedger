@@ -1,19 +1,16 @@
 'use client';
 import { useSearchStore } from '@/src/lib/store/searchStore';
 import { NormalizedCard } from '@/src/shared-types/card-index';
-import { useMemo, useEffect } from 'react';
-import { SortableKey } from '../src/services/pokemonCardValidator';
+import { useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { resolveSort, sortBrowseCards } from '@/src/utils/cardSort';
 import { useCardStore, IndexedCard } from '@/src/lib/store/cardStore';
 import { useShallow } from 'zustand/react/shallow';
 import { CardPrices } from '@/src/shared-types/price-api';
 import { useMarketStore } from '@/src/lib/store/marketStore';
 
-interface UseCardFiltersProps {
-    defaultSort?: {
-        sortBy: SortableKey;
-        sortOrder: 'asc' | 'desc';
-    };
-}
+// /cards sort keys accepted from URL params (locked contract: cardSort.ts)
+const BROWSE_SORT_KEYS = ['rD', 'n', 'pS', 'num', 'price', 'relevance'] as const;
 
 // Helper to get price for sorting without full denormalization
 function getEffectivePrice(priceData?: CardPrices): number | null {
@@ -38,13 +35,11 @@ function intersectSets(setA: Set<string>, setB: Set<string>): Set<string> {
     return intersection;
 }
 
-export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
-    const { filters, setFilters } = useSearchStore(
-        useShallow((state) => ({
-            filters: state.filters,
-            setFilters: state.setFilters
-        }))
-    );
+export function useCardFilters() {
+    // Locked sort contract (src/utils/cardSort.ts): URL params are the sole
+    // sort authority — the store never supplies sort keys.
+    const searchParams = useSearchParams();
+    const filters = useSearchStore((state) => state.filters);
     const prices = useMarketStore((state) => state.prices);
 
     const {
@@ -78,12 +73,6 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
             names: state.names
         }))
     );
-
-    useEffect(() => {
-        if (!filters.sortBy && defaultSort) {
-            setFilters(defaultSort);
-        }
-    }, [filters.sortBy, defaultSort, setFilters]);
 
     // Efficient Set Intersection
     const candidateCards = useMemo(() => {
@@ -180,75 +169,30 @@ export function useCardFilters({ defaultSort }: UseCardFiltersProps) {
         return searchResults;
     }, [filters.search, ufInstance, searchHaystack, candidateCards, cards]);
 
-    // Sort the normalized cards
+    // Sort the normalized cards (locked sort contract: cardSort.ts)
     const sortedAndFilteredCards = useMemo(() => {
-        const sortBy = (filters.sortBy || (filters.search ? 'relevance' : 'rD')) as
-            | SortableKey
-            | 'relevance';
-        const sortOrder = filters.sortOrder || 'desc';
+        const { sortBy, sortOrder } = resolveSort(
+            searchParams.get('sortBy'),
+            searchParams.get('sortOrder'),
+            BROWSE_SORT_KEYS,
+            filters.search ? 'relevance' : 'rD'
+        );
 
         // Fast path 1: Relevance preserves uFuzzy order
         if (sortBy === 'relevance') return filteredCards;
 
-        // Fast path 2: Default backend JSON order, skip sorting entirely.
+        // Fast path 2: Default browse order ('rD' 'desc') IS the artifact order;
+        // skip sorting entirely.
         if (sortBy === 'rD' && sortOrder === 'desc' && !filters.search) {
             return filteredCards;
         }
 
-        const cardsToSort = [...filteredCards];
-        const setReleaseDateMap = new Map<number, number>(
-            sets.map((set, index) => [index, new Date(set.releaseDate).getTime()])
-        );
-        cardsToSort.sort((a, b) => {
-            switch (sortBy) {
-                case 'price':
-                    const priceA = getEffectivePrice(prices[a.id]);
-                    const priceB = getEffectivePrice(prices[b.id]);
-                    const isAInvalid = priceA === null;
-                    const isBInvalid = priceB === null;
-
-                    if (isAInvalid && isBInvalid) return 0;
-                    if (isAInvalid) return 1;
-                    if (isBInvalid) return -1;
-                    return sortOrder === 'desc' ? priceB - priceA : priceA - priceB;
-
-                case 'n':
-                    const nameDiff = names[a.n].localeCompare(names[b.n]);
-                    if (nameDiff !== 0) return nameDiff;
-                    return setReleaseDateMap.get(a.s)! - setReleaseDateMap.get(b.s)!;
-
-                case 'num':
-                    return a.num.localeCompare(b.num, undefined, { numeric: true });
-
-                case 'pS':
-                    const pokedexDiff = (a.pS || 9999) - (b.pS || 9999);
-                    if (pokedexDiff !== 0) return pokedexDiff;
-                    return setReleaseDateMap.get(a.s)! - setReleaseDateMap.get(b.s)!;
-
-                case 'rD':
-                default:
-                    const dateA = setReleaseDateMap.get(a.s)!;
-                    const dateB = setReleaseDateMap.get(b.s)!;
-
-                    if (dateA !== dateB) {
-                        return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
-                    }
-
-                    // Tie-breaker: Set Size (prevents interweaving on ascending sort)
-                    if (a.s !== b.s) {
-                        return sets[b.s].total - sets[a.s].total;
-                    }
-
-                    // Tie-breaker: Card Number
-                    return a.num.localeCompare(b.num, undefined, { numeric: true });
-            }
+        return sortBrowseCards(filteredCards, sortBy, sortOrder, {
+            names,
+            sets,
+            priceOf: (card) => getEffectivePrice(prices[card.id])
         });
-
-        if (sortOrder === 'desc' && sortBy !== 'price' && sortBy !== 'rD') {
-            cardsToSort.reverse();
-        }
-        return cardsToSort;
-    }, [filteredCards, filters.sortBy, filters.search, filters.sortOrder, sets, prices, names]);
+    }, [filteredCards, searchParams, filters.search, sets, prices, names]);
 
     return { filteredCards: sortedAndFilteredCards };
 }

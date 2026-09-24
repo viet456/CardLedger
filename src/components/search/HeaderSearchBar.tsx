@@ -55,7 +55,7 @@ export function HeaderSearchBar({ onSuggestionClick, className }: HeaderSearchBa
             if (searchTerm) {
                 params.set('search', searchTerm);
             }
-            router.push(`/cards?${params.toString()}&sortBy=relevance&sortOrder=desc`);
+            router.push(`/cards?${params.toString()}`);
         }
     };
     const handleClear = () => {

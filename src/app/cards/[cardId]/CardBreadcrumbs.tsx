@@ -12,10 +12,7 @@ export async function CardBreadcrumbs({ cardId }: { cardId: string }) {
                 Sets
             </Link>
             <ChevronRight className='h-4 w-4' />
-            <Link
-                href={`/sets/${card.set.id}?sortBy=num&sortOrder=asc`}
-                className='hover:underline'
-            >
+            <Link href={`/sets/${card.set.id}`} className='hover:underline'>
                 {card.set.name}
             </Link>
         </nav>

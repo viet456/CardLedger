@@ -103,7 +103,7 @@ export function OfflineCardView({ cardId }: { cardId: string }) {
                 </Link>
                 <ChevronRight className='h-4 w-4' />
                 <Link
-                    href={`/sets/${setId}?sortBy=num&sortOrder=asc`}
+                    href={`/sets/${setId}`}
                     className='hover:underline'
                 >
                     {setName}
