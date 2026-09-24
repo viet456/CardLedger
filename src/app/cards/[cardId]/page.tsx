@@ -48,13 +48,15 @@ export async function generateMetadata({
     };
 }
 
-export default async function SingleCardPage({ params, searchParams }: {
+export default async function SingleCardPage({ params }: {
     params: Promise<{ cardId: string }>;
-    searchParams: Promise<{ preview?: string }>;
 }) {
     const { cardId } = await params;
-    const { preview } = await searchParams;
-    const imagePath = preview ? decodeURIComponent(preview) : `cards/${cardId}`;
+    const card = await getCachedCardData(cardId);
+    // Image key is derived server-side from cached card data — the old
+    // ?preview param created duplicate parameterized URLs and is gone.
+    // Falls back to the standard key pattern for cards without an image.
+    const imagePath = card?.img ?? `cards/${cardId}`;
 
     return (
         <main className='container mx-auto max-w-6xl p-4 sm:p-6 lg:p-8'>
