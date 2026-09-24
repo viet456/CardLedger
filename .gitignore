@@ -56,4 +56,5 @@ next-env.d.ts
 
 /prisma/generated
 .next
-.vscodescripts/dedupe-report.json
+.vscode
+scripts/dedupe-report.json
