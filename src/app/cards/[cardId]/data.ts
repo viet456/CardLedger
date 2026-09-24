@@ -122,7 +122,7 @@ async function getCardDataRaw(cardId: string): Promise<DenormalizedCard | null> 
 
 export async function getCachedCardData(cardId: string) {
     'use cache';
-    cacheTag('card-data', 'card-details');
+    cacheTag('card-data', 'card-details', `card-${cardId}`);
     cacheLife('max');
 
     return getCardDataRaw(cardId);
