@@ -1,6 +1,7 @@
 import { prisma } from '@/src/lib/prisma';
 import { DenormalizedCard } from '@/src/shared-types/card-index';
 import { PriceHistoryDataPoint } from '@/src/shared-types/price-api';
+import { compareCardNumbers } from '@/src/utils/cardSort';
 import { cacheTag, cacheLife } from 'next/cache';
 
 export async function getCachedPriceHistory(cardId: string): Promise<PriceHistoryDataPoint[]> {
@@ -125,4 +126,129 @@ export async function getCachedCardData(cardId: string) {
     cacheLife('max');
 
     return getCardDataRaw(cardId);
+}
+
+// ------------------------- Related cards (internal linking) -------------------------
+
+export interface RelatedCardLink {
+    id: string;
+    name: string;
+    number: string;
+    imageKey: string | null;
+    setId: string;
+    setName: string;
+}
+
+export interface RelatedCardsData {
+    cardName: string;
+    evolvesFrom: RelatedCardLink | null;
+    evolvesTo: RelatedCardLink[];
+    prevInSet: RelatedCardLink | null;
+    nextInSet: RelatedCardLink | null;
+    sameSpecies: RelatedCardLink[];
+}
+
+const relatedCardSelect = {
+    id: true,
+    name: true,
+    number: true,
+    imageKey: true,
+    set: { select: { id: true, name: true } }
+} as const;
+
+type RelatedCardRow = {
+    id: string;
+    name: string;
+    number: string;
+    imageKey: string | null;
+    set: { id: string; name: string };
+};
+
+function toRelatedLink(card: RelatedCardRow): RelatedCardLink {
+    return {
+        id: card.id,
+        name: card.name,
+        number: card.number,
+        imageKey: card.imageKey,
+        setId: card.set.id,
+        setName: card.set.name
+    };
+}
+
+async function getRelatedCardsRaw(cardId: string): Promise<RelatedCardsData | null> {
+    const card = await prisma.card.findUnique({
+        where: { id: cardId },
+        select: {
+            ...relatedCardSelect,
+            evolvesFrom: true,
+            evolvesTo: true,
+            nationalPokedexNumbers: true,
+            setId: true
+        }
+    });
+    if (!card) return null;
+
+    // Prev / next within the set, in the locked 'num' order (cardSort.ts)
+    const setMates = await prisma.card.findMany({
+        where: { setId: card.setId },
+        select: relatedCardSelect
+    });
+    const sortedMates = [...setMates].sort((a, b) => compareCardNumbers(a.number, b.number));
+    const idx = sortedMates.findIndex((c) => c.id === cardId);
+    const prevInSet = idx > 0 ? toRelatedLink(sortedMates[idx - 1]) : null;
+    const nextInSet =
+        idx >= 0 && idx < sortedMates.length - 1 ? toRelatedLink(sortedMates[idx + 1]) : null;
+
+    // Evolution relatives — one representative printing (most recent) per species
+    const evolutionNames = [card.evolvesFrom, ...card.evolvesTo].filter(
+        (n): n is string => typeof n === 'string' && n.length > 0
+    );
+    const representatives = new Map<string, RelatedCardLink>();
+    if (evolutionNames.length > 0) {
+        const evolutionCards = await prisma.card.findMany({
+            where: { name: { in: evolutionNames }, id: { not: cardId } },
+            select: relatedCardSelect,
+            orderBy: { set: { releaseDate: 'desc' } },
+            take: 100
+        });
+        for (const c of evolutionCards) {
+            if (!representatives.has(c.name)) representatives.set(c.name, toRelatedLink(c));
+        }
+    }
+    const evolvesFrom = card.evolvesFrom ? (representatives.get(card.evolvesFrom) ?? null) : null;
+    const evolvesTo = card.evolvesTo
+        .map((n) => representatives.get(n))
+        .filter((l): l is RelatedCardLink => !!l);
+
+    // Other printings of the same species (national pokedex number match)
+    let sameSpecies: RelatedCardLink[] = [];
+    if (card.nationalPokedexNumbers.length > 0) {
+        const speciesMates = await prisma.card.findMany({
+            where: {
+                id: { not: cardId },
+                nationalPokedexNumbers: { hasSome: card.nationalPokedexNumbers }
+            },
+            select: relatedCardSelect,
+            orderBy: { set: { releaseDate: 'desc' } },
+            take: 6
+        });
+        sameSpecies = speciesMates.map(toRelatedLink);
+    }
+
+    return {
+        cardName: card.name,
+        evolvesFrom,
+        evolvesTo,
+        prevInSet,
+        nextInSet,
+        sameSpecies
+    };
+}
+
+export async function getCachedRelatedCards(cardId: string): Promise<RelatedCardsData | null> {
+    'use cache';
+    cacheTag('card-data', 'card-related', `card-${cardId}`);
+    cacheLife('max');
+
+    return getRelatedCardsRaw(cardId);
 }

@@ -4,6 +4,7 @@ import { CardDetails } from './CardDetails';
 import { CardBreadcrumbs } from './CardBreadcrumbs';
 import { ClientCachedBreadcrumbFallback } from './ClientCachedBreadcrumbFallback';
 import { ClientCachedDetailsFallback } from './ClientCachedDetailsFallback';
+import { RelatedCards } from './RelatedCards';
 import { PriceHero } from '@/src/components/cards/PriceHero';
 import { Metadata } from 'next';
 import { getCachedCardData } from './data';
@@ -82,6 +83,17 @@ export default async function SingleCardPage({ params }: {
                     <Suspense fallback={<ClientCachedDetailsFallback cardId={cardId} />}>
                         <CardDetails cardId={cardId} />
                     </Suspense>
+
+                    {/* Internal linking block (server-rendered, crawlable) */}
+                    <div className='mt-8'>
+                        <Suspense
+                            fallback={
+                                <div className='h-48 animate-pulse rounded-lg border bg-card shadow-sm' />
+                            }
+                        >
+                            <RelatedCards cardId={cardId} />
+                        </Suspense>
+                    </div>
                 </div>
             </div>
         </main>
