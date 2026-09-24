@@ -24,12 +24,12 @@ export async function generateMetadata({
 
     if (!set) {
         return {
-            title: 'Set Not Found | CardLedger'
+            title: 'Set Not Found'
         };
     }
 
     return {
-        title: `${set.name} | CardLedger`,
+        title: `${set.name}`,
         description: `Browse all ${set.printedTotal} cards from the ${set.name} set.`,
         alternates: {
             canonical: `/sets/${setId}`

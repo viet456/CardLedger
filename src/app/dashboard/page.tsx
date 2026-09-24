@@ -5,7 +5,7 @@ import { headers } from 'next/headers';
 import { auth } from '@/src/lib/auth';
 
 export const metadata: Metadata = {
-    title: 'Dashboard | CardLedger',
+    title: 'Dashboard',
     description: 'Manage your Pokémon card collection and track portfolio value.'
 };
 

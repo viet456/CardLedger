@@ -20,7 +20,7 @@ import {
 } from '../components/layout/ShowcaseSections';
 
 export const metadata: Metadata = {
-    title: 'CardLedger: Your Pokémon TCG Collection Manager',
+    title: 'Your Pokémon TCG Collection Manager',
     description:
         'Track, manage, and browse your entire Pokémon TCG collection. Fast, modern, and powerful tools for every collector.'
 };

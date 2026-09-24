@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import { Globe, AtSign, Github } from 'lucide-react';
 
 export const metadata: Metadata = {
-    title: 'About | CardLedger',
+    title: 'About',
     description: 'Learn about the architecture and technology behind the CardLedger project.'
 };
 

@@ -6,7 +6,7 @@ import { type Set as PrismaSet } from '@/prisma/generated/client';
 import { SetClient, GroupedSet } from './SetClient';
 
 export const metadata: Metadata = {
-    title: 'All Sets | CardLedger',
+    title: 'All Sets',
     description: 'Browse a complete list of all Pokémon TCG sets, grouped by series.'
 };
 

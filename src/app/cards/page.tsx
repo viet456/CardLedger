@@ -5,7 +5,7 @@ import { CardFilterControlsSkeleton } from '@/src/components/search/CardFilterCo
 import { CardGridSkeleton } from '@/src/components/cards/CardGridSkeleton';
 
 export const metadata: Metadata = {
-    title: 'All Cards | CardLedger',
+    title: 'All Cards',
     description:
         'Browse, search, and filter the entire Pokémon TCG database of over 19,000 cards. Find any card from any set.'
 };

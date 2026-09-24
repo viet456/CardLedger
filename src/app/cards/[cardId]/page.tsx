@@ -19,7 +19,7 @@ export async function generateMetadata({
 
     if (!card) {
         return {
-            title: 'Card Not Found | CardLedger',
+            title: 'Card Not Found',
             description: 'The requested card could not be found.'
         };
     }
@@ -27,7 +27,7 @@ export async function generateMetadata({
     const cardName = card.n;
     const cardNumber = card.num;
     const setName = card.set.name;
-    const title = `${cardName} #${cardNumber} (${setName}) | CardLedger`;
+    const title = `${cardName} #${cardNumber} (${setName})`;
     const description = `View ${cardName} #${cardNumber} from the ${setName} set. Track prices, check market trends, and add to your Pokémon TCG collection on CardLedger.`;
 
     return {
