@@ -262,13 +262,15 @@ export function PriceHistoryChart({ cardId }: { cardId: string }) {
 
     if (loading) {
         return (
-            <div className='animate-pulse space-y-4'>
-                <div className='h-8 w-40 rounded-md bg-muted' />
-                <div className='h-48 w-full rounded-md bg-muted' />
-                <div className='flex justify-between'>
-                    <div className='h-6 w-20 rounded-md bg-muted' />
-                    <div className='h-6 w-20 rounded-md bg-muted' />
+            <div className='animate-pulse'>
+                {/* Range button placeholders — mirrors the mb-4 flex gap-2 button row */}
+                <div className='mb-4 flex gap-2'>
+                    {Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} className='h-8 flex-1 rounded-md bg-muted sm:w-12 sm:flex-none' />
+                    ))}
                 </div>
+                {/* Chart area placeholder — mirrors relative h-[300px] w-full */}
+                <div className='h-[300px] w-full rounded-md bg-muted/30' />
             </div>
         );
     }
@@ -309,10 +311,7 @@ export function PriceHistoryChart({ cardId }: { cardId: string }) {
                 })}
             </div>
             {!hasData ? (
-                <div
-                    style={{ minHeight: '300px' }}
-                    className='h-100 flex items-center justify-center rounded-md bg-muted text-sm text-muted-foreground'
-                >
+                <div className='flex min-h-[300px] items-center justify-center rounded-md bg-muted text-sm text-muted-foreground'>
                     No price history available for this period.
                 </div>
             ) : (

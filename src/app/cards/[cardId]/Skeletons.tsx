@@ -14,7 +14,7 @@ export function DetailsSkeleton() {
                 <div className='mb-2 h-8 w-24 rounded bg-muted' />
                 <div className='mb-4 flex gap-2'>
                     {Array.from({ length: 6 }).map((_, i) => (
-                        <div key={i} className='h-9 flex-1 rounded bg-muted sm:w-12 sm:flex-none' />
+                        <div key={i} className='h-8 flex-1 rounded-md bg-muted sm:w-12 sm:flex-none' />
                     ))}
                 </div>
                 <div className='h-[300px] w-full rounded-md bg-muted/30' />
