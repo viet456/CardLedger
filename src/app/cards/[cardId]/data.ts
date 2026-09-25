@@ -220,20 +220,37 @@ async function getRelatedCardsRaw(cardId: string): Promise<RelatedCardsData | nu
         .map((n) => representatives.get(n))
         .filter((l): l is RelatedCardLink => !!l);
 
-    // Other printings of the same species (national pokedex number match)
-    let sameSpecies: RelatedCardLink[] = [];
-    if (card.nationalPokedexNumbers.length > 0) {
-        const speciesMates = await prisma.card.findMany({
-            where: {
-                id: { not: cardId },
-                nationalPokedexNumbers: { hasSome: card.nationalPokedexNumbers }
-            },
-            select: relatedCardSelect,
-            orderBy: { set: { releaseDate: 'desc' } },
-            take: 6
-        });
-        sameSpecies = speciesMates.map(toRelatedLink);
-    }
+    // Other printings of the same species — exact-name matches first (the
+    // heading says "More {name} cards"), national pokedex number matches as
+    // overflow for variant names (e.g. "Pikachu-GX"). Newest set first, self
+    // excluded, max 6. Name matching also covers rows with empty
+    // nationalPokedexNumbers (e.g. /cards/30th-001) that would otherwise
+    // match nothing.
+    const speciesMates = await prisma.card.findMany({
+        where: {
+            id: { not: cardId },
+            OR:
+                card.nationalPokedexNumbers.length > 0
+                    ? [
+                          { name: card.name },
+                          {
+                              nationalPokedexNumbers: {
+                                  hasSome: card.nationalPokedexNumbers
+                              }
+                          }
+                      ]
+                    : [{ name: card.name }]
+        },
+        select: relatedCardSelect,
+        orderBy: { set: { releaseDate: 'desc' } },
+        take: 20
+    });
+    // Stable sort: exact-name matches ahead of dex-only matches. Array.sort is
+    // stable, so the release-date desc order from SQL is preserved per group.
+    const sameSpecies = [...speciesMates]
+        .sort((a, b) => Number(a.name !== card.name) - Number(b.name !== card.name))
+        .slice(0, 6)
+        .map(toRelatedLink);
 
     return {
         cardName: card.name,

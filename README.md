@@ -9,7 +9,7 @@ CardLedger is a production-grade platform for cataloging and tracking Pokémon T
 
 - **📶 Offline-First & Real-Time Sync:** Add or edit collection entries without an internet connection. Changes are queued locally and automatically reconciled across multi-device sessions in real-time via Server-Sent Events (SSE) when connectivity is restored.
 - **📊 Portfolio Analytics:** Tracks acquisition date and cost basis vs. current market value. Visualizes portfolio performance over time with aggregate "Cost vs. Value" charts and percentage growth metrics.
-- **🔍 Instant Search:** Performs zero-latency filtering across 22,000+ cards using pre-calculated intersection maps and persisted client-side indexes.
+- **🔍 Instant Search:** Performs zero-latency filtering across 21,000+ cards using pre-calculated intersection maps and persisted client-side indexes.
 - **📱 Infinite Grid:** Features a highly optimized, infinite-scrolling virtualized grid for browsing massive card sets without pagination lag.
 
 ## Engineering Highlights

@@ -13,7 +13,7 @@ export default function About() {
                 <h1>About CardLedger: Engineering a Modern TCG Platform</h1>
                 <p>
                     CardLedger began with a strict engineering constraint: handle massive,
-                    relationship-heavy datasets (22,000+ cards and 6.3M+ price records) over the
+                    relationship-heavy datasets (21,000+ cards and 6.3M+ price records) over the
                     web, but make the experience feel as instant and fluid as a locally installed
                     desktop app. Born from the frustration of slow, pagination-heavy web interfaces,
                     it serves as both a functional TCG collection manager and a technical case study
@@ -56,7 +56,7 @@ export default function About() {
                     <li>
                         <b>Backend Analytics vs. Local Search</b>: Prisma manages the 6.3M+ price history records 
                         on the backend to execute complex analytical queries. However, to make catalog browsing 
-                        instant, the entire 22,000+ card dataset is indexed client-side. Using uFuzzy and custom 
+                        instant, the entire 21,000+ card dataset is indexed client-side. Using uFuzzy and custom 
                         intersection maps, filtering executes in sub-milliseconds without ever hitting the server.
                     </li>
                     <li>
