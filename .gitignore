@@ -57,5 +57,3 @@ next-env.d.ts
 /prisma/generated
 .next
 .vscode
-scripts/dedupe-report.json
-scripts/set-merge-report.json

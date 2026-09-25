@@ -5,9 +5,8 @@ import { r2 } from '../../src/lib/r2';
 const BUCKET_NAME = process.env.R2_BUCKET_NAME!;
 
 /**
- * Upload a remote image to R2 — verbatim extraction of populate.ts's helper,
- * shared with the set-merge tooling (applySetMerges uploads borrowed/API set
- * logos). Semantics preserved exactly: returns false on a non-ok fetch and
+ * Upload a remote image to R2 — shared image-upload helper for the populate
+ * pipeline. Semantics preserved exactly: returns false on a non-ok fetch and
  * THROWS on upload errors (populate wraps this in withRetry).
  */
 export async function uploadImageToR2(url: string, key: string): Promise<boolean> {

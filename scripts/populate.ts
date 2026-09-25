@@ -5,7 +5,6 @@ import { PrismaClient, Supertype, LegalityStatus } from '../prisma/generated/cli
 import TCGdex from '@tcgdex/sdk';
 import { HeadObjectCommand } from '@aws-sdk/client-s3';
 import { r2 } from '../src/lib/r2';
-import { DuplicateIndex } from './lib/duplicateDetection';
 import { uploadImageToR2 } from './lib/r2Upload';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL! });
@@ -95,35 +94,18 @@ async function withRetry<T>(fn: () => Promise<T>, label: string): Promise<T> {
 
 // --- Logic Processors ---
 
-async function processCard(cardRef: any, dbSet: any, cardsWithImages: Set<string>, duplicateIndex: DuplicateIndex) {
+async function processCard(cardRef: any, dbSet: any, cardsWithImages: Set<string>) {
     try {
         const card = await withRetry(() => tcgdex.fetch('cards', cardRef.id), `cards/${cardRef.id}`);
         if (!card) return;
 
-        // --- Duplicate guard (dedupe pipeline; see scripts/auditDuplicates.ts) ---
-        // Never CREATE a second row for a card that already exists under a
-        // different id (zero-notation variants or TCGdex "shadow sets") —
-        // duplicates become self-canonical pages stuck out of the index.
-        // Updates to existing rows flow through the normal upsert below.
+        // Existing row lookup — backs the image-compensation guard below: a
+        // compensated / non-convention imageKey must never be overwritten
+        // (the API is not the source of truth for which R2 object serves art).
         const selfExists = await prisma.card.findUnique({
             where: { id: card.id },
             select: { id: true, imageKey: true }
         });
-        if (!selfExists) {
-            const equivalent = duplicateIndex.findDuplicate({
-                id: card.id,
-                name: card.name,
-                number: card.localId,
-                setId: dbSet.id,
-                rarity: card.rarity ?? null
-            });
-            if (equivalent) {
-                console.warn(
-                    `\n    ⛔ Duplicate guard: skipped ${card.id} (${card.name} #${card.localId}) — same card as ${equivalent.id} (set ${equivalent.setId}). Merge via the dedupe pipeline (pnpm db:audit-duplicates).`
-                );
-                return;
-            }
-        }
 
         let supertype: Supertype = 'Pokémon';
         if (card.category === 'Energy') supertype = 'Energy';
@@ -508,22 +490,6 @@ async function syncCards() {
         orderBy: { releaseDate: 'desc' }
     });
 
-    // --- Duplicate guard index (dedupe pipeline; loaded once, zero per-card cost) ---
-    const guardCardsRaw = await prisma.card.findMany({
-        select: { id: true, name: true, number: true, setId: true, rarity: { select: { name: true } } }
-    });
-    const guardCards = guardCardsRaw.map((c) => ({
-        id: c.id,
-        name: c.name,
-        number: c.number,
-        setId: c.setId,
-        rarity: c.rarity?.name ?? null
-    }));
-    const guardSets = await prisma.set.findMany({
-        select: { id: true, name: true, releaseDate: true, printedTotal: true, total: true }
-    });
-    const duplicateIndex = new DuplicateIndex(guardCards, guardSets);
-
     for (const dbSet of dbSets) {
         // Track which cards already have images (for R2 upload skip only)
         const existing = await prisma.card.findMany({
@@ -547,7 +513,7 @@ async function syncCards() {
         console.log(`\n🚀 ${dbSet.name}: Syncing ${toProcess.length} cards (R2 uploads: ${isForce ? 'force all' : `${missingImages.length} missing`})...`);
         const chunks = chunkArray(toProcess, 5);
         for (let i = 0; i < chunks.length; i++) {
-            await Promise.all(chunks[i].map((c) => processCard(c, dbSet, cardsWithImages, duplicateIndex)));
+            await Promise.all(chunks[i].map((c) => processCard(c, dbSet, cardsWithImages)));
             // Throttle to avoid API rate-limiting (5xx errors)
             if (i < chunks.length - 1) await sleep(500);
         }
