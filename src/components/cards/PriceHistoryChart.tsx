@@ -262,15 +262,29 @@ export function PriceHistoryChart({ cardId }: { cardId: string }) {
 
     if (loading) {
         return (
-            <div className='animate-pulse'>
-                {/* Range button placeholders — mirrors the mb-4 flex gap-2 button row */}
-                <div className='mb-4 flex gap-2'>
-                    {Array.from({ length: 6 }).map((_, i) => (
-                        <div key={i} className='h-8 flex-1 rounded-md bg-muted sm:w-12 sm:flex-none' />
+            <div className='animate-pulse' aria-hidden='true'>
+                {/* Range buttons — real Button variants so colors/borders/widths match the loaded row */}
+                <div className='pointer-events-none mb-4 flex gap-2'>
+                    {(['1m', '3m', '6m', '1y', 'YTD', 'All'] as TimeRange[]).map((range, i) => (
+                        <Button
+                            key={range}
+                            variant={i === 1 ? 'default' : 'outline'}
+                            size='sm'
+                            tabIndex={-1}
+                            className='flex-1 sm:flex-none'
+                        >
+                            <span className='invisible'>{range.toUpperCase()}</span>
+                        </Button>
                     ))}
                 </div>
-                {/* Chart area placeholder — mirrors relative h-[300px] w-full */}
-                <div className='h-[300px] w-full rounded-md bg-muted/30' />
+                {/* Chart area — transparent canvas + grid in the chart's grid color (--border) */}
+                <div className='relative h-[300px] w-full'>
+                    <div className='absolute inset-0 grid grid-cols-5 grid-rows-5'>
+                        {Array.from({ length: 25 }).map((_, i) => (
+                            <div key={i} className='border-b border-r border-border' />
+                        ))}
+                    </div>
+                </div>
             </div>
         );
     }
