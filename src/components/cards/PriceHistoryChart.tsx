@@ -277,14 +277,8 @@ export function PriceHistoryChart({ cardId }: { cardId: string }) {
                         </Button>
                     ))}
                 </div>
-                {/* Chart area — transparent canvas + grid in the chart's grid color (--border) */}
-                <div className='relative h-[300px] w-full'>
-                    <div className='absolute inset-0 grid grid-cols-5 grid-rows-5'>
-                        {Array.from({ length: 25 }).map((_, i) => (
-                            <div key={i} className='border-b border-r border-border' />
-                        ))}
-                    </div>
-                </div>
+                {/* Chart area — empty 300px spacer matching the loaded canvas container */}
+                <div className='h-[300px] w-full' />
             </div>
         );
     }
