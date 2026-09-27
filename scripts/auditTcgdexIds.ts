@@ -5,7 +5,7 @@
  * canonical, OG and sitemap URLs all embed Card.id. Rows created before the id
  * migration can carry pre-migration (pokemontcg-era) ids that TCGdex does not
  * know, e.g. the cel25-XXA shells that duplicated the cel25cc-CC0xx Classic
- * Collection keepers (found 2026-09; merged by scripts/mergeLegacyCel25Ids.ts).
+ * Collection keepers (found 2026-09; merged under commit 5a13a6a).
  *
  * Usage: pnpm run db:audit-ids
  *

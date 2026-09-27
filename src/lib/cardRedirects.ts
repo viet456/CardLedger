@@ -19,7 +19,8 @@ export interface LegacyRedirect {
 
 export const cardRedirects: LegacyRedirect[] = [
     // 138 pairs (2026-09) — stale pre-rename/pre-migration card ids re-pointed at
-    // their current TCGdex ids; kept in sync with scripts/mergeLegacyCardIds.ts
+    // their current TCGdex ids; kept in sync with the merge mapping applied
+    // under commit 5a13a6a
     { source: '/cards/bwp-BW004', destination: '/cards/bwp-BW04' },
     { source: '/cards/bwp-BW005', destination: '/cards/bwp-BW05' },
     { source: '/cards/cel25-2A', destination: '/cards/cel25cc-CC001' },
