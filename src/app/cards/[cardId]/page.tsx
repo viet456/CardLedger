@@ -36,7 +36,7 @@ export async function generateMetadata({
         title,
         description,
         alternates: {
-            canonical: `/cards/${cardId}`
+            canonical: `/cards/${encodeURIComponent(cardId)}`
         },
         openGraph: {
             title,
@@ -51,9 +51,7 @@ export async function generateMetadata({
     };
 }
 
-export default async function SingleCardPage({ params }: {
-    params: Promise<{ cardId: string }>;
-}) {
+export default async function SingleCardPage({ params }: { params: Promise<{ cardId: string }> }) {
     const { cardId } = await params;
     const card = await getCachedCardData(cardId);
     // Image key is derived server-side from cached card data — the old
@@ -92,10 +90,7 @@ export default async function SingleCardPage({ params }: {
               { name: card.set.name, url: `/sets/${card.set.id}` },
               { name: `${card.n} #${card.num}` }
           ]
-        : [
-              { name: 'Home', url: '/' },
-              { name: 'Card Not Found' }
-          ];
+        : [{ name: 'Home', url: '/' }, { name: 'Card Not Found' }];
 
     return (
         <main className='container mx-auto max-w-6xl p-4 sm:p-6 lg:p-8'>
@@ -116,11 +111,11 @@ export default async function SingleCardPage({ params }: {
             <div className='grid grid-cols-1 gap-8 md:grid-cols-3 lg:gap-12'>
                 {/* --- LEFT COLUMN: Sticky on Desktop --- */}
                 <div className='md:col-span-1'>
-                    <div className='md:sticky md:top-20 flex flex-col gap-4'>
+                    <div className='flex flex-col gap-4 md:sticky md:top-20'>
                         <CardImageDisplay img={imagePath} name='Card Image' id={cardId} />
-                        
+
                         {/* Desktop-only PriceHero */}
-                        <div className='hidden md:block px-2'> 
+                        <div className='hidden px-2 md:block'>
                             <PriceHero cardId={cardId} />
                         </div>
                     </div>

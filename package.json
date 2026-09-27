@@ -24,6 +24,8 @@
         "db:migrate-setid": "tsx scripts/migrateToNumericIds.ts",
         "db:backfill-price": "tsx scripts/backfillPriceHistory.ts",
         "db:update-market": "tsx scripts/updateMarketStats.ts",
+        "db:audit-ids": "pnpm run db:generate && tsx scripts/auditTcgdexIds.ts",
+        "db:merge-legacy-ids": "tsx scripts/mergeLegacyCardIds.ts",
         "db:sync": "pnpm run db:populate && pnpm run images:migrate",
         "index:cards": "tsx scripts/generateCardIndex.ts",
         "index:market": "tsx scripts/generateMarketIndex.ts",
