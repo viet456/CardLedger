@@ -4,13 +4,14 @@ import { NormalizedCard } from '@/src/shared-types/card-index';
 import { useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { resolveSort, sortBrowseCards } from '@/src/utils/cardSort';
+import type { SortableKey } from '@/src/services/pokemonCardValidator';
 import { useCardStore, IndexedCard } from '@/src/lib/store/cardStore';
 import { useShallow } from 'zustand/react/shallow';
 import { CardPrices } from '@/src/shared-types/price-api';
 import { useMarketStore } from '@/src/lib/store/marketStore';
 
 // /cards sort keys accepted from URL params (locked contract: cardSort.ts)
-const BROWSE_SORT_KEYS = ['rD', 'n', 'pS', 'num', 'price', 'relevance'] as const;
+const BROWSE_SORT_KEYS: readonly (SortableKey | 'relevance')[] = ['rD', 'n', 'pS', 'num', 'price', 'relevance'];
 
 // Helper to get price for sorting without full denormalization
 function getEffectivePrice(priceData?: CardPrices): number | null {
