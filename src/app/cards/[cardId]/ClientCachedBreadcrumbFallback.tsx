@@ -30,10 +30,7 @@ export function ClientCachedBreadcrumbFallback({ cardId }: { cardId: string }) {
                 Sets
             </Link>
             <ChevronRight className='h-4 w-4' />
-            <Link
-                href={`/sets/${denormalized.set.id}?sortBy=num&sortOrder=asc`}
-                className='hover:underline'
-            >
+            <Link href={`/sets/${denormalized.set.id}`} className='hover:underline'>
                 {denormalized.set.name}
             </Link>
         </nav>

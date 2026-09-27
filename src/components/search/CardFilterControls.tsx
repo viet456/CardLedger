@@ -65,6 +65,16 @@ export function CardFilterControls({
         setFilters({ [key]: finalValue });
     };
 
+    // Changing the sort KEY always re-applies that key's natural direction
+    // (locked sort contract: src/utils/cardSort.ts) so a stale sortOrder can
+    // never reverse the newly chosen key by default.
+    const handleSortByChange = (value: string) => {
+        setFilters({
+            sortBy: value === 'all' ? undefined : (value as SortableKey),
+            sortOrder: undefined
+        });
+    };
+
     const handleClearFilters = () => {
         setFilters({
             setId: undefined,
@@ -173,7 +183,7 @@ export function CardFilterControls({
 
                 <Select
                     value={filters.search ? filters.sortBy || 'relevance' : filters.sortBy || ''}
-                    onValueChange={(val) => handleFilterChange('sortBy', val)}
+                    onValueChange={handleSortByChange}
                 >
                     <SelectTrigger className='h-9 w-full border border-border bg-card'>
                         <SelectValue placeholder='Sort By' className='truncate' />
@@ -332,7 +342,7 @@ export function CardFilterControls({
                         value={
                             filters.search ? filters.sortBy || 'relevance' : filters.sortBy || ''
                         }
-                        onValueChange={(val) => handleFilterChange('sortBy', val)}
+                        onValueChange={handleSortByChange}
                     >
                         <SelectTrigger className='w-full border border-border bg-card'>
                             <SelectValue placeholder='Sort By' className='truncate' />

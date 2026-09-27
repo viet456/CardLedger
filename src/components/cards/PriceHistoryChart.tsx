@@ -262,13 +262,23 @@ export function PriceHistoryChart({ cardId }: { cardId: string }) {
 
     if (loading) {
         return (
-            <div className='animate-pulse space-y-4'>
-                <div className='h-8 w-40 rounded-md bg-muted' />
-                <div className='h-48 w-full rounded-md bg-muted' />
-                <div className='flex justify-between'>
-                    <div className='h-6 w-20 rounded-md bg-muted' />
-                    <div className='h-6 w-20 rounded-md bg-muted' />
+            <div className='animate-pulse' aria-hidden='true'>
+                {/* Range buttons — real Button variants so colors/borders/widths match the loaded row */}
+                <div className='pointer-events-none mb-4 flex gap-2'>
+                    {(['1m', '3m', '6m', '1y', 'YTD', 'All'] as TimeRange[]).map((range, i) => (
+                        <Button
+                            key={range}
+                            variant={i === 1 ? 'default' : 'outline'}
+                            size='sm'
+                            tabIndex={-1}
+                            className='flex-1 sm:flex-none'
+                        >
+                            <span className='invisible'>{range.toUpperCase()}</span>
+                        </Button>
+                    ))}
                 </div>
+                {/* Chart area — empty 300px spacer matching the loaded canvas container */}
+                <div className='h-[300px] w-full' />
             </div>
         );
     }
@@ -309,10 +319,7 @@ export function PriceHistoryChart({ cardId }: { cardId: string }) {
                 })}
             </div>
             {!hasData ? (
-                <div
-                    style={{ minHeight: '300px' }}
-                    className='h-100 flex items-center justify-center rounded-md bg-muted text-sm text-muted-foreground'
-                >
+                <div className='flex min-h-[300px] items-center justify-center rounded-md bg-muted text-sm text-muted-foreground'>
                     No price history available for this period.
                 </div>
             ) : (

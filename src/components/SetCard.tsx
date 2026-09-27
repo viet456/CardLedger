@@ -20,7 +20,7 @@ export function SetCard({ set, isPriority = false }: SetCardProps) {
     const router = useRouter();
 
     const handleNavigate = () => {
-        router.push(`/sets/${set.id}?sortBy=num&sortOrder=asc`);
+        router.push(`/sets/${set.id}`);
     };
 
     return (

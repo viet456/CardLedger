@@ -21,7 +21,7 @@ const tcgdex = new TCGdex('en');
 let eurToUsdExchangeRate = 1.08;
 
 // Parallel processing config
-const CARD_BATCH_SIZE = 5; // Paced to process ~22,000 cards over 40-50 minutes to avoid hitting rate limits
+const CARD_BATCH_SIZE = 5; // Paced to process ~21,300 cards over 40-50 minutes to avoid hitting rate limits
 const SET_BATCH_SIZE = 1; // Process one set at a time to be very safe during migration
 
 async function fetchExchangeRate(): Promise<number> {

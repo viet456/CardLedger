@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import r2ImageLoader from '@/src/lib/loader';
 
 const FALLBACK_IMAGE = '/images/card-placeholder.avif';
@@ -17,16 +17,6 @@ export function CardImageDisplay({ img, name, id }: CardImageDisplayProps) {
     
     const [baseError, setBaseError] = useState(false);
     const [highResError, setHighResError] = useState(false);
-
-    useEffect(() => {
-        // If we have the preview param, clean it up from the URL bar
-        // without refreshing the page
-        if (typeof window !== 'undefined' && window.location.search.includes('preview=')) {
-            const url = new URL(window.location.href);
-            url.searchParams.delete('preview');
-            window.history.replaceState(window.history.state, '', url);
-        }
-    }, []);
 
     // Only show the gray placeholder if we have NO image, or the low-res completely failed
     if (!img || baseError) {

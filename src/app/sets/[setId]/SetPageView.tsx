@@ -1,5 +1,6 @@
 'use client';
 import { SortableKey, findCardsInputSchema } from '@/src/services/pokemonCardValidator';
+import { resolveSort, sortDenormalizedCards } from '@/src/utils/cardSort';
 import { CardFilterControls } from '@/src/components/search/CardFilterControls';
 import { SimpleCardGrid } from '@/src/components/cards/SimpleCardGrid';
 import { SetObject, FilterOptions, DenormalizedCard } from '@/src/shared-types/card-index';
@@ -20,34 +21,21 @@ interface SetPageViewProps {
     filterOptions: FilterOptions;
 }
 
+// Set-page sort keys accepted from URL params (locked contract: cardSort.ts)
+const SET_SORT_KEYS = ['num', 'n', 'price'] as const;
+
 function useSetFilters(initialCards: DenormalizedCard[]) {
-    // 1. Grab params directly to be "optimistic"
     const searchParams = useSearchParams();
     const { filters } = useSearchStore(useShallow((state) => ({ filters: state.filters })));
 
-    // 2. Detect "Uninitialized" State (Global Store Default)
-    // If sortBy is 'rD', the store is stale (hasn't synced with URL yet).
-    const urlSortBy = searchParams.get('sortBy');
-    const urlSortOrder = searchParams.get('sortOrder');
-    const shouldUseUrlParams = urlSortBy && filters.sortBy !== urlSortBy;
-    // 3. Determine Effective Sort (Prefer URL if store is stale)
-    let effectiveSortBy = filters.sortBy || 'num';
-    let effectiveSortOrder = filters.sortOrder || 'asc';
-
-    if (shouldUseUrlParams) {
-        // Use URL params as source of truth during hydration
-        if (urlSortBy === 'num' || urlSortBy === 'n' || urlSortBy === 'price') {
-            effectiveSortBy = urlSortBy;
-        } else {
-            effectiveSortBy = 'num';
-        }
-
-        if (urlSortOrder === 'asc' || urlSortOrder === 'desc') {
-            effectiveSortOrder = urlSortOrder;
-        } else {
-            effectiveSortOrder = 'asc';
-        }
-    }
+    // Locked sort contract (src/utils/cardSort.ts): URL params are the sole
+    // sort authority; absent sort params -> page default 'num' 'asc' (matches SSR).
+    const { sortBy: effectiveSortBy, sortOrder: effectiveSortOrder } = resolveSort(
+        searchParams.get('sortBy'),
+        searchParams.get('sortOrder'),
+        SET_SORT_KEYS,
+        'num'
+    );
 
     const filteredAndSortedCards = useMemo(() => {
         const filtered = initialCards.filter((card) => {
@@ -64,30 +52,9 @@ function useSetFilters(initialCards: DenormalizedCard[]) {
             return true;
         });
 
-        const sortBy = effectiveSortBy as SortableKey;
-        const sortOrder = effectiveSortOrder;
-
-        filtered.sort((a, b) => {
-            switch (sortBy) {
-                case 'price':
-                    const priceA = a.price ?? -1;
-                    const priceB = b.price ?? -1;
-                    if (priceA === -1 && priceB === -1) return 0;
-                    if (priceA === -1) return 1;
-                    if (priceB === -1) return -1;
-                    return sortOrder === 'desc' ? priceB - priceA : priceA - priceB;
-                case 'n':
-                    return a.n.localeCompare(b.n);
-                case 'num':
-                    return a.num.localeCompare(b.num, undefined, { numeric: true });
-                default:
-                    return a.num.localeCompare(b.num, undefined, { numeric: true });
-            }
-        });
-
-        if (sortOrder === 'desc' && sortBy !== 'price') filtered.reverse();
-
-        return filtered;
+        // Locked sort contract (src/utils/cardSort.ts) — SSR/CSR parity via the
+        // shared comparator ('num' asc === generateCardIndex order).
+        return sortDenormalizedCards(filtered, effectiveSortBy, effectiveSortOrder);
     }, [initialCards, filters, effectiveSortBy, effectiveSortOrder]);
 
     return { filteredAndSortedCards };
@@ -121,14 +88,11 @@ export function SetPageView({ setInfo, cards, filterOptions }: SetPageViewProps)
         const parsed = findCardsInputSchema.safeParse(paramsObj);
 
         if (parsed.success) {
-            const newFilters = {
-                sortBy: parsed.data.sortBy || 'num',
-                sortOrder: parsed.data.sortOrder || 'asc',
-                ...parsed.data
-            };
-            replaceFilters(newFilters);
+            // Locked sort contract: carry URL values verbatim into the store —
+            // no sort defaults are injected (missing keys -> page default).
+            replaceFilters(parsed.data);
         } else {
-            replaceFilters({ sortBy: 'num', sortOrder: 'asc' });
+            replaceFilters({} as Parameters<typeof replaceFilters>[0]);
         }
 
         setTimeout(() => {

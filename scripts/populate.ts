@@ -3,9 +3,9 @@ import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient, Supertype, LegalityStatus } from '../prisma/generated/client';
 import TCGdex from '@tcgdex/sdk';
-import { PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
+import { HeadObjectCommand } from '@aws-sdk/client-s3';
 import { r2 } from '../src/lib/r2';
-import fetch from 'node-fetch';
+import { uploadImageToR2 } from './lib/r2Upload';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL! });
 const adapter = new PrismaPg(pool);
@@ -54,32 +54,7 @@ async function doesImageExistInR2(key: string): Promise<boolean> {
     }
 }
 
-async function uploadImageToR2(url: string, key: string): Promise<boolean> {
-    try {
-        // const exists = await doesImageExistInR2(key);
-        // if (exists) return false;
-
-        const res = await fetch(url);
-        if (!res.ok) return false;
-
-        const arrayBuffer = await res.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        const contentType = res.headers.get('content-type') || 'image/png';
-
-        await r2.send(
-            new PutObjectCommand({
-                Bucket: BUCKET_NAME,
-                Key: key,
-                Body: buffer,
-                ContentType: contentType
-            })
-        );
-        return true;
-    } catch (e) {
-        console.error(`\n    ⚠️ R2 Upload Error for ${key}:`, (e as Error).message);
-        throw e;
-    }
-}
+// uploadImageToR2 extracted to scripts/lib/r2Upload.ts (shared with the set-merge tooling).
 
 function chunkArray<T>(array: T[], size: number): T[][] {
     const result: T[][] = [];
@@ -124,6 +99,14 @@ async function processCard(cardRef: any, dbSet: any, cardsWithImages: Set<string
         const card = await withRetry(() => tcgdex.fetch('cards', cardRef.id), `cards/${cardRef.id}`);
         if (!card) return;
 
+        // Existing row lookup — backs the image-compensation guard below: a
+        // compensated / non-convention imageKey must never be overwritten
+        // (the API is not the source of truth for which R2 object serves art).
+        const selfExists = await prisma.card.findUnique({
+            where: { id: card.id },
+            select: { id: true, imageKey: true }
+        });
+
         let supertype: Supertype = 'Pokémon';
         if (card.category === 'Energy') supertype = 'Energy';
         if (card.category === 'Trainer') supertype = 'Trainer';
@@ -144,7 +127,15 @@ async function processCard(cardRef: any, dbSet: any, cardsWithImages: Set<string
         if (card.image) {
             const sanitizedId = sanitizePublicId(card.id);
             const expectedImageKey = `cards/${sanitizedId}.png`;
-            if (!cardsWithImages.has(card.id)) {
+            const existingKey = selfExists?.imageKey ?? null;
+            if (existingKey && existingKey !== expectedImageKey) {
+                // Compensated / non-convention key (the dedupe pipeline copies a
+                // shadow card's image onto its keeper) — the API is NOT the
+                // source of truth for which R2 object serves a card's art.
+                // Never overwrite it or the next populate (even --force) would
+                // orphan the image.
+                imageKey = existingKey;
+            } else if (!cardsWithImages.has(card.id)) {
                 const srcUrl = card.image.endsWith('.png') ? card.image : `${card.image}/high.png`;
                 try {
                     imageUploaded = await uploadImageToR2(srcUrl, expectedImageKey);
@@ -467,6 +458,8 @@ async function syncSeriesAndSets() {
                 },
                 update: {
                     tcgdexId: set.id,
+                    // Real sitemap lastmod: bump on every metadata sync
+                    updatedAt: new Date(),
                     name: correctedName,
                     series: s.name,
                     seriesId: s.id,

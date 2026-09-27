@@ -1,11 +1,12 @@
 import { Metadata } from 'next';
 import CardPageView from './CardPageView';
 import { Suspense } from 'react';
+import { breadcrumbJsonLd } from '@/src/lib/jsonld';
 import { CardFilterControlsSkeleton } from '@/src/components/search/CardFilterControlsSkeleton';
 import { CardGridSkeleton } from '@/src/components/cards/CardGridSkeleton';
 
 export const metadata: Metadata = {
-    title: 'All Cards | CardLedger',
+    title: 'All Cards',
     description:
         'Browse, search, and filter the entire Pokémon TCG database of over 19,000 cards. Find any card from any set.'
 };
@@ -49,8 +50,21 @@ function CardsPageSkeleton() {
 
 export default function CardsPage() {
     return (
-        <Suspense fallback={<CardsPageSkeleton />}>
-            <CardPageView />
-        </Suspense>
+        <>
+            <script
+                type='application/ld+json'
+                dangerouslySetInnerHTML={{
+                    __html: JSON.stringify(
+                        breadcrumbJsonLd([
+                            { name: 'Home', url: '/' },
+                            { name: 'All Cards' }
+                        ])
+                    )
+                }}
+            />
+            <Suspense fallback={<CardsPageSkeleton />}>
+                <CardPageView />
+            </Suspense>
+        </>
     );
 }

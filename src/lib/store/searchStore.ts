@@ -11,14 +11,12 @@ interface SearchStore {
     replaceFilters: (newFilters: FilterState) => void;
 }
 
-const DEFAULT_SORT_BY = 'rD' as SortableKey;
-const DEFAULT_SORT_ORDER = 'desc' as const;
+// Locked sort contract (see src/utils/cardSort.ts): sortBy/sortOrder never
+// persist in the store — URL query params are the sole sort authority. The
+// store starts empty and page entry effects replace it from the URL.
 
 export const useSearchStore = create<SearchStore>((set) => ({
-    filters: {
-        sortBy: DEFAULT_SORT_BY,
-        sortOrder: DEFAULT_SORT_ORDER
-    },
+    filters: {},
     previousSortBy: null,
     setFilters: (newFilters) =>
         set((state) => {
@@ -32,8 +30,9 @@ export const useSearchStore = create<SearchStore>((set) => ({
                     newState.sortBy = 'relevance' as SortableKey;
                 }
                 // Restore previous sort when clearing search
+                // (undefined -> page default applies; see cardSort.ts)
                 if (!newFilters.search && state.filters.search) {
-                    newState.sortBy = state.previousSortBy || DEFAULT_SORT_BY;
+                    newState.sortBy = state.previousSortBy || undefined;
                     newPreviousSortBy = null;
                 }
             }
@@ -42,12 +41,9 @@ export const useSearchStore = create<SearchStore>((set) => ({
         }),
     replaceFilters: (newFilters) =>
         set(() => ({
-            filters: {
-                // Apply defaults for missing values
-                sortBy: newFilters.sortBy || DEFAULT_SORT_BY,
-                sortOrder: newFilters.sortOrder || DEFAULT_SORT_ORDER,
-                ...newFilters
-            },
+            // Full replace with verbatim URL-derived values — missing sort keys
+            // stay undefined (page defaults apply). No defaults are injected.
+            filters: newFilters,
             previousSortBy: null
         }))
 }));

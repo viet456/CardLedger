@@ -1,6 +1,7 @@
 import { prisma } from '@/src/lib/prisma';
 import { DenormalizedCard } from '@/src/shared-types/card-index';
 import { PriceHistoryDataPoint } from '@/src/shared-types/price-api';
+import { compareCardNumbers } from '@/src/utils/cardSort';
 import { cacheTag, cacheLife } from 'next/cache';
 
 export async function getCachedPriceHistory(cardId: string): Promise<PriceHistoryDataPoint[]> {
@@ -121,8 +122,150 @@ async function getCardDataRaw(cardId: string): Promise<DenormalizedCard | null> 
 
 export async function getCachedCardData(cardId: string) {
     'use cache';
-    cacheTag('card-data', 'card-details');
+    cacheTag('card-data', 'card-details', `card-${cardId}`);
     cacheLife('max');
 
     return getCardDataRaw(cardId);
+}
+
+// ------------------------- Related cards (internal linking) -------------------------
+
+export interface RelatedCardLink {
+    id: string;
+    name: string;
+    number: string;
+    imageKey: string | null;
+    setId: string;
+    setName: string;
+}
+
+export interface RelatedCardsData {
+    cardName: string;
+    evolvesFrom: RelatedCardLink | null;
+    evolvesTo: RelatedCardLink[];
+    prevInSet: RelatedCardLink | null;
+    nextInSet: RelatedCardLink | null;
+    sameSpecies: RelatedCardLink[];
+}
+
+const relatedCardSelect = {
+    id: true,
+    name: true,
+    number: true,
+    imageKey: true,
+    set: { select: { id: true, name: true } }
+} as const;
+
+type RelatedCardRow = {
+    id: string;
+    name: string;
+    number: string;
+    imageKey: string | null;
+    set: { id: string; name: string };
+};
+
+function toRelatedLink(card: RelatedCardRow): RelatedCardLink {
+    return {
+        id: card.id,
+        name: card.name,
+        number: card.number,
+        imageKey: card.imageKey,
+        setId: card.set.id,
+        setName: card.set.name
+    };
+}
+
+async function getRelatedCardsRaw(cardId: string): Promise<RelatedCardsData | null> {
+    const card = await prisma.card.findUnique({
+        where: { id: cardId },
+        select: {
+            ...relatedCardSelect,
+            evolvesFrom: true,
+            evolvesTo: true,
+            nationalPokedexNumbers: true,
+            setId: true
+        }
+    });
+    if (!card) return null;
+
+    // Prev / next within the set, in the locked 'num' order (cardSort.ts)
+    const setMates = await prisma.card.findMany({
+        where: { setId: card.setId },
+        select: relatedCardSelect
+    });
+    const sortedMates = [...setMates].sort((a, b) => compareCardNumbers(a.number, b.number));
+    const idx = sortedMates.findIndex((c) => c.id === cardId);
+    const prevInSet = idx > 0 ? toRelatedLink(sortedMates[idx - 1]) : null;
+    const nextInSet =
+        idx >= 0 && idx < sortedMates.length - 1 ? toRelatedLink(sortedMates[idx + 1]) : null;
+
+    // Evolution relatives — one representative printing (most recent) per species
+    const evolutionNames = [card.evolvesFrom, ...card.evolvesTo].filter(
+        (n): n is string => typeof n === 'string' && n.length > 0
+    );
+    const representatives = new Map<string, RelatedCardLink>();
+    if (evolutionNames.length > 0) {
+        const evolutionCards = await prisma.card.findMany({
+            where: { name: { in: evolutionNames }, id: { not: cardId } },
+            select: relatedCardSelect,
+            orderBy: { set: { releaseDate: 'desc' } },
+            take: 100
+        });
+        for (const c of evolutionCards) {
+            if (!representatives.has(c.name)) representatives.set(c.name, toRelatedLink(c));
+        }
+    }
+    const evolvesFrom = card.evolvesFrom ? (representatives.get(card.evolvesFrom) ?? null) : null;
+    const evolvesTo = card.evolvesTo
+        .map((n) => representatives.get(n))
+        .filter((l): l is RelatedCardLink => !!l);
+
+    // Other printings of the same species — exact-name matches first (the
+    // heading says "More {name} cards"), national pokedex number matches as
+    // overflow for variant names (e.g. "Pikachu-GX"). Newest set first, self
+    // excluded, max 6. Name matching also covers rows with empty
+    // nationalPokedexNumbers (e.g. /cards/30th-001) that would otherwise
+    // match nothing.
+    const speciesMates = await prisma.card.findMany({
+        where: {
+            id: { not: cardId },
+            OR:
+                card.nationalPokedexNumbers.length > 0
+                    ? [
+                          { name: card.name },
+                          {
+                              nationalPokedexNumbers: {
+                                  hasSome: card.nationalPokedexNumbers
+                              }
+                          }
+                      ]
+                    : [{ name: card.name }]
+        },
+        select: relatedCardSelect,
+        orderBy: { set: { releaseDate: 'desc' } },
+        take: 20
+    });
+    // Stable sort: exact-name matches ahead of dex-only matches. Array.sort is
+    // stable, so the release-date desc order from SQL is preserved per group.
+    const sameSpecies = [...speciesMates]
+        .sort((a, b) => Number(a.name !== card.name) - Number(b.name !== card.name))
+        .slice(0, 6)
+        .map(toRelatedLink);
+
+    return {
+        cardName: card.name,
+        evolvesFrom,
+        evolvesTo,
+        prevInSet,
+        nextInSet,
+        sameSpecies
+    };
+}
+
+export async function getCachedRelatedCards(cardId: string): Promise<RelatedCardsData | null> {
+    'use cache';
+    cacheTag('card-data', 'card-related', `card-${cardId}`);
+    cacheLife('max');
+
+    return getRelatedCardsRaw(cardId);
 }
