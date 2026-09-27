@@ -10,10 +10,10 @@ function captionFor(link: RelatedCardLink): string {
 function TextLink({ link }: { link: RelatedCardLink }) {
     return (
         <Link
-            href={`/cards/${link.id}`}
-            className='text-primary text-sm font-medium hover:underline'
+            href={`/cards/${encodeURIComponent(link.id)}`}
+            className='text-sm font-medium text-primary hover:underline'
         >
-            {link.name} <span className='text-muted-foreground font-normal'>#{link.number}</span>
+            {link.name} <span className='font-normal text-muted-foreground'>#{link.number}</span>
         </Link>
     );
 }
@@ -32,10 +32,7 @@ export async function RelatedCards({ cardId }: { cardId: string }) {
     const hasNeighbors = !!related.prevInSet || !!related.nextInSet;
 
     return (
-        <section
-            aria-label='Related cards'
-            className='rounded-lg border bg-card p-4 shadow-sm'
-        >
+        <section aria-label='Related cards' className='rounded-lg border bg-card p-4 shadow-sm'>
             <h2 className='mb-3 text-2xl font-semibold tracking-tight'>Related Cards</h2>
 
             <div className='flex flex-col gap-6'>
@@ -65,7 +62,10 @@ export async function RelatedCards({ cardId }: { cardId: string }) {
                 )}
 
                 {hasNeighbors && (
-                    <nav aria-label='Cards in this set' className='flex items-center justify-between gap-4'>
+                    <nav
+                        aria-label='Cards in this set'
+                        className='flex items-center justify-between gap-4'
+                    >
                         {related.prevInSet ? (
                             <Link
                                 href={`/cards/${related.prevInSet.id}`}
@@ -104,7 +104,7 @@ export async function RelatedCards({ cardId }: { cardId: string }) {
                             {related.sameSpecies.map((link) => (
                                 <RelatedCardTile
                                     key={link.id}
-                                    href={`/cards/${link.id}`}
+                                    href={`/cards/${encodeURIComponent(link.id)}`}
                                     imageKey={link.imageKey}
                                     name={link.name}
                                     caption={captionFor(link)}

@@ -9,9 +9,7 @@ export const ASSETS_URL = 'https://assets.cardledger.io';
 /** Canonical optimized-card-image URL (mirrors the bucket logic in src/lib/loader.ts). */
 export function cardImageUrl(imageKey: string | null | undefined): string | undefined {
     if (!imageKey) return undefined;
-    const clean = imageKey
-        .replace(/^\//, '')
-        .replace(/\.(png|jpg|jpeg|webp|avif|gif)$/i, '');
+    const clean = imageKey.replace(/^\//, '').replace(/\.(png|jpg|jpeg|webp|avif|gif)$/i, '');
     return `${ASSETS_URL}/optimized/${clean}/640.avif`;
 }
 
@@ -48,7 +46,7 @@ export interface CardProductInput {
 
 /** Product + Offer JSON-LD for a single card page. */
 export function cardProductJsonLd(card: CardProductInput) {
-    const url = `${SITE_URL}/cards/${card.id}`;
+    const url = `${SITE_URL}/cards/${encodeURIComponent(card.id)}`;
     const fullName = `${card.name} #${card.number} (${card.setName})`;
     const image = cardImageUrl(card.imageKey);
 

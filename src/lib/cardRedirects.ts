@@ -5,6 +5,11 @@
  * pipeline (kept in git history for reference) and now maintained by hand
  * if a merge ever happens again.
  *
+ * These pairs are permanent and append-only — never delete them: they are
+ * the only record of the old-to-new id mapping (source rows and generator
+ * tooling are gone) and they drive both the 301s in next.config.ts and
+ * collectionStore's client-side card id remap (cardIdRedirects).
+ *
  * next.config.ts turns these into 301s so link equity consolidates onto the
  * keeper URLs. Same-name-distinct-cards (e.g. "No Logo" printings with their
  * own printed numbers) are NOT duplicates and get no redirects here.
@@ -18,6 +23,149 @@ export interface LegacyRedirect {
 }
 
 export const cardRedirects: LegacyRedirect[] = [
+    // 138 pairs (2026-09) — stale pre-rename/pre-migration card ids re-pointed at
+    // their current TCGdex ids; kept in sync with the merge mapping applied
+    // under commit 5a13a6a
+    { source: '/cards/bwp-BW004', destination: '/cards/bwp-BW04' },
+    { source: '/cards/bwp-BW005', destination: '/cards/bwp-BW05' },
+    { source: '/cards/cel25-2A', destination: '/cards/cel25cc-CC001' },
+    { source: '/cards/cel25-4A', destination: '/cards/cel25cc-CC002' },
+    { source: '/cards/cel25-15A', destination: '/cards/cel25cc-CC003' },
+    { source: '/cards/cel25-15A1', destination: '/cards/cel25cc-CC003' },
+    { source: '/cards/cel25-73A', destination: '/cards/cel25cc-CC004' },
+    { source: '/cards/cel25-8A', destination: '/cards/cel25cc-CC005' },
+    { source: '/cards/cel25-15A2', destination: '/cards/cel25cc-CC006' },
+    { source: '/cards/cel25-15A3', destination: '/cards/cel25cc-CC007' },
+    { source: '/cards/cel25-24A', destination: '/cards/cel25cc-CC008' },
+    { source: '/cards/cel25-20A', destination: '/cards/cel25cc-CC009' },
+    { source: '/cards/cel25-66A', destination: '/cards/cel25cc-CC010' },
+    { source: '/cards/cel25-9A', destination: '/cards/cel25cc-CC011' },
+    { source: '/cards/cel25-86A', destination: '/cards/cel25cc-CC012' },
+    { source: '/cards/cel25-88A', destination: '/cards/cel25cc-CC013' },
+    { source: '/cards/cel25-93A', destination: '/cards/cel25cc-CC014' },
+    { source: '/cards/cel25-17A', destination: '/cards/cel25cc-CC015' },
+    { source: '/cards/cel25-15A4', destination: '/cards/cel25cc-CC016' },
+    { source: '/cards/cel25-109A', destination: '/cards/cel25cc-CC017' },
+    { source: '/cards/cel25-145A', destination: '/cards/cel25cc-CC018' },
+    { source: '/cards/cel25-107A', destination: '/cards/cel25cc-CC019' },
+    { source: '/cards/cel25-113A', destination: '/cards/cel25cc-CC020' },
+    { source: '/cards/cel25-114A', destination: '/cards/cel25cc-CC021' },
+    { source: '/cards/cel25-54A', destination: '/cards/cel25cc-CC022' },
+    { source: '/cards/cel25-97A', destination: '/cards/cel25cc-CC023' },
+    { source: '/cards/cel25-76A', destination: '/cards/cel25cc-CC024' },
+    { source: '/cards/cel25-60A', destination: '/cards/cel25cc-CC025' },
+    { source: '/cards/ecard2-H1', destination: '/cards/ecard2-H01' },
+    { source: '/cards/ecard2-H2', destination: '/cards/ecard2-H02' },
+    { source: '/cards/ecard2-H3', destination: '/cards/ecard2-H03' },
+    { source: '/cards/ecard2-H4', destination: '/cards/ecard2-H04' },
+    { source: '/cards/ecard2-H5', destination: '/cards/ecard2-H05' },
+    { source: '/cards/ecard2-H6', destination: '/cards/ecard2-H06' },
+    { source: '/cards/ecard2-H7', destination: '/cards/ecard2-H07' },
+    { source: '/cards/ecard2-H8', destination: '/cards/ecard2-H08' },
+    { source: '/cards/ecard2-H9', destination: '/cards/ecard2-H09' },
+    { source: '/cards/ecard3-H1', destination: '/cards/ecard3-H01' },
+    { source: '/cards/ecard3-H2', destination: '/cards/ecard3-H02' },
+    { source: '/cards/ecard3-H3', destination: '/cards/ecard3-H03' },
+    { source: '/cards/ecard3-H4', destination: '/cards/ecard3-H04' },
+    { source: '/cards/ecard3-H5', destination: '/cards/ecard3-H05' },
+    { source: '/cards/ecard3-H6', destination: '/cards/ecard3-H06' },
+    { source: '/cards/ecard3-H7', destination: '/cards/ecard3-H07' },
+    { source: '/cards/ecard3-H8', destination: '/cards/ecard3-H08' },
+    { source: '/cards/ecard3-H9', destination: '/cards/ecard3-H09' },
+    { source: '/cards/ecard2-103', destination: '/cards/ecard2-103a' },
+    { source: '/cards/ecard2-50', destination: '/cards/ecard2-50a' },
+    { source: '/cards/ecard2-74', destination: '/cards/ecard2-74a' },
+    { source: '/cards/ecard2-95', destination: '/cards/ecard2-95a' },
+    // ids in redirect paths are URL-encoded (see sitemaps.ts): the "?" Unown's
+    // id is literally "exu-%3F" on TCGdex, addressed as /cards/exu-%253F
+    { source: '/cards/ex10-%3F', destination: '/cards/exu-%253F' },
+    { source: '/cards/mcd15-8', destination: '/cards/2015xy-8' },
+    { source: '/cards/mcd22-1', destination: '/cards/2022swsh-1' },
+    { source: '/cards/mcd22-2', destination: '/cards/2022swsh-2' },
+    { source: '/cards/mcd22-3', destination: '/cards/2022swsh-3' },
+    { source: '/cards/mcd22-4', destination: '/cards/2022swsh-4' },
+    { source: '/cards/mcd22-5', destination: '/cards/2022swsh-5' },
+    { source: '/cards/mcd22-6', destination: '/cards/2022swsh-6' },
+    { source: '/cards/mcd22-7', destination: '/cards/2022swsh-7' },
+    { source: '/cards/mcd22-8', destination: '/cards/2022swsh-8' },
+    { source: '/cards/mcd22-9', destination: '/cards/2022swsh-9' },
+    { source: '/cards/mcd22-10', destination: '/cards/2022swsh-10' },
+    { source: '/cards/mcd22-11', destination: '/cards/2022swsh-11' },
+    { source: '/cards/mcd22-12', destination: '/cards/2022swsh-12' },
+    { source: '/cards/mcd22-13', destination: '/cards/2022swsh-13' },
+    { source: '/cards/mcd22-14', destination: '/cards/2022swsh-14' },
+    { source: '/cards/mcd22-15', destination: '/cards/2022swsh-15' },
+    { source: '/cards/sm1-101a', destination: '/cards/sm1-101' },
+    { source: '/cards/sm2-19a', destination: '/cards/sm2-19' },
+    { source: '/cards/sm2-21a', destination: '/cards/sm2-21' },
+    { source: '/cards/sm2-51a', destination: '/cards/sm2-51' },
+    { source: '/cards/sm2-60a', destination: '/cards/sm2-60' },
+    { source: '/cards/sm2-92a', destination: '/cards/sm2-92' },
+    { source: '/cards/sm2-121a', destination: '/cards/sm2-121' },
+    { source: '/cards/sm2-124a', destination: '/cards/sm2-124' },
+    { source: '/cards/sm2-125a', destination: '/cards/sm2-125' },
+    { source: '/cards/sm2-128a', destination: '/cards/sm2-128' },
+    { source: '/cards/sm2-130a', destination: '/cards/sm2-130' },
+    { source: '/cards/sm2-157a', destination: '/cards/sm2-157' },
+    { source: '/cards/sm3-18a', destination: '/cards/sm3-18' },
+    { source: '/cards/sm3-39a', destination: '/cards/sm3-39' },
+    { source: '/cards/sm3-88a', destination: '/cards/sm3-88' },
+    { source: '/cards/sm3-92a', destination: '/cards/sm3-92' },
+    { source: '/cards/sm3-105a', destination: '/cards/sm3-105' },
+    { source: '/cards/sm3-112a', destination: '/cards/sm3-112' },
+    { source: '/cards/sm3-115a', destination: '/cards/sm3-115' },
+    { source: '/cards/sm3-116a', destination: '/cards/sm3-116' },
+    { source: '/cards/sm3.5-10a', destination: '/cards/sm3.5-10' },
+    { source: '/cards/sm3.5-68a', destination: '/cards/sm3.5-68' },
+    { source: '/cards/sm3.5-77a', destination: '/cards/sm3.5-77' },
+    { source: '/cards/sm4-84a', destination: '/cards/sm4-84' },
+    { source: '/cards/sm5-119a', destination: '/cards/sm5-119' },
+    { source: '/cards/sm5-122a', destination: '/cards/sm5-122' },
+    { source: '/cards/sm5-125a', destination: '/cards/sm5-125' },
+    { source: '/cards/sm5-135a', destination: '/cards/sm5-135' },
+    { source: '/cards/sm5-153a', destination: '/cards/sm5-153' },
+    { source: '/cards/sm6-2a', destination: '/cards/sm6-2' },
+    { source: '/cards/sm6-102a', destination: '/cards/sm6-102' },
+    { source: '/cards/sm6-112a', destination: '/cards/sm6-112' },
+    { source: '/cards/sm6-113a', destination: '/cards/sm6-113' },
+    { source: '/cards/sm7-10a', destination: '/cards/sm7-10' },
+    { source: '/cards/sm7-123a', destination: '/cards/sm7-123' },
+    { source: '/cards/sm7-148a', destination: '/cards/sm7-148' },
+    { source: '/cards/sm7-177a', destination: '/cards/sm7-177' },
+    { source: '/cards/sm7.5-40a', destination: '/cards/sm7.5-40' },
+    { source: '/cards/sm7.5-60a', destination: '/cards/sm7.5-60' },
+    { source: '/cards/sm8-172a', destination: '/cards/sm8-172' },
+    { source: '/cards/sm8-187a', destination: '/cards/sm8-187' },
+    { source: '/cards/sm8-188a', destination: '/cards/sm8-188' },
+    { source: '/cards/sm8-189a', destination: '/cards/sm8-189' },
+    { source: '/cards/sm9-152a', destination: '/cards/sm9-152' },
+    { source: '/cards/sm9-152b', destination: '/cards/sm9-152' },
+    { source: '/cards/sm10-182a', destination: '/cards/sm10-182' },
+    { source: '/cards/sm10-182b', destination: '/cards/sm10-182' },
+    { source: '/cards/sm10-189a', destination: '/cards/sm10-189' },
+    { source: '/cards/sm10-195a', destination: '/cards/sm10-195' },
+    { source: '/cards/sm11-191a', destination: '/cards/sm11-191' },
+    { source: '/cards/sm11-206a', destination: '/cards/sm11-206' },
+    { source: '/cards/sm12-143a', destination: '/cards/sm12-143' },
+    { source: '/cards/smp-SM30a', destination: '/cards/smp-SM30' },
+    { source: '/cards/smp-SM103a', destination: '/cards/smp-SM103' },
+    { source: '/cards/smp-SM104a', destination: '/cards/smp-SM104' },
+    { source: '/cards/sve-1', destination: '/cards/sve-001' },
+    { source: '/cards/sve-2', destination: '/cards/sve-002' },
+    { source: '/cards/sve-3', destination: '/cards/sve-003' },
+    { source: '/cards/sve-4', destination: '/cards/sve-004' },
+    { source: '/cards/sve-5', destination: '/cards/sve-005' },
+    { source: '/cards/sve-6', destination: '/cards/sve-006' },
+    { source: '/cards/sve-7', destination: '/cards/sve-007' },
+    { source: '/cards/sve-8', destination: '/cards/sve-008' },
+    { source: '/cards/sve-9', destination: '/cards/sve-009' },
+    { source: '/cards/sve-10', destination: '/cards/sve-010' },
+    { source: '/cards/sve-11', destination: '/cards/sve-011' },
+    { source: '/cards/sve-12', destination: '/cards/sve-012' },
+    { source: '/cards/sve-13', destination: '/cards/sve-013' },
+    { source: '/cards/sve-14', destination: '/cards/sve-014' },
+    { source: '/cards/sve-15', destination: '/cards/sve-015' },
+    { source: '/cards/sve-16', destination: '/cards/sve-016' },
     // 802 pairs (777 card-level + 25 set-consolidation) — historical, kept verbatim
     { source: '/cards/cel25c-107_A', destination: '/cards/cel25cc-CC019' },
     { source: '/cards/cel25c-109_A', destination: '/cards/cel25cc-CC017' },
@@ -820,7 +968,7 @@ export const cardRedirects: LegacyRedirect[] = [
     { source: '/cards/tk-sm-r-23', destination: '/cards/tk-sm-l-23' },
     { source: '/cards/tk-sm-r-25', destination: '/cards/tk-sm-l-25' },
     { source: '/cards/tk-xy-latio-20', destination: '/cards/tk-xy-latia-20' },
-    { source: '/cards/tk-xy-su-20', destination: '/cards/tk-xy-p-20' },
+    { source: '/cards/tk-xy-su-20', destination: '/cards/tk-xy-p-20' }
 ];
 
 /**
@@ -837,17 +985,21 @@ export const setRedirects: LegacyRedirect[] = [
     { source: '/sets/swsh12.5tg', destination: '/sets/swsh12tg' },
     { source: '/sets/swsh12pt5gg', destination: '/sets/swsh12.5gg' },
     { source: '/sets/swsh45sv', destination: '/sets/swsh4.5sv' },
-    { source: '/sets/swsh9.5tg', destination: '/sets/swsh9tg' },
+    { source: '/sets/swsh9.5tg', destination: '/sets/swsh9tg' }
 ];
 
 /**
  * loser card id -> keeper card id, derived from `cardRedirects`. Client-side
  * caches (see collectionStore) remap ids through this after merges — server
  * rows are repointed at merge time, but the changeset pull does not cover
- * those updates.
+ * those updates. Redirect paths are URL-encoded (sitemaps.ts convention), so
+ * decode them back to raw ids here (identity for every normal id).
  */
 export const cardIdRedirects: Record<string, string> = Object.fromEntries(
     cardRedirects
         .filter((r) => r.source.startsWith('/cards/') && r.destination.startsWith('/cards/'))
-        .map((r) => [r.source.slice('/cards/'.length), r.destination.slice('/cards/'.length)])
+        .map((r) => [
+            decodeURIComponent(r.source.slice('/cards/'.length)),
+            decodeURIComponent(r.destination.slice('/cards/'.length))
+        ])
 );

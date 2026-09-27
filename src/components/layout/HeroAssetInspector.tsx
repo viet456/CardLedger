@@ -303,7 +303,7 @@ function SchematicCard({
             )}
         >
             <Link
-                href={`/cards/${id}`}
+                href={`/cards/${encodeURIComponent(id)}`}
                 className='group relative block h-[420px] w-full shrink-0 transition-transform duration-300'
                 prefetch={true}
                 onClick={(e) => {
