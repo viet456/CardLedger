@@ -5,6 +5,11 @@
  * pipeline (kept in git history for reference) and now maintained by hand
  * if a merge ever happens again.
  *
+ * These pairs are permanent and append-only — never delete them: they are
+ * the only record of the old-to-new id mapping (source rows and generator
+ * tooling are gone) and they drive both the 301s in next.config.ts and
+ * collectionStore's client-side card id remap (cardIdRedirects).
+ *
  * next.config.ts turns these into 301s so link equity consolidates onto the
  * keeper URLs. Same-name-distinct-cards (e.g. "No Logo" printings with their
  * own printed numbers) are NOT duplicates and get no redirects here.
