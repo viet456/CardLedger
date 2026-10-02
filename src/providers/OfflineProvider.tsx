@@ -6,7 +6,7 @@ import { useCollectionStore } from '../lib/store/collectionStore';
 const OfflineContext = createContext(false);
 const STORAGE_KEY = 'was-offline';
 
-async function checkConnectivity(): Promise<boolean> {
+async function checkIsOffline(): Promise<boolean> {
     if (!navigator.onLine) return true;
     try {
         // Ping an API path instead of an image. Service Workers rarely cache API routes.
@@ -35,7 +35,7 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
             const storedState = sessionStorage.getItem(STORAGE_KEY) === 'true';
             if (storedState) setIsOffline(true);
 
-            const actualState = await checkConnectivity();
+            const actualState = await checkIsOffline();
             updateOfflineState(actualState);
         };
 
@@ -54,7 +54,7 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
 
             // Create a retry loop because DNS takes a few seconds to establish
             const verifyConnection = (attemptsLeft: number) => {
-                checkConnectivity().then((isActuallyOffline) => {
+                checkIsOffline().then((isActuallyOffline) => {
                     if (!isActuallyOffline) {
                         // Confirmed! We have real internet. Flush the queue.
                         updateOfflineState(false);
