@@ -6,6 +6,12 @@ import { cacheTag, cacheLife } from 'next/cache';
 
 export async function getCachedPriceHistory(cardId: string): Promise<PriceHistoryDataPoint[]> {
     'use cache';
+    // NOTE: the price-history tag is intentionally NOT globally revalidated
+    // anymore; the daily revalidate-cards run used to revalidateTag it, which
+    // marked all ~22k card pages stale through this JSON-LD lookup and
+    // spiked Fluid Compute usage. See the comment in
+    // src/app/api/revalidate-cards/route.ts. The tag is kept for any future
+    // targeted invalidation (e.g. top-N cards via card-${cardId} tags).
     cacheTag('price-history');
     cacheLife('days');
     const history = await prisma.priceHistory.findMany({

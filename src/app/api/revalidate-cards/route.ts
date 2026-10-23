@@ -11,11 +11,29 @@ export async function POST(request: NextRequest) {
         });
     }
     try {
-        // Revalidate all pages with prices updated
-        revalidateTag('price-history', 'days');
-
-        // Revalidate the set overview pages (SetPageView cache)
+        // Revalidate set overview pages + sitemap files (src/lib/sitemaps.ts
+        // carries the `set-data` tag, keeping lastmod tracking set.updatedAt).
         revalidateTag('set-data', 'days');
+
+        // DISABLED: revalidateTag('price-history', 'days')
+        //
+        // Why: the daily run (scripts/updateMarketStats.ts -> this route)
+        // marked all ~22k /cards/[cardId] pages stale at once, because every
+        // card page uses getCachedPriceHistory (tagged `price-history`)
+        // for its JSON-LD.
+        // Each stale URL then re-invoked a function when a crawler hit it
+        // (observed: ~4k invocations per 5-minute crawl burst) and blew
+        // through the Vercel Fluid Compute included usage.
+        //
+        // Freshness is not needed here: user-visible prices render
+        // client-side from IndexedDB, fed by the daily R2 history blob
+        // (incrementHistoryIndex in updateMarketStats.ts) -- never from
+        // server HTML. JSON-LD tolerates stale-by-a-day prices. Pages
+        // stay edge-cached until a deploy or targeted revalidation.
+        //
+        // If product rich results ever need fresher JSON-LD prices,
+        // revalidate only top-N cards via their `card-${cardId}` tags --
+        // do NOT restore the global blast.
 
         return new NextResponse(JSON.stringify({ revalidated: true, now: Date.now() }), {
             headers: { 'Content-Type': '' }
