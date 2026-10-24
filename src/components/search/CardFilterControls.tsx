@@ -27,17 +27,14 @@ import { SortableKey } from '@/src/services/pokemonCardValidator';
 import { CardFilterControlsSkeleton } from './CardFilterControlsSkeleton';
 
 function useMediaQuery(query: string) {
-    const [value, setValue] = React.useState<boolean | undefined>(undefined);
-    React.useEffect(() => {
-        function onChange(event: MediaQueryListEvent) {
-            setValue(event.matches);
-        }
+    const subscribe = React.useCallback((callback: () => void) => {
         const result = matchMedia(query);
-        result.addEventListener('change', onChange);
-        setValue(result.matches);
-        return () => result.removeEventListener('change', onChange);
+        result.addEventListener('change', callback);
+        return () => result.removeEventListener('change', callback);
     }, [query]);
-    return value;
+    const getSnapshot = React.useCallback(() => matchMedia(query).matches, [query]);
+    const getServerSnapshot = React.useCallback(() => undefined, []);
+    return React.useSyncExternalStore<boolean | undefined>(subscribe, getSnapshot, getServerSnapshot);
 }
 
 type SortOption = {
