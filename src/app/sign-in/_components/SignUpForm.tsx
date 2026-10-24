@@ -17,11 +17,12 @@ export function SignUpForm() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
 
+    // Derived: a too-short username always reads as "no result", without
+    // needing a setState() inside the effect (react-hooks/set-state-in-effect).
+    const effectiveUsernameAvailable = username.length < 3 ? null : usernameAvailable;
+
     useEffect(() => {
-        if (username.length < 3) {
-            setUsernameAvailable(null);
-            return;
-        }
+        if (username.length < 3) return;
 
         const timer = setTimeout(async () => {
             setCheckingUsername(true);
@@ -45,7 +46,7 @@ export function SignUpForm() {
         if (username.length < 3 || username.length > 20)
             return setError('Username must be 3-20 chars');
         if (!/^[a-zA-Z0-9_-]+$/.test(username)) return setError('Invalid characters in username');
-        if (usernameAvailable === false) return setError('Username is taken');
+        if (effectiveUsernameAvailable === false) return setError('Username is taken');
 
         try {
             const response = await authClient.signUp.email({
@@ -96,17 +97,17 @@ export function SignUpForm() {
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             className={
-                                usernameAvailable === false
+                                effectiveUsernameAvailable === false
                                     ? 'border-red-500 focus-visible:ring-red-500'
                                     : ''
                             }
                         />
                         <div className='absolute right-3 top-2.5 text-xs'>
                             {checkingUsername && <span className='text-muted-foreground'>...</span>}
-                            {!checkingUsername && usernameAvailable === true && (
+                            {!checkingUsername && effectiveUsernameAvailable === true && (
                                 <span className='text-green-500'>✔</span>
                             )}
-                            {!checkingUsername && usernameAvailable === false && (
+                            {!checkingUsername && effectiveUsernameAvailable === false && (
                                 <span className='text-red-500'>✖</span>
                             )}
                         </div>
@@ -136,7 +137,7 @@ export function SignUpForm() {
                 <Button
                     type='submit'
                     className='w-full'
-                    disabled={!email || password.length < 8 || !usernameAvailable}
+                    disabled={!email || password.length < 8 || !effectiveUsernameAvailable}
                 >
                     Create Account
                 </Button>

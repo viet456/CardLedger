@@ -56,7 +56,7 @@ export function PriceHistoryChart({ cardId }: { cardId: string }) {
     useEffect(() => {
         if (!hasInitializedRange.current && initialData && initialData.length > 0) {
             hasInitializedRange.current = true;
-            setActiveRange(defaultRange); // eslint-disable-line react-hooks/set-state-in-effect
+            setActiveRange(defaultRange);
         }
     }, [initialData, defaultRange]);
 

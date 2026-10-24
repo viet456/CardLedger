@@ -48,7 +48,6 @@ export const useAuthSession = () => {
                 // Only wipe cache if data is null AND there is NO network error.
                 // This means the server explicitly confirmed the user is logged out.
                 localStorage.removeItem(CACHE_KEY);
-                // eslint-disable-next-line react-hooks/set-state-in-effect
                 setCachedSession(null);
             }
         }
