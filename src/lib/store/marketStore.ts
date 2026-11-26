@@ -4,7 +4,7 @@ import { get, set, del } from 'idb-keyval';
 import { PointerFile } from '@/src/shared-types/card-index';
 import { MarketStats } from '@/src/shared-types/price-api';
 
-const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
+const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://assets.cardledger.io';
 
 // Saved to Zustand in memory
 type PersistedState = MarketStats & {

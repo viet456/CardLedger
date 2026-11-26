@@ -1,11 +1,8 @@
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
-import { getCachedCardData } from '@/src/app/cards/[cardId]/data';
+import { DenormalizedCard } from '@/src/shared-types/card-index';
 
-export async function CardBreadcrumbs({ cardId }: { cardId: string }) {
-    const card = await getCachedCardData(cardId);
-    if (!card) return null;
-
+export function CardBreadcrumbs({ card }: { card: DenormalizedCard }) {
     return (
         <nav className='mb-6 flex items-center space-x-2 text-sm text-muted-foreground'>
             <Link href='/sets' className='hover:underline'>

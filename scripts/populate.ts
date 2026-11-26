@@ -394,10 +394,20 @@ async function syncSeriesAndSets() {
             let symbolImageKey: string | null = null;
             let imagesUpdated = false; // Flag to trigger re-optimization if needed
 
-            // Fetch existing set to check if images are already stored
+            // Fetch existing set to check if images or metadata changed
             const existingSet = await prisma.set.findUnique({
                 where: { id: set.id },
-                select: { logoImageKey: true, symbolImageKey: true }
+                select: {
+                    name: true,
+                    series: true,
+                    printedTotal: true,
+                    total: true,
+                    ptcgoCode: true,
+                    standard: true,
+                    expanded: true,
+                    logoImageKey: true,
+                    symbolImageKey: true
+                }
             });
 
             if (set.logo) {
@@ -433,6 +443,23 @@ async function syncSeriesAndSets() {
             // ------------------------
 
             const ptcgoCode = fullSet?.tcgOnline || (fullSet as any)?.abbreviation?.official || null;
+            const nextStandard = mapLegality((fullSet as any)?.legal?.standard);
+            const nextExpanded = mapLegality((fullSet as any)?.legal?.expanded);
+
+            // Only bump updatedAt when set-level metadata or images actually
+            // changed. Unconditionally bumping updatedAt on all ~200 sets
+            // rewrote <lastmod> across all ~22k card URLs in /sitemaps/{setId}.xml,
+            // triggering unnecessary full-catalog recrawl waves.
+            const setChanged =
+                !existingSet ||
+                existingSet.name !== correctedName ||
+                existingSet.series !== s.name ||
+                existingSet.printedTotal !== set.cardCount.official ||
+                existingSet.total !== set.cardCount.total ||
+                existingSet.ptcgoCode !== ptcgoCode ||
+                existingSet.standard !== nextStandard ||
+                existingSet.expanded !== nextExpanded ||
+                imagesUpdated;
 
             await prisma.set.upsert({
                 where: { id: set.id },
@@ -453,21 +480,20 @@ async function syncSeriesAndSets() {
                     symbolImageKey,
                     logoOptimized: false,
                     symbolOptimized: false,
-                    standard: mapLegality((fullSet as any)?.legal?.standard),
-                    expanded: mapLegality((fullSet as any)?.legal?.expanded),
+                    standard: nextStandard,
+                    expanded: nextExpanded,
                 },
                 update: {
                     tcgdexId: set.id,
-                    // Real sitemap lastmod: bump on every metadata sync
-                    updatedAt: new Date(),
+                    ...(setChanged ? { updatedAt: new Date() } : {}),
                     name: correctedName,
                     series: s.name,
                     seriesId: s.id,
                     printedTotal: set.cardCount.official,
                     total: set.cardCount.total,
                     ptcgoCode,
-                    standard: mapLegality((fullSet as any)?.legal?.standard),
-                    expanded: mapLegality((fullSet as any)?.legal?.expanded),
+                    standard: nextStandard,
+                    expanded: nextExpanded,
                     ...(logoImageKey ? { logoImageKey } : {}),
                     ...(symbolImageKey ? { symbolImageKey } : {}),
                     ...(imagesUpdated ? { logoOptimized: false, symbolOptimized: false } : {})
@@ -520,9 +546,35 @@ async function syncCards() {
     }
 }
 
+async function revalidateSetCaches() {
+    const token = process.env.REVALIDATION_TOKEN;
+    const rawAppUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (!token || !rawAppUrl) return;
+
+    const appUrl = rawAppUrl
+        .trim()
+        .replace(/\/+$/, '')
+        .replace(/^https:\/\/cardledger\.io$/i, 'https://www.cardledger.io');
+
+    try {
+        const res = await fetch(`${appUrl}/api/revalidate-cards?token=${encodeURIComponent(token)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        if (res.ok) {
+            console.log('✅ Revalidated set overview & sitemap caches.');
+        } else {
+            console.warn(`⚠️ Cache revalidation returned HTTP ${res.status}.`);
+        }
+    } catch (err) {
+        console.warn('⚠️ Failed to trigger cache revalidation after populate:', err);
+    }
+}
+
 async function main() {
     await syncSeriesAndSets();
     await syncCards();
+    await revalidateSetCaches();
     console.log('\n✨ Database Population Complete.');
 }
 

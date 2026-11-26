@@ -5,6 +5,8 @@ import { breadcrumbJsonLd } from '@/src/lib/jsonld';
 import { CardFilterControlsSkeleton } from '@/src/components/search/CardFilterControlsSkeleton';
 import { CardGridSkeleton } from '@/src/components/cards/CardGridSkeleton';
 
+export const ensureStatic = 'navigation';
+
 export const metadata: Metadata = {
     title: 'All Cards',
     description:

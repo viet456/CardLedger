@@ -101,9 +101,21 @@ export function PriceHistoryChart({ cardId }: { cardId: string }) {
     }, [initialData, activeRange]);
 
     const earliestDate = useMemo(() => {
-        if (!initialData || initialData.length === 0) return new Date();
+        if (!initialData || initialData.length === 0) return null;
         return new Date(initialData[0].timestamp);
     }, [initialData]);
+
+    const cutoffs = useMemo(() => {
+        if (!earliestDate) return null;
+        const now = new Date();
+        return {
+            '1m': new Date(new Date().setMonth(now.getMonth() - 1)),
+            '3m': new Date(new Date().setMonth(now.getMonth() - 3)),
+            '6m': new Date(new Date().setMonth(now.getMonth() - 6)),
+            '1y': new Date(new Date().setFullYear(now.getFullYear() - 1)),
+            YTD: new Date(now.getFullYear(), 0, 1)
+        };
+    }, [earliestDate]);
 
     useEffect(() => {
         if (!resolvedTheme) return;
@@ -289,20 +301,12 @@ export function PriceHistoryChart({ cardId }: { cardId: string }) {
         d.tcgReverse !== null ||
         d.tcgFirstEdition !== null
     );
-    const now = new Date();
-    const cutoffs = {
-        '1m': new Date(new Date().setMonth(now.getMonth() - 1)),
-        '3m': new Date(new Date().setMonth(now.getMonth() - 3)),
-        '6m': new Date(new Date().setMonth(now.getMonth() - 6)),
-        '1y': new Date(new Date().setFullYear(now.getFullYear() - 1)),
-        YTD: new Date(now.getFullYear(), 0, 1)
-    };
-
     return (
         <div>
             <div className='mb-4 flex gap-2'>
                 {(['1m', '3m', '6m', '1y', 'YTD', 'All'] as TimeRange[]).map((range) => {
-                    const isDisabled = range !== 'All' && earliestDate > cutoffs[range];
+                    const isDisabled =
+                        range !== 'All' && (!earliestDate || !cutoffs || earliestDate > cutoffs[range]);
 
                     return (
                         <Button

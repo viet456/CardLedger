@@ -1,7 +1,5 @@
-import { getCachedCardData } from '@/src/app/cards/[cardId]/data';
 import { PriceHistoryChart } from '@/src/components/cards/PriceHistoryChart';
-import { AbilityObject } from '@/src/shared-types/card-index';
-import { notFound } from 'next/navigation';
+import { AbilityObject, DenormalizedCard } from '@/src/shared-types/card-index';
 import { FilterLink } from '@/src/app/cards/[cardId]/FilterLink';
 import { EnergyIcon } from '@/src/components/cards/EnergyIcon';
 import { FormattedText } from '@/src/components/cards/FormattedText';
@@ -20,9 +18,8 @@ const getEnergyStack = (costs: string[]) => {
     }, {} as Record<string, number>)
 }
 
-export async function CardDetails({ cardId }: { cardId: string }) {
-    const card = await getCachedCardData(cardId);
-    if (!card) notFound();
+export function CardDetails({ card }: { card: DenormalizedCard }) {
+    const cardId = card.id;
 
     return (
         <div className='flex flex-col gap-8'>

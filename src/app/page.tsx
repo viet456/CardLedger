@@ -19,6 +19,8 @@ import {
     SyncShowcase
 } from '../components/layout/ShowcaseSections';
 
+export const ensureStatic = 'navigation';
+
 export const metadata: Metadata = {
     title: 'Your Pokémon TCG Collection Manager',
     description:

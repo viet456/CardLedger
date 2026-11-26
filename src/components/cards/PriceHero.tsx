@@ -8,40 +8,64 @@ import { getTcgPlayerUrl } from '@/src/utils/tcgplayer';
 import { denormalizeSingleCard } from '@/src/utils/cardUtils';
 import { useFormatPrice } from '@/src/lib/store/currencyStore';
 
-export function PriceHero({ cardId }: { cardId: string }) {
+interface PriceHeroProps {
+    cardId: string;
+    initialPrice?: number | null;
+    cardName?: string;
+    setName?: string;
+    tcgPlayerId?: number | null;
+}
+
+export function PriceHero({
+    cardId,
+    initialPrice,
+    cardName,
+    setName,
+    tcgPlayerId
+}: PriceHeroProps) {
     const { trend, loading } = useCardLatestPrices(cardId);
     const formatPrice = useFormatPrice();
 
-    // Attempt to get instant price from market cache as fallback
-    const cachedPrices = useMarketStore(state => state.prices[cardId]);
-    const fallbackPrice = cachedPrices 
-        ? (cachedPrices.tcgNearMint || cachedPrices.tcgNormal || cachedPrices.tcgHolo || cachedPrices.tcgReverse || cachedPrices.tcgFirstEdition || 0)
+    // Attempt to get instant price from client market cache first, falling back to
+    // server-cached MarketStats price (for instant SSR/LCP + visible JSON-LD parity)
+    const cachedPrices = useMarketStore((state) => state.prices[cardId]);
+    const clientMarketPrice = cachedPrices
+        ? cachedPrices.tcgNearMint ||
+          cachedPrices.tcgNormal ||
+          cachedPrices.tcgHolo ||
+          cachedPrices.tcgReverse ||
+          cachedPrices.tcgFirstEdition ||
+          0
         : 0;
+    const fallbackPrice = clientMarketPrice || (initialPrice ?? 0);
 
-    // Compute TCGPlayer URL from client store
+    // Compute TCGPlayer URL from client store with SSR prop fallback
     const store = useCardStore();
     const normalizedCard = store.cardMap.get(cardId);
     const denormalized = normalizedCard ? denormalizeSingleCard(normalizedCard, store) : null;
-    const tcgPlayerUrl = denormalized 
-        ? getTcgPlayerUrl(denormalized.tcgPlayerId, denormalized.n, denormalized.set?.name)
+    const resolvedName = denormalized?.n ?? cardName;
+    const resolvedSetName = denormalized?.set?.name ?? setName;
+    const resolvedTcgPlayerId = denormalized ? denormalized.tcgPlayerId : (tcgPlayerId ?? null);
+    const tcgPlayerUrl = resolvedName
+        ? getTcgPlayerUrl(resolvedTcgPlayerId, resolvedName, resolvedSetName)
         : `https://www.tcgplayer.com/search/pokemon/product?q=${encodeURIComponent(cardId)}`;
 
-    // If we are loading and have no local cache fallback, show the skeleton
+    // If we are loading and have neither client nor server fallback price, show skeleton
     if (loading && !fallbackPrice) return <PriceHeroSkeleton />;
 
-    // Use hook-computed trend when available, fall back to cached market price
+    // Use hook-computed trend (from daily R2 history) when available, else fallback price
     const price = trend.price || fallbackPrice;
     const { diff, percent } = trend;
 
     return (
-    <div className="flex flex-col gap-1">
-        <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-            Current Market Price
-        </span>
-        <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold tracking-tight">
-                {price > 0 ? formatPrice(price) : 'N/A'}
+        <div className='flex flex-col gap-1'>
+            <span className='text-xs font-bold uppercase tracking-widest text-muted-foreground'>
+                Current Market Price
             </span>
+            <div className='flex items-baseline gap-2'>
+                <span className='text-3xl font-bold tracking-tight' suppressHydrationWarning>
+                    {price > 0 ? formatPrice(price) : 'N/A'}
+                </span>
             {diff !== 0 && price > 0 && (
                 <div className={`flex items-center text-sm font-bold ${diff > 0 ? 'text-trend-up' : 'text-trend-down'}`}>
                     {diff > 0 ? '▲' : '▼'}

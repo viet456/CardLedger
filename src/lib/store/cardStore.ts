@@ -9,7 +9,7 @@ import {
 } from '@/src/shared-types/card-index';
 import uFuzzy from '@leeoniya/ufuzzy';
 
-const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
+const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://assets.cardledger.io';
 
 // Front-end type with index for fastest sorting when multiple filters selected
 // Ensures intersected filter maps return cards sorted, quickly
