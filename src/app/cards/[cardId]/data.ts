@@ -1,6 +1,6 @@
 import { prisma } from '@/src/lib/prisma';
 import { DenormalizedCard } from '@/src/shared-types/card-index';
-import { PriceHistoryDataPoint } from '@/src/shared-types/price-api';
+import { CardPrices, PriceHistoryDataPoint, resolveBestNearMint } from '@/src/shared-types/price-api';
 import { compareCardNumbers } from '@/src/utils/cardSort';
 import { cacheTag, cacheLife } from 'next/cache';
 
@@ -61,10 +61,39 @@ async function getCardDataRaw(cardId: string): Promise<DenormalizedCard | null> 
                         include: { type: true }
                     }
                 }
+            },
+            marketStats: {
+                select: {
+                    tcgNearMintLatest: true,
+                    tcgNormalLatest: true,
+                    tcgHoloLatest: true,
+                    tcgReverseLatest: true,
+                    tcgFirstEditionLatest: true
+                }
             }
         }
     });
     if (!rawCard) return null;
+
+    const variants: CardPrices | null = rawCard.marketStats
+        ? {
+              tcgNearMint: rawCard.marketStats.tcgNearMintLatest?.toNumber() ?? null,
+              tcgNormal: rawCard.marketStats.tcgNormalLatest?.toNumber() ?? null,
+              tcgHolo: rawCard.marketStats.tcgHoloLatest?.toNumber() ?? null,
+              tcgReverse: rawCard.marketStats.tcgReverseLatest?.toNumber() ?? null,
+              tcgFirstEdition: rawCard.marketStats.tcgFirstEditionLatest?.toNumber() ?? null
+          }
+        : null;
+
+    const headlinePrice = variants
+        ? resolveBestNearMint(
+              variants.tcgNearMint,
+              variants.tcgNormal,
+              variants.tcgHolo,
+              variants.tcgReverse,
+              variants.tcgFirstEdition
+          )
+        : null;
 
     const denormalizedCard: DenormalizedCard = {
         id: rawCard.id,
@@ -116,7 +145,8 @@ async function getCardDataRaw(cardId: string): Promise<DenormalizedCard | null> 
             rawCard.ancientTraitName && rawCard.ancientTraitText
                 ? { name: rawCard.ancientTraitName, text: rawCard.ancientTraitText }
                 : null,
-        price: null,
+        price: headlinePrice,
+        variants,
         hasNormal: rawCard.hasNormal,
         hasHolo: rawCard.hasHolo,
         hasReverse: rawCard.hasReverse,
@@ -129,7 +159,7 @@ async function getCardDataRaw(cardId: string): Promise<DenormalizedCard | null> 
 export async function getCachedCardData(cardId: string) {
     'use cache';
     cacheTag('card-data', 'card-details', `card-${cardId}`);
-    cacheLife('max');
+    cacheLife('weeks');
 
     return getCardDataRaw(cardId);
 }
@@ -271,7 +301,7 @@ async function getRelatedCardsRaw(cardId: string): Promise<RelatedCardsData | nu
 export async function getCachedRelatedCards(cardId: string): Promise<RelatedCardsData | null> {
     'use cache';
     cacheTag('card-data', 'card-related', `card-${cardId}`);
-    cacheLife('max');
+    cacheLife('weeks');
 
     return getRelatedCardsRaw(cardId);
 }

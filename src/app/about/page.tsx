@@ -1,6 +1,8 @@
 import { Metadata } from 'next';
 import { Globe, AtSign, Github } from 'lucide-react';
 
+export const ensureStatic = 'navigation';
+
 export const metadata: Metadata = {
     title: 'About',
     description: 'Learn about the architecture and technology behind the CardLedger project.'

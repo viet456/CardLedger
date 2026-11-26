@@ -6,6 +6,8 @@ import { getCachedSetData } from './data';
 import { breadcrumbJsonLd } from '@/src/lib/jsonld';
 import { FilterOptions } from '@/src/shared-types/card-index';
 
+export const ensureStatic = 'navigation';
+
 export async function generateStaticParams() {
     const sets = await prisma.set.findMany({
         select: { id: true }
@@ -19,19 +21,18 @@ export async function generateMetadata({
     params: Promise<{ setId: string }>;
 }): Promise<Metadata> {
     const { setId } = await params;
-    const set = await prisma.set.findUnique({
-        where: { id: setId }
-    });
+    const data = await getCachedSetData(setId);
 
-    if (!set) {
+    if (!data) {
         return {
             title: 'Set Not Found'
         };
     }
 
+    const { setInfo } = data;
     return {
-        title: `${set.name}`,
-        description: `Browse all ${set.printedTotal} cards from the ${set.name} set.`,
+        title: `${setInfo.name}`,
+        description: `Browse all ${setInfo.printedTotal} cards from the ${setInfo.name} set.`,
         alternates: {
             canonical: `/sets/${setId}`
         }

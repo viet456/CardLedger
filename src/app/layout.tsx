@@ -4,13 +4,10 @@ import { Footer } from '../components/layout/Footer';
 import { Inter } from 'next/font/google';
 import { ScrollToTopButton } from '../components/ScrollToTopButton';
 import { CardDataInitializer } from '../components/CardDataInitializer';
-import { auth } from '@/src/lib/auth';
-import { headers } from 'next/headers';
 import { ProvidersWrapper } from '../providers/ProvidersWrapper';
 import { Header } from '../components/layout/Header';
-import { Suspense } from 'react';
 import { LazyAnalytics } from '../components/LazyAnalytics';
-import { SerwistProvider } from './serwist'; 
+import { SerwistProvider } from './serwist';
 
 const inter = Inter({
     subsets: ['latin'],
@@ -65,22 +62,6 @@ export const viewport: Viewport = {
     themeColor: '#000000',
 };
 
-async function AppContent({ children }: { children: React.ReactNode }) {
-    const session = await auth.api.getSession({
-        headers: await headers()
-    });
-
-    return (
-        <ProvidersWrapper session={session}>
-            <CardDataInitializer />
-            <Header />
-            <main className='flex-grow'>{children}</main>
-            <Footer />
-            <ScrollToTopButton />
-        </ProvidersWrapper>
-    );
-}
-
 export default function RootLayout({
     children
 }: Readonly<{
@@ -95,11 +76,13 @@ export default function RootLayout({
                 className={`flex min-h-screen flex-col bg-background font-sans text-foreground antialiased`}
             >
                 <SerwistProvider swUrl="/serwist/sw.js">
-                    <Suspense fallback={<div className='min-h-screen bg-background' />}>
-                        <AppContent>
-                            {children}
-                        </AppContent>
-                    </Suspense>
+                    <ProvidersWrapper session={null}>
+                        <CardDataInitializer />
+                        <Header />
+                        <main className='flex-grow'>{children}</main>
+                        <Footer />
+                        <ScrollToTopButton />
+                    </ProvidersWrapper>
                 </SerwistProvider>
                 <LazyAnalytics />
             </body>

@@ -4,6 +4,7 @@ import { cardRedirects, setRedirects } from './src/lib/cardRedirects';
 
 const nextConfig: NextConfig = {
     cacheComponents: true,
+    partialPrefetching: false,
     async redirects() {
         // Dedupe + set-consolidation pipelines: 301s for merged card URLs and
         // absorbed set shells (see src/lib/cardRedirects.ts)

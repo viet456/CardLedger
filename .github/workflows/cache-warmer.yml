@@ -1,9 +1,9 @@
 name: Cache Warmer
 on:
-  schedule:
-    - cron: '0 * * * *' # every hour
-  push:
-    branches: ['main']
+  # Disabled automatic hourly/push warming: public pages (/, /cards, /sets,
+  # /sets/[setId], /cards/[cardId]) are now static/on-demand ISR at Vercel's
+  # CDN edge with stale-while-revalidate, so sets and cards refresh lazily
+  # only when requested. Kept as manual workflow_dispatch only.
   workflow_dispatch:
 
 jobs:
@@ -12,16 +12,17 @@ jobs:
     steps:
       - name: Warm caches
         env:
+          APP_BASE: https://www.cardledger.io
           R2_BASE: https://assets.cardledger.io
         run: |
           UA="User-Agent: Mozilla/5.0 (compatible; CacheWarmer/1.0)"
           set +e  # don't abort on first failure — warm as much as possible
 
-          # --- Vercel SSR pages ---
+          # --- Vercel static/ISR hub pages ---
           pages=(
-            "https://cardledger.io"
-            "https://cardledger.io/cards"
-            "https://cardledger.io/sets"
+            "$APP_BASE/"
+            "$APP_BASE/cards"
+            "$APP_BASE/sets"
           )
           for url in "${pages[@]}"; do
             curl -s -o /dev/null -w "%{http_code} %{url}\n" \
@@ -29,8 +30,8 @@ jobs:
           done
           wait
 
-          # --- Set pages (dynamic SSR, warmed via /api/set-ids) ---
-          set_ids_json=$(curl -s --max-time 10 "https://cardledger.io/api/set-ids")
+          # --- Set pages (ISR, warmed via /api/set-ids) ---
+          set_ids_json=$(curl -s --max-time 10 "$APP_BASE/api/set-ids")
           if [ -n "$set_ids_json" ] && echo "$set_ids_json" | jq empty 2>/dev/null; then
             mapfile -t set_ids < <(echo "$set_ids_json" | jq -r '.setIds[]')
             echo "Warming ${#set_ids[@]} set pages…"
@@ -38,7 +39,7 @@ jobs:
             running=0
             for sid in "${set_ids[@]}"; do
               curl -s -o /dev/null -w "%{http_code} /sets/${sid}\n" \
-                -L -H "$UA" --max-time 10 "https://cardledger.io/sets/${sid}" &
+                -L -H "$UA" --max-time 10 "$APP_BASE/sets/${sid}" &
               running=$((running + 1))
               if [ "$running" -ge "$max_parallel" ]; then
                 wait -n 2>/dev/null || wait

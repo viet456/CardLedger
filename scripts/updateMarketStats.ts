@@ -44,23 +44,34 @@ async function fetchExchangeRate(): Promise<number> {
     }
 }
 
+function normalizeAppUrl(rawUrl: string): string {
+    // Avoid POST -> 301 -> GET redirect conversion when apex cardledger.io
+    // redirects to canonical www.cardledger.io on Vercel.
+    return rawUrl
+        .trim()
+        .replace(/\/+$/, '')
+        .replace(/^https:\/\/cardledger\.io$/i, 'https://www.cardledger.io');
+}
+
 async function revalidateNextCache() {
     const token = process.env.REVALIDATION_TOKEN;
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    const rawAppUrl = process.env.NEXT_PUBLIC_APP_URL;
 
-    if (!token || !appUrl) {
+    if (!token || !rawAppUrl) {
         console.warn(
             '⚠️ REVALIDATION_TOKEN or NEXT_PUBLIC_APP_URL not set. Skipping cache revalidation.'
         );
         return;
     }
 
+    const appUrl = normalizeAppUrl(rawAppUrl);
+
     try {
         console.log(`Attempting to revalidate Next.js cache...`);
         const response = await axios.post(
             `${appUrl}/api/revalidate-cards?token=${token}`,
             {},
-            { 
+            {
                 timeout: 10000,
                 headers: { 'Content-Type': 'application/json' }
             }
@@ -76,23 +87,6 @@ async function revalidateNextCache() {
             error instanceof Error ? error.message : error
         );
     }
-}
-
-async function warmSetCaches(setsToProcess: { id: string, name: string }[]) {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-    if (!appUrl) return;
-
-    console.log(`-- Warming Next.js cache for ${setsToProcess.length} sets to prevent DB trickle...`);
-    
-    for (let i = 0; i < setsToProcess.length; i += 10) {
-        const batch = setsToProcess.slice(i, i + 10);
-        await Promise.all(
-            batch.map(set => 
-                axios.get(`${appUrl}/sets/${set.id}`).catch(() => {}) 
-            )
-        );
-    }
-    console.log('✅ Cache warming complete.');
 }
 
 async function upsertCardMarketStats(cardId: string, fullCard: any) {
@@ -335,8 +329,12 @@ async function main() {
     }
 
     console.log(`✅ Daily MarketStats update complete. Total cards updated: ${totalUpdated}`);
+    // Note: /api/revalidate-cards marks `set-data` and `all-sets` with
+    // stale-while-revalidate ('days'). We intentionally do NOT eagerly warm
+    // all ~200 /sets/[setId] pages afterward: stale-while-revalidate serves
+    // the cached edge HTML instantly on first hit and only spends Fluid CPU
+    // regenerating sets that visitors/crawlers actually request.
     await revalidateNextCache();
-    await warmSetCaches(dbSets);
 
     try {
         await incrementHistoryIndex();

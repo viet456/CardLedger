@@ -41,7 +41,6 @@ export function PokemonCard({
     // Clean card URL (no ?preview param — it caused param/canonical pollution;
     // the card page derives its image key server-side)
     const cardHref = `/cards/${encodeURIComponent(card.id)}`;
-    const isMobile = typeof window !== 'undefined' ? window.innerWidth < 768 : false;
     const stats = propStats || card.collectionStats;
 
     //-- PRICE SELECTION LOGIC --
@@ -113,7 +112,7 @@ export function PokemonCard({
 
             <TransitionLink
                 href={cardHref}
-                prefetch={!isMobile}
+                prefetch={false}
                 className='flex h-full w-full flex-col'
             >
                 {/* --- IMAGE AREA --- */}

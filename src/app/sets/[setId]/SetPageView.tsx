@@ -5,15 +5,15 @@ import { CardFilterControls } from '@/src/components/search/CardFilterControls';
 import { SimpleCardGrid } from '@/src/components/cards/SimpleCardGrid';
 import { SetObject, FilterOptions, DenormalizedCard } from '@/src/shared-types/card-index';
 import { useShallow } from 'zustand/react/shallow';
-import { useSearchStore } from '@/src/lib/store/searchStore';
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useSearchStore, FilterState } from '@/src/lib/store/searchStore';
+import { Suspense, useEffect, useMemo, useState, useRef } from 'react';
 import Image from 'next/image';
 import { Calendar, Layers, Hash, ChevronDown, ChevronUp, BarChart3 } from 'lucide-react';
 import { Button } from '@/src/components/ui/button';
 import { cn } from '@/src/lib/utils';
 import { Separator } from '@/src/components/ui/separator';
 import { SetCollectionBreakdownDialog } from '@/src/components/collection/SetCollectionBreakdownDialog';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 interface SetPageViewProps {
     setInfo: SetObject;
@@ -24,15 +24,54 @@ interface SetPageViewProps {
 // Set-page sort keys accepted from URL params (locked contract: cardSort.ts)
 const SET_SORT_KEYS = ['num', 'n', 'price'] as const;
 
-function useSetFilters(initialCards: DenormalizedCard[]) {
+function SetSearchParamsSync({
+    hasSyncedFromUrlRef,
+    isUpdatingUrlRef,
+    isUpdatingStoreRef,
+    replaceFilters
+}: {
+    hasSyncedFromUrlRef: React.RefObject<boolean>;
+    isUpdatingUrlRef: React.RefObject<boolean>;
+    isUpdatingStoreRef: React.RefObject<boolean>;
+    replaceFilters: (newFilters: FilterState) => void;
+}) {
     const searchParams = useSearchParams();
+
+    useEffect(() => {
+        hasSyncedFromUrlRef.current = true;
+        if (isUpdatingUrlRef.current) {
+            isUpdatingUrlRef.current = false;
+            return;
+        }
+        isUpdatingStoreRef.current = true;
+
+        const paramsObj = Object.fromEntries(searchParams.entries());
+        const parsed = findCardsInputSchema.safeParse(paramsObj);
+
+        if (parsed.success) {
+            // Locked sort contract: carry URL values verbatim into the store —
+            // no sort defaults are injected (missing keys -> page default).
+            replaceFilters(parsed.data);
+        } else {
+            replaceFilters({} as FilterState);
+        }
+
+        setTimeout(() => {
+            isUpdatingStoreRef.current = false;
+        }, 0);
+    }, [searchParams, replaceFilters, hasSyncedFromUrlRef, isUpdatingUrlRef, isUpdatingStoreRef]);
+
+    return null;
+}
+
+function useSetFilters(initialCards: DenormalizedCard[]) {
     const { filters } = useSearchStore(useShallow((state) => ({ filters: state.filters })));
 
-    // Locked sort contract (src/utils/cardSort.ts): URL params are the sole
-    // sort authority; absent sort params -> page default 'num' 'asc' (matches SSR).
+    // Locked sort contract (src/utils/cardSort.ts): URL params sync into store;
+    // absent sort params -> page default 'num' 'asc' (matches SSR).
     const { sortBy: effectiveSortBy, sortOrder: effectiveSortOrder } = resolveSort(
-        searchParams.get('sortBy'),
-        searchParams.get('sortOrder'),
+        filters.sortBy ?? null,
+        filters.sortOrder ?? null,
         SET_SORT_KEYS,
         'num'
     );
@@ -61,9 +100,7 @@ function useSetFilters(initialCards: DenormalizedCard[]) {
 }
 
 export function SetPageView({ setInfo, cards, filterOptions }: SetPageViewProps) {
-    const router = useRouter();
     const pathname = usePathname();
-    const searchParams = useSearchParams();
 
     const { filters, replaceFilters } = useSearchStore(
         useShallow((state) => ({
@@ -73,36 +110,14 @@ export function SetPageView({ setInfo, cards, filterOptions }: SetPageViewProps)
     );
     const [isInfoExpanded, setIsInfoExpanded] = useState(false);
 
+    const hasSyncedFromUrl = useRef(false);
     const isUpdatingUrl = useRef(false);
     const isUpdatingStore = useRef(false);
 
-    // Sync URL -> Store
+    // Sync Store -> URL (only after initial URL -> Store sync completes so
+    // direct visits like /sets/base1?rarity=Rare&sortBy=price aren't overwritten)
     useEffect(() => {
-        if (isUpdatingUrl.current) {
-            isUpdatingUrl.current = false;
-            return;
-        }
-        isUpdatingStore.current = true;
-
-        const paramsObj = Object.fromEntries(searchParams.entries());
-        const parsed = findCardsInputSchema.safeParse(paramsObj);
-
-        if (parsed.success) {
-            // Locked sort contract: carry URL values verbatim into the store —
-            // no sort defaults are injected (missing keys -> page default).
-            replaceFilters(parsed.data);
-        } else {
-            replaceFilters({} as Parameters<typeof replaceFilters>[0]);
-        }
-
-        setTimeout(() => {
-            isUpdatingStore.current = false;
-        }, 0);
-    }, [searchParams, replaceFilters]);
-
-    // Sync Store -> URL
-    useEffect(() => {
-        if (isUpdatingStore.current) return;
+        if (!hasSyncedFromUrl.current || isUpdatingStore.current) return;
         isUpdatingUrl.current = true;
         const params = new URLSearchParams();
         Object.entries(filters).forEach(([key, value]) => {
@@ -110,10 +125,13 @@ export function SetPageView({ setInfo, cards, filterOptions }: SetPageViewProps)
                 params.set(key, String(value));
             }
         });
-        window.history.replaceState(null, '', `${pathname}?${params.toString()}`);
-    }, [filters, 
-        pathname,
-    ]);
+        const queryString = params.toString();
+        window.history.replaceState(
+            null,
+            '',
+            queryString ? `${pathname}?${queryString}` : pathname
+        );
+    }, [filters, pathname]);
 
     // Cleanup
     useEffect(() => {
@@ -136,6 +154,14 @@ export function SetPageView({ setInfo, cards, filterOptions }: SetPageViewProps)
 
     return (
         <div className='flex flex-grow flex-col gap-6 md:flex-row md:items-start md:gap-0'>
+            <Suspense fallback={null}>
+                <SetSearchParamsSync
+                    hasSyncedFromUrlRef={hasSyncedFromUrl}
+                    isUpdatingUrlRef={isUpdatingUrl}
+                    isUpdatingStoreRef={isUpdatingStore}
+                    replaceFilters={replaceFilters}
+                />
+            </Suspense>
             {/* --- SIDEBAR (Desktop Only) --- */}
             <aside
                 className={cn(

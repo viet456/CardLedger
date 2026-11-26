@@ -11,9 +11,13 @@ export async function POST(request: NextRequest) {
         });
     }
     try {
-        // Revalidate set overview pages + sitemap files (src/lib/sitemaps.ts
-        // carries the `set-data` tag, keeping lastmod tracking set.updatedAt).
-        revalidateTag('set-data', 'days');
+        // Revalidate set overview pages (/sets, /sets/[setId]), /api/set-ids,
+        // and sitemap files (src/lib/sitemaps.ts carries the `set-data` tag,
+        // keeping lastmod tracking set.updatedAt). Using 'max' (Next.js 16
+        // recommended profile) ensures requests always receive stale-while-revalidate
+        // edge content rather than blocking even if a vintage set wasn't visited recently.
+        revalidateTag('set-data', 'max');
+        revalidateTag('all-sets', 'max');
 
         // DISABLED: revalidateTag('price-history', 'days')
         //
@@ -35,9 +39,7 @@ export async function POST(request: NextRequest) {
         // revalidate only top-N cards via their `card-${cardId}` tags --
         // do NOT restore the global blast.
 
-        return new NextResponse(JSON.stringify({ revalidated: true, now: Date.now() }), {
-            headers: { 'Content-Type': '' }
-        });
+        return NextResponse.json({ revalidated: true, now: Date.now() });
     } catch (error: unknown) {
         let message = 'An unknown error occurred';
         if (error instanceof Error) {

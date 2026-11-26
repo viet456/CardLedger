@@ -11,6 +11,7 @@ function TextLink({ link }: { link: RelatedCardLink }) {
     return (
         <Link
             href={`/cards/${encodeURIComponent(link.id)}`}
+            prefetch={false}
             className='text-sm font-medium text-primary hover:underline'
         >
             {link.name} <span className='font-normal text-muted-foreground'>#{link.number}</span>
@@ -68,7 +69,8 @@ export async function RelatedCards({ cardId }: { cardId: string }) {
                     >
                         {related.prevInSet ? (
                             <Link
-                                href={`/cards/${related.prevInSet.id}`}
+                                href={`/cards/${encodeURIComponent(related.prevInSet.id)}`}
+                                prefetch={false}
                                 className='flex min-w-0 items-center gap-1 text-sm text-primary hover:underline'
                             >
                                 <ChevronLeft className='h-4 w-4 shrink-0' />
@@ -81,7 +83,8 @@ export async function RelatedCards({ cardId }: { cardId: string }) {
                         )}
                         {related.nextInSet ? (
                             <Link
-                                href={`/cards/${related.nextInSet.id}`}
+                                href={`/cards/${encodeURIComponent(related.nextInSet.id)}`}
+                                prefetch={false}
                                 className='flex min-w-0 items-center gap-1 text-right text-sm text-primary hover:underline'
                             >
                                 <span className='truncate'>

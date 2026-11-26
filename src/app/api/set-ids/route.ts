@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { cacheLife } from 'next/cache';
+import { cacheLife, cacheTag } from 'next/cache';
 import { prisma } from '@/src/lib/prisma';
 
 async function getCachedSetIds() {
     'use cache';
+    cacheTag('all-sets', 'set-data');
     cacheLife('weeks');
 
     const sets = await prisma.set.findMany({

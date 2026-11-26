@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useSyncExternalStore } from 'react';
 import { authClient } from '@/src/lib/auth-client';
 import { useIsOffline } from './OfflineProvider';
 
@@ -8,6 +8,47 @@ type Session = typeof authClient.$Infer.Session;
 
 const SessionContext = createContext<Session | null>(null);
 const CACHE_KEY = 'cardledger-session-cache';
+
+let lastRawSessionCache: string | null = null;
+let lastParsedSessionCache: Session | null = null;
+const sessionCacheListeners = new Set<() => void>();
+
+function notifySessionCacheListeners() {
+    for (const listener of sessionCacheListeners) {
+        listener();
+    }
+}
+
+function subscribeSessionCache(callback: () => void) {
+    sessionCacheListeners.add(callback);
+    const handleStorage = (e: StorageEvent) => {
+        if (e.key === CACHE_KEY || e.key === null) {
+            callback();
+        }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => {
+        sessionCacheListeners.delete(callback);
+        window.removeEventListener('storage', handleStorage);
+    };
+}
+
+function getClientSessionSnapshot(): Session | null {
+    try {
+        const raw = localStorage.getItem(CACHE_KEY);
+        if (raw === lastRawSessionCache) {
+            return lastParsedSessionCache;
+        }
+        lastRawSessionCache = raw;
+        lastParsedSessionCache = raw ? (JSON.parse(raw) as Session) : null;
+        return lastParsedSessionCache;
+    } catch (e) {
+        console.error('Failed to parse session cache', e);
+        return null;
+    }
+}
+
+const getServerSessionSnapshot = (): Session | null => null;
 
 export const SessionProvider = ({
     children,
@@ -22,33 +63,30 @@ export const SessionProvider = ({
 export const useAuthSession = () => {
     const contextSession = useContext(SessionContext);
     const betterAuthSession = authClient.useSession();
-    const isOffline = useIsOffline();   
-    const [cachedSession, setCachedSession] = useState<Session | null>(() => {
-        if (typeof window !== 'undefined') {
-            try {
-                const cached = localStorage.getItem(CACHE_KEY);
-                if (cached) return JSON.parse(cached);
-            } catch (e) {
-                console.error('Failed to parse session cache', e);
-            }
-        }
-        return null;
-    });
+    const isOffline = useIsOffline();
+    const cachedSession = useSyncExternalStore(
+        subscribeSessionCache,
+        getClientSessionSnapshot,
+        getServerSessionSnapshot
+    );
 
     // Session cache updates
     useEffect(() => {
         if (!isOffline && !betterAuthSession.isPending) {
             if (betterAuthSession.data) {
                 // Legitimate active session
-                localStorage.setItem(CACHE_KEY, JSON.stringify(betterAuthSession.data));
-                // eslint-disable-next-line react-hooks/set-state-in-effect
-                setCachedSession(betterAuthSession.data);
-                
+                const serialized = JSON.stringify(betterAuthSession.data);
+                if (localStorage.getItem(CACHE_KEY) !== serialized) {
+                    localStorage.setItem(CACHE_KEY, serialized);
+                    notifySessionCacheListeners();
+                }
             } else if (betterAuthSession.data === null && !betterAuthSession.error) {
                 // Only wipe cache if data is null AND there is NO network error.
                 // This means the server explicitly confirmed the user is logged out.
-                localStorage.removeItem(CACHE_KEY);
-                setCachedSession(null);
+                if (localStorage.getItem(CACHE_KEY) !== null) {
+                    localStorage.removeItem(CACHE_KEY);
+                    notifySessionCacheListeners();
+                }
             }
         }
     }, [betterAuthSession.data, betterAuthSession.isPending, betterAuthSession.error, isOffline]);
@@ -59,20 +97,20 @@ export const useAuthSession = () => {
         return {
             ...betterAuthSession,
             data: cachedSession || contextSession, // Serve the cached identity immediately
-            isPending: false,                      
-            error: null                            
+            isPending: false,
+            error: null
         };
     }
 
     const hasResolved = !betterAuthSession.isPending || betterAuthSession.data !== undefined;
 
-    // Optimistic session fallback 
+    // Optimistic session fallback
     const effectiveData = hasResolved
         ? betterAuthSession.data
         : (contextSession ?? cachedSession ?? betterAuthSession.data);
 
     return {
         ...betterAuthSession,
-        data: effectiveData,
+        data: effectiveData
     };
 };

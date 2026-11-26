@@ -16,6 +16,7 @@ export function RelatedCardTile({ href, imageKey, name, caption }: RelatedCardTi
     return (
         <Link
             href={href}
+            prefetch={false}
             className='group flex w-full min-w-0 flex-col gap-1 rounded-lg p-1 transition-colors hover:bg-muted/60'
         >
             <div className='relative aspect-[2.5/3.5] w-full overflow-hidden rounded-md bg-muted'>
